@@ -1,0 +1,18 @@
+# visual studio code
+.vscode/
+.idea/
+
+# python
+venv/
+virtualenv/
+__pycache__
+.pytest_cache/
+.mypy_cache/
+build/
+dist/
+*.egg-info/
+docs/_build/
+tutorials/assets/ResNet101_pretrained
+
+# misc
+.DS_Store
