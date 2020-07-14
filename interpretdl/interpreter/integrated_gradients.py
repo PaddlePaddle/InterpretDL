@@ -41,7 +41,6 @@ class IntGradInterpreter(Interpreter):
                             return image_input, probs
             trained_model_path: The pretrained model directory.
             class_num: Number of classes for the model.
-            task: Can either be 'cv' or 'nlp'
             use_cuda: Whether or not to use cuda.
             model_input_shape: The input shape of the model
 
@@ -65,7 +64,7 @@ class IntGradInterpreter(Interpreter):
         Main function of the interpreter.
 
         Args:
-            data: If task is 'cv', input the image filepath; if task is 'nlp', input a sequence of word ids.
+            data: If task is cv, input can be the image filepath or processed image; if task is nlp, input a sequence of word ids.
             label: The target label to analyze. If None, the most likely label will be used.
             baseline: The baseline input. If None, all zeros will be used. If 'random', random Guassian initialization will be used.
             setps: number of steps in the Riemman approximation of the integral
