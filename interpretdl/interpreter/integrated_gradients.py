@@ -20,7 +20,7 @@ class IntGradInterpreter(Interpreter):
     http://proceedings.mlr.press/v70/sundararajan17a/sundararajan17a.pdf
     """
 
-    def __init__(self, predict_fn, trained_model_path, class_num, task, use_cuda, model_input_shape = [3, 224, 224]) -> None:
+    def __init__(self, predict_fn, trained_model_path, class_num, use_cuda, model_input_shape = [3, 224, 224]) -> None:
         """
         Initialize the IntGradInterpreter
 
@@ -51,7 +51,6 @@ class IntGradInterpreter(Interpreter):
         self.predict_fn = predict_fn
         self.trained_model_path = trained_model_path
         self.class_num = class_num
-        self.task = task
         self.use_cuda = use_cuda
         self.model_input_shape = model_input_shape
 
@@ -78,28 +77,38 @@ class IntGradInterpreter(Interpreter):
         """
         startup_prog = fluid.Program()
         main_program = fluid.Program()
+        if isinstance(data, str) or len(np.array(data).shape) > 2:
+            input_type = 'cv'
+        else:
+            input_type = 'nlp'
+            baseline = None
+        
+        # Read in image
+        if isinstance(data, str):
+            with open(data, 'rb') as f:
+                org = Image.open(f)
+                org = org.convert('RGB')
+                org = np.array(org)
+                img = read_image(data, crop_size = self.model_input_shape[1])
+                data = preprocess_image(img)    
+                
+        data_type = np.array(data).dtype
+        
         with fluid.program_guard(main_program, startup_prog):
             with fluid.unique_name.guard():
                 
-                if self.task == 'cv':
-                    data_op = fluid.data(name='data', shape=[1] + self.model_input_shape, dtype='float32')
-                elif self.task == 'nlp':
-                    data_op = fluid.data(name='data', shape=[1] + self.model_input_shape, dtype='int64')
+                data_op = fluid.data(name='data', shape=[1] + self.model_input_shape, dtype=data_type)
                 label_op = fluid.layers.data(name='label', shape=[1], dtype='int64')
                 alpha_op = fluid.layers.data(name='alpha', shape=[1], dtype='double')
                 
                 if baseline == 'random':
-                    x_baseline = fluid.layers.gaussian_random([1] + self.model_input_shape, dtype="float32")
+                    x_baseline = fluid.layers.gaussian_random([1] + self.model_input_shape, dtype=data_type)
                 else:
                     x_baseline = fluid.layers.zeros_like(data_op)
                     
                 x_diff = data_op - x_baseline
                 
-                if self.task == 'cv':
-                    x_step, probs = self.predict_fn(x_diff, alpha_op, x_baseline)
-                
-                elif self.task == 'nlp':
-                    x_step, probs = self.predict_fn(data_op, alpha_op, None)
+                x_step, probs = self.predict_fn(x_diff, alpha_op, x_baseline)
                 
                 for op in main_program.global_block().ops:
                     if op.type == 'batch_norm':
@@ -122,14 +131,7 @@ class IntGradInterpreter(Interpreter):
 
         fluid.io.load_persistables(exe, self.trained_model_path, main_program)
         
-            # Read in image
-        if self.task == 'cv':
-            with open(data, 'rb') as f:
-                org = Image.open(f)
-                org = org.convert('RGB')
-                org = np.array(org)
-                img = read_image(data, crop_size = self.model_input_shape[1])
-                data = preprocess_image(img)
+
 
         # if label is None, let it be the most likely label
         
@@ -144,7 +146,7 @@ class IntGradInterpreter(Interpreter):
             
         gradients_list = []
         
-        if baseline is None or self.task == 'nlp':
+        if baseline is None:
             num_random_trials = 1
             
         for i in range(num_random_trials):
@@ -160,7 +162,7 @@ class IntGradInterpreter(Interpreter):
             gradients_list.append(ig_gradients)
         avg_gradients = np.average(np.array(gradients_list), axis=0)
         
-        if self.task == 'cv':
+        if input_type == 'cv':
             visualize_ig(avg_gradients, img, visual, save_path)
             
         return avg_gradients

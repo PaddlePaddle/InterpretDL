@@ -23,7 +23,7 @@ def int_grad_example():
         
     img_path = 'assets/fireboat.png'
     #https://github.com/PaddlePaddle/models/tree/release/1.8/PaddleCV/image_classification
-    ig = IntGradInterpreter(predict_fn, "assets/ResNet50_pretrained", 1000, 'cv', True)
+    ig = IntGradInterpreter(predict_fn, "assets/ResNet50_pretrained", 1000, True)
     gradients = ig.interpret(img_path, label = None, baseline = 'random', steps = 50, num_random_trials=1, visual=True, save_path='ig_test.jpg')
     
 def nlp_example():
@@ -33,7 +33,7 @@ def nlp_example():
         return emb, probs
 
     #https://baidu-nlp.bj.bcebos.com/sentiment_classification-dataset-1.0.0.tar.gz
-    ig = IntGradInterpreter(predict_fn, "assets/senta_model/bilstm_model/params", 2, 'nlp', True, model_input_shape = [256])
+    ig = IntGradInterpreter(predict_fn, "assets/senta_model/bilstm_model/params", 2, True, model_input_shape = [256])
     data = np.array([[1251507, 595755, 1106205, 860907, 1134818, 1106205, 810335, 1134818, 4779, 4779, 672177, 280917] + [0]*244])
     avg_gradients = ig.interpret(data, label = None, baseline = 'random', steps = 50, num_random_trials=1, visual=True, save_path='ig_test.jpg')
     print(np.sum(avg_gradients, axis = 1))
