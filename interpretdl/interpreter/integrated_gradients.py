@@ -58,6 +58,7 @@ class IntGradInterpreter(Interpreter):
         self.class_num = class_num
         self.use_cuda = use_cuda
         self.model_input_shape = model_input_shape
+        self.paddle_prepared = False
 
     def interpret(self,
                   data,
@@ -81,106 +82,125 @@ class IntGradInterpreter(Interpreter):
 
         Returns:
         """
-        startup_prog = fluid.Program()
-        main_program = fluid.Program()
+
         if isinstance(data, str) or len(np.array(data).shape) > 2:
             input_type = 'cv'
+            self.baseline = baseline
         else:
             input_type = 'nlp'
-            baseline = None
+            self.baseline = None
+
+        self.label = label
+        self.num_random_trials = num_random_trials
+        self.steps = steps
 
         # Read in image
         if isinstance(data, str):
-            with open(data, 'rb') as f:
-                org = Image.open(f)
-                org = org.convert('RGB')
-                org = np.array(org)
-                img = read_image(data, crop_size=self.model_input_shape[1])
-                data = preprocess_image(img)
+            img = read_image(data, crop_size=self.model_input_shape[1])
+            data = preprocess_image(img)
 
-        data_type = np.array(data).dtype
+        self.data_type = np.array(data).dtype
 
-        with fluid.program_guard(main_program, startup_prog):
-            with fluid.unique_name.guard():
+        if not self.paddle_prepared:
+            self._paddle_prepare()
 
-                data_op = fluid.data(
-                    name='data',
-                    shape=[1] + self.model_input_shape,
-                    dtype=data_type)
-                label_op = fluid.layers.data(
-                    name='label', shape=[1], dtype='int64')
-                alpha_op = fluid.layers.data(
-                    name='alpha', shape=[1], dtype='double')
-
-                if baseline == 'random':
-                    x_baseline = fluid.layers.gaussian_random(
-                        [1] + self.model_input_shape, dtype=data_type)
-                else:
-                    x_baseline = fluid.layers.zeros_like(data_op)
-
-                x_diff = data_op - x_baseline
-
-                x_step, probs = self.paddle_model(x_diff, alpha_op, x_baseline)
-
-                for op in main_program.global_block().ops:
-                    if op.type == 'batch_norm':
-                        op._set_attr('use_global_stats', True)
-                    elif op.type == 'dropout':
-                        op._set_attr('is_test', True)
-
-                one_hot = fluid.layers.one_hot(label_op, self.class_num)
-                one_hot = fluid.layers.elementwise_mul(probs, one_hot)
-                target_category_loss = fluid.layers.reduce_sum(one_hot)
-
-                p_g_list = fluid.backward.append_backward(target_category_loss)
-
-                gradients_map = fluid.gradients(one_hot, x_step)[0]
-
-        if self.use_cuda:
-            gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
-            place = fluid.CUDAPlace(gpu_id)
-        else:
-            place = fluid.CPUPlace()
-        exe = fluid.Executor(place)
-
-        fluid.io.load_persistables(exe, self.trained_model_path, main_program)
-
-        gradients, out, data_diff = exe.run(
-            main_program,
-            feed={
-                'data': data,
-                'label': np.array([[0]]),
-                'alpha': np.array([[float(1)]]),
-            },
-            fetch_list=[gradients_map, probs, x_step],
-            return_numpy=False)
-
-        # if label is None, let it be the most likely label
-        if label is None:
-            label = np.argmax(out[0])
-
-        gradients_list = []
-
-        if baseline is None:
-            num_random_trials = 1
-
-        for i in range(num_random_trials):
-            total_gradients = np.zeros_like(gradients)
-            for alpha in np.linspace(0, 1, steps):
-                [gradients] = exe.run(main_program,
-                                      feed={
-                                          'data': data,
-                                          'label': np.array([[label]]),
-                                          'alpha': np.array([[alpha]]),
-                                      },
-                                      fetch_list=[gradients_map],
-                                      return_numpy=False)
-                total_gradients += np.array(gradients)
-            ig_gradients = total_gradients * np.array(data_diff) / steps
-            gradients_list.append(ig_gradients)
-        avg_gradients = np.average(np.array(gradients_list), axis=0)
+        avg_gradients = self.predict_fn(data)
 
         if input_type == 'cv':
             visualize_ig(avg_gradients, img, visual, save_path)
 
         return avg_gradients
+
+    def _paddle_prepare(self, predict_fn=None):
+        if predict_fn is None:
+            startup_prog = fluid.Program()
+            main_program = fluid.Program()
+            with fluid.program_guard(main_program, startup_prog):
+                with fluid.unique_name.guard():
+
+                    data_op = fluid.data(
+                        name='data',
+                        shape=[1] + self.model_input_shape,
+                        dtype=self.data_type)
+                    label_op = fluid.layers.data(
+                        name='label', shape=[1], dtype='int64')
+                    alpha_op = fluid.layers.data(
+                        name='alpha', shape=[1], dtype='double')
+
+                    if self.baseline == 'random':
+                        x_baseline = fluid.layers.gaussian_random(
+                            [1] + self.model_input_shape, dtype=self.data_type)
+                    else:
+                        x_baseline = fluid.layers.zeros_like(data_op)
+
+                    x_diff = data_op - x_baseline
+
+                    x_step, probs = self.paddle_model(x_diff, alpha_op,
+                                                      x_baseline)
+
+                    for op in main_program.global_block().ops:
+                        if op.type == 'batch_norm':
+                            op._set_attr('use_global_stats', True)
+                        elif op.type == 'dropout':
+                            op._set_attr('is_test', True)
+
+                    one_hot = fluid.layers.one_hot(label_op, self.class_num)
+                    one_hot = fluid.layers.elementwise_mul(probs, one_hot)
+                    target_category_loss = fluid.layers.reduce_sum(one_hot)
+
+                    p_g_list = fluid.backward.append_backward(
+                        target_category_loss)
+
+                    gradients_map = fluid.gradients(one_hot, x_step)[0]
+
+            if self.use_cuda:
+                gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
+                place = fluid.CUDAPlace(gpu_id)
+            else:
+                place = fluid.CPUPlace()
+            exe = fluid.Executor(place)
+
+            fluid.io.load_persistables(exe, self.trained_model_path,
+                                       main_program)
+
+            def predict_fn(data):
+                gradients, out, data_diff = exe.run(
+                    main_program,
+                    feed={
+                        'data': data,
+                        'label': np.array([[0]]),
+                        'alpha': np.array([[float(1)]]),
+                    },
+                    fetch_list=[gradients_map, probs, x_step],
+                    return_numpy=False)
+
+                # if label is None, let it be the most likely label
+                if self.label is None:
+                    self.label = np.argmax(out[0])
+
+                gradients_list = []
+
+                if self.baseline is None:
+                    num_random_trials = 1
+
+                for i in range(self.num_random_trials):
+                    total_gradients = np.zeros_like(gradients)
+                    for alpha in np.linspace(0, 1, self.steps):
+                        [gradients] = exe.run(main_program,
+                                              feed={
+                                                  'data': data,
+                                                  'label':
+                                                  np.array([[self.label]]),
+                                                  'alpha': np.array([[alpha]]),
+                                              },
+                                              fetch_list=[gradients_map],
+                                              return_numpy=False)
+                        total_gradients += np.array(gradients)
+                    ig_gradients = total_gradients * np.array(
+                        data_diff) / self.steps
+                    gradients_list.append(ig_gradients)
+                avg_gradients = np.average(np.array(gradients_list), axis=0)
+                return avg_gradients
+
+        self.predict_fn = predict_fn
+        self.paddle_prepared = True
