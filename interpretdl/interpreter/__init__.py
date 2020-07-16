@@ -7,6 +7,7 @@ from .lime import LIMEInterpreter
 from .lime_prior import LIMEPriorInterpreter
 from .gradient_cam import GradCAMInterpreter
 from .integrated_gradients import IntGradInterpreter
+from .smooth_grad import SmoothGradInterpreter
 
 __all__ = [
     "LIMEInterpreter", "LIMEPriorInterpreter", "GradCAMInterpreter",
