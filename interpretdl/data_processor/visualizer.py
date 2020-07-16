@@ -81,3 +81,19 @@ def visualize_ig(gradients, img, visual=True, save_path=None):
 
     if save_path is not None:
         x.save(save_path)
+
+
+def visualize_grayscale(gradients, percentile=99, visual=True, save_path=None):
+    image_2d = np.sum(np.abs(gradients[0]), axis=0)
+
+    vmax = np.percentile(image_2d, percentile)
+    vmin = np.min(image_2d)
+
+    x = np.clip((image_2d - vmin) / (vmax - vmin), 0, 1) * 255
+    x = np.uint8(x)
+    x = Image.fromarray(x)
+    if visual:
+        visualize_image(x)
+
+    if save_path is not None:
+        x.save(save_path)
