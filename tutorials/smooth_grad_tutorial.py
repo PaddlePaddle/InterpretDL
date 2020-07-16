@@ -1,4 +1,4 @@
-from assets.resnet import ResNet50
+from assets.resnet import ResNet101
 from assets.bilstm import bilstm_net
 import paddle.fluid as fluid
 import numpy as np
@@ -22,8 +22,8 @@ def smooth_grad_example():
         return probs
 
     img_path = 'assets/deer.png'
-    sg = SmoothGradInterpreter(predict_fn, "../../../ResNet50_pretrained",
-                               1000, True)
+    sg = SmoothGradInterpreter(predict_fn, "assets/ResNet50_pretrained", 1000,
+                               True)
     gradients = sg.interpret(
         img_path,
         label=None,
@@ -32,6 +32,7 @@ def smooth_grad_example():
         visual=True,
         save_path='sg_test.jpg')
 
+    # optional
     visualize_grayscale(gradients, save_path='sg_gray.jpg')
 
 

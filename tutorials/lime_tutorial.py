@@ -19,7 +19,7 @@ def lime_example():
     # More pretrained models can be found in
     # https://github.com/PaddlePaddle/models/tree/release/1.8/PaddleCV/image_classification
     lime = LIMEInterpreter(predict_fn, "assets/ResNet101_pretrained")
-    lime.interpret(
+    lime_weights = lime.interpret(
         'assets/catdog.png',
         num_samples=1000,
         batch_size=100,
