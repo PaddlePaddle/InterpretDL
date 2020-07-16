@@ -22,7 +22,7 @@ class IntGradInterpreter(Interpreter):
     """
 
     def __init__(self,
-                 predict_fn,
+                 paddle_model,
                  trained_model_path,
                  class_num,
                  use_cuda,
@@ -31,20 +31,20 @@ class IntGradInterpreter(Interpreter):
         Initialize the IntGradInterpreter
 
         Args:
-            predict_fn: A user-defined function that gives access to model predictions. It takes the following arguments:
-                    - data: Data input.
-                    - alpha: A scalar for calculating the path integral
-                    - baseline: The baseline input.
-                    example:
-                        def predict_fn(data, alpha, baseline):
-                            import paddle.fluid as fluid
-                            class_num = 1000
-                            image_input = baseline + alpha * data
-                            model = ResNet50()
-                            logits = model.net(input=image_input, class_dim=class_num)
+            paddle_model: A user-defined function that gives access to model predictions. It takes the following arguments:
+                - data: Data input.
+                - alpha: A scalar for calculating the path integral
+                - baseline: The baseline input.
+                example:
+                    def paddle_model(data, alpha, baseline):
+                        import paddle.fluid as fluid
+                        class_num = 1000
+                        image_input = baseline + alpha * data
+                        model = ResNet50()
+                        logits = model.net(input=image_input, class_dim=class_num)
 
-                            probs = fluid.layers.softmax(logits, axis=-1)
-                            return image_input, probs
+                        probs = fluid.layers.softmax(logits, axis=-1)
+                        return image_input, probs
             trained_model_path: The pretrained model directory.
             class_num: Number of classes for the model.
             use_cuda: Whether or not to use cuda.
@@ -53,17 +53,11 @@ class IntGradInterpreter(Interpreter):
         Returns:
         """
         Interpreter.__init__(self)
-        self.predict_fn = predict_fn
+        self.paddle_model = paddle_model
         self.trained_model_path = trained_model_path
         self.class_num = class_num
         self.use_cuda = use_cuda
         self.model_input_shape = model_input_shape
-
-    def set_params(self):
-        """
-        Set parameters for the interpreter.
-        """
-        pass
 
     def interpret(self,
                   data,
@@ -126,7 +120,7 @@ class IntGradInterpreter(Interpreter):
 
                 x_diff = data_op - x_baseline
 
-                x_step, probs = self.predict_fn(x_diff, alpha_op, x_baseline)
+                x_step, probs = self.paddle_model(x_diff, alpha_op, x_baseline)
 
                 for op in main_program.global_block().ops:
                     if op.type == 'batch_norm':
@@ -151,8 +145,6 @@ class IntGradInterpreter(Interpreter):
 
         fluid.io.load_persistables(exe, self.trained_model_path, main_program)
 
-        # if label is None, let it be the most likely label
-
         gradients, out, data_diff = exe.run(
             main_program,
             feed={
@@ -163,6 +155,7 @@ class IntGradInterpreter(Interpreter):
             fetch_list=[gradients_map, probs, x_step],
             return_numpy=False)
 
+        # if label is None, let it be the most likely label
         if label is None:
             label = np.argmax(out[0])
 

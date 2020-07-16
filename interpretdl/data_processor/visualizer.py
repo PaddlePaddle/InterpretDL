@@ -1,24 +1,28 @@
-
 from skimage.segmentation import quickshift, mark_boundaries
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
+
 
 def is_jupyter():
     # ref: https://stackoverflow.com/a/39662359/4834515
     try:
         shell = get_ipython().__class__.__name__
         if shell == 'ZMQInteractiveShell':
-            return True   # Jupyter notebook or qtconsole
+            return True  # Jupyter notebook or qtconsole
         elif shell == 'TerminalInteractiveShell':
             return False  # Terminal running IPython
         else:
             return False  # Other type (?)
     except NameError:
-        return False      # Probably standard Python interpreter
+        return False  # Probably standard Python interpreter
 
 
-def show_important_parts(image, lime_weights, label=None, segments=None, ratio_superpixels=0.2):
+def show_important_parts(image,
+                         lime_weights,
+                         label=None,
+                         segments=None,
+                         ratio_superpixels=0.2):
     if label is None:
         label = list(lime_weights.keys())[0]
 
@@ -48,15 +52,16 @@ def visualize_image(image):
     else:
         plt.imshow(image)
         plt.show()
-        
-        
-def visualize_ig(gradients, img, visual = True, save_path = None):
-    gradients = gradients[0].transpose((1,2,0))
+
+
+def visualize_ig(gradients, img, visual=True, save_path=None):
+    gradients = gradients[0].transpose((1, 2, 0))
     interpretation = np.clip(gradients, 0, 1)
     channel = [0, 255, 0]
     interpretation = np.average(interpretation, axis=2)
 
-    m, e = np.percentile(np.abs(interpretation), 99.5), np.min(np.abs(interpretation))
+    m, e = np.percentile(np.abs(interpretation),
+                         99.5), np.min(np.abs(interpretation))
     transformed = (np.abs(interpretation) - e) / (m - e)
 
     # Recover the original sign of the interpretation.
@@ -70,7 +75,7 @@ def visualize_ig(gradients, img, visual = True, save_path = None):
 
     x = np.uint8(interpretation)
     x = Image.fromarray(x)
-        #display.display(display.Image(x))
+
     if visual:
         visualize_image(x)
 

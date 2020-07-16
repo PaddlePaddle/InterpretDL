@@ -20,21 +20,27 @@ class GradCAMInterpreter(Interpreter):
     https://arxiv.org/abs/1610.02391
     """
 
-    def __init__(self, predict_fn, trained_model_path, class_num, target_layer_name, use_cuda, model_input_shape = [3, 224, 224]) -> None:
+    def __init__(self,
+                 paddle_model,
+                 trained_model_path,
+                 class_num,
+                 target_layer_name,
+                 use_cuda,
+                 model_input_shape=[3, 224, 224]) -> None:
         """
         Initialize the GradCAMInterpreter
 
         Args:
-            predict_fn: A user-defined function that gives access to model predictions. It takes the following arguments:
-                    - image_input: An image input.
-                    example:
-                        def predict_fn(image_input):
-                            import paddle.fluid as fluid
-                            class_num = 1000
-                            model = ResNet50()
-                            logits = model.net(input=image_input, class_dim=class_num)
-                            probs = fluid.layers.softmax(logits, axis=-1)
-                            return probs
+            paddle_model: A user-defined function that gives access to model predictions. It takes the following arguments:
+                - image_input: An image input.
+                example:
+                    def paddle_model(image_input):
+                        import paddle.fluid as fluid
+                        class_num = 1000
+                        model = ResNet50()
+                        logits = model.net(input=image_input, class_dim=class_num)
+                        probs = fluid.layers.softmax(logits, axis=-1)
+                        return probs
             trained_model_path: The pretrained model directory.
             class_num: Number of classes for the model.
             target_layer_name: The target layer to calculate gradients.
@@ -42,7 +48,7 @@ class GradCAMInterpreter(Interpreter):
             model_input_shape: The input shape of the model
         """
         Interpreter.__init__(self)
-        self.predict_fn = predict_fn
+        self.paddle_model = paddle_model
         self.trained_model_path = trained_model_path
         self.class_num = class_num
         self.target_layer_name = target_layer_name
@@ -66,10 +72,14 @@ class GradCAMInterpreter(Interpreter):
         with fluid.program_guard(main_program, startup_prog):
             with fluid.unique_name.guard():
 
-                image_op = fluid.data(name='image', shape=[1] + self.model_input_shape, dtype='float32')
-                label_op = fluid.layers.data(name='label', shape=[1], dtype='int64')
+                image_op = fluid.data(
+                    name='image',
+                    shape=[1] + self.model_input_shape,
+                    dtype='float32')
+                label_op = fluid.layers.data(
+                    name='label', shape=[1], dtype='int64')
 
-                probs = self.predict_fn(image_op)
+                probs = self.paddle_model(image_op)
                 if isinstance(probs, tuple):
                     probs = probs[0]
 
@@ -107,22 +117,24 @@ class GradCAMInterpreter(Interpreter):
             org = Image.open(f)
             org = org.convert('RGB')
             org = np.array(org)
-        img = read_image(img_path, crop_size = self.model_input_shape[1])
-        images = preprocess_image(img)  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
+        img = read_image(img_path, crop_size=self.model_input_shape[1])
+        images = preprocess_image(
+            img)  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
 
         # if label is None, let it be the most likely label
         if label is None:
-            out = exe.run(main_program, feed={
-                    'image': images,
-                    'label': np.array([[0]])
-                }, fetch_list=[probs])
+            out = exe.run(main_program,
+                          feed={'image': images,
+                                'label': np.array([[0]])},
+                          fetch_list=[probs])
 
             label = np.argmax(out[0][0])
 
-        feature_map, gradients, loss = exe.run(main_program, feed={
-                'image': images,
-                'label': np.array([[label]])
-            }, fetch_list=[conv, gradients_map, target_category_loss])
+        feature_map, gradients, loss = exe.run(
+            main_program,
+            feed={'image': images,
+                  'label': np.array([[label]])},
+            fetch_list=[conv, gradients_map, target_category_loss])
 
         f = np.array(feature_map)[0]
         g = np.array(gradients)[0]
