@@ -13,12 +13,12 @@ InterpretDL, short for *interpretation of deep learning models*, is a model inte
 
 * [Installation](#Installation)
 * [Documentation](#Documentation)
-* [Usage Guideline](#Usage Guideline)
+* [Usage Guideline](#Usage-Guideline)
 * [Contribution](#Contribution)
 * [Roadmap](#Roadmap)
     * [Algorithms](#Algorithms)
     * [Tutorials](#Tutorials)
-* [Copyright and License](#Copyright and License)
+* [Copyright and License](#Copyright-and-License)
 
 ## Installation
 
