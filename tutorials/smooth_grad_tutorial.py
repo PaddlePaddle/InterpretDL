@@ -1,4 +1,4 @@
-from assets.resnet import ResNet101
+from assets.resnet import ResNet50
 from assets.bilstm import bilstm_net
 import paddle.fluid as fluid
 import numpy as np
