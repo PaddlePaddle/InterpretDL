@@ -80,6 +80,20 @@ class LIMEPriorInterpreter(LIMEInterpreter):
                   batch_size=50,
                   visual=True,
                   save_path=None):
+        """
+
+        Args:
+            data_path: The input file path.
+            interpret_class: The index of class to interpret. If None, the most likely label will be used.
+            num_samples: LIME sampling numbers. Larger number of samples usually gives more accurate interpretation.
+            batch_size: Number of samples to forward each time.
+            visual: Whether or not to visualize the processed image.
+            save_path: The path to save the processed image. If None, the image will not be saved.
+
+        Returns:
+            lime_weights: a dict {interpret_label_i: weights on features}
+
+        """
         if self.global_weights is None and self.prior_method != "none":
             raise ValueError(
                 "The interpreter is not prepared. Call prepare() before interpretation."
@@ -121,3 +135,10 @@ class LIMEPriorInterpreter(LIMEInterpreter):
 
         if save_path is not None:
             plt.imsave(save_path, interpretation)
+
+        self.lime_intermediate_results['probability'] = probability
+        self.lime_intermediate_results['input'] = data_instance[0]
+        self.lime_intermediate_results[
+            'segmentation'] = self.lime_base.segments
+
+        return lime_weights

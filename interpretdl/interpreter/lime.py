@@ -53,6 +53,8 @@ class LIMEInterpreter(Interpreter):
         # use the default LIME setting
         self.lime_base = LimeBase()
 
+        self.lime_intermediate_results = {}
+
     def interpret(self,
                   data_path,
                   interpret_class=None,
@@ -71,6 +73,7 @@ class LIMEInterpreter(Interpreter):
             save_path: The path to save the processed image. If None, the image will not be saved.
 
         Returns:
+            lime_weights: a dict {interpret_label_i: weights on features}
 
         """
         if not self.paddle_prepared:
@@ -102,6 +105,13 @@ class LIMEInterpreter(Interpreter):
 
         if save_path is not None:
             plt.imsave(save_path, interpretation)
+
+        self.lime_intermediate_results['probability'] = probability
+        self.lime_intermediate_results['input'] = data_instance[0]
+        self.lime_intermediate_results[
+            'segmentation'] = self.lime_base.segments
+
+        return lime_weights
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
