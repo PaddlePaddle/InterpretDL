@@ -13,7 +13,6 @@ import numpy as np
 
 
 class LIMEPriorInterpreter(LIMEInterpreter):
-
     def __init__(self,
                  paddle_model: Callable,
                  trained_model_path: str,
@@ -29,11 +28,16 @@ class LIMEPriorInterpreter(LIMEInterpreter):
             prior_method:
             use_cuda:
         """
-        LIMEInterpreter.__init__(self, paddle_model, trained_model_path, model_input_shape, use_cuda)
+        LIMEInterpreter.__init__(self, paddle_model, trained_model_path,
+                                 model_input_shape, use_cuda)
         self.prior_method = prior_method
         self.global_weights = None
 
-    def prepare(self, list_file_paths=None, batch_size=0, weights_file_path=None, prior_reg_force=1.0):
+    def interpreter_init(self,
+                         list_file_paths=None,
+                         batch_size=0,
+                         weights_file_path=None,
+                         prior_reg_force=1.0):
         """
         Pre-compute global weights.
         If `weights_file_path` is given and has contents, then skip the pre-compute process and
@@ -41,11 +45,12 @@ class LIMEPriorInterpreter(LIMEInterpreter):
         with `list_file_paths`. After the pre-compute process, if `weights_file_path` is given,
         then the prec-computed weights will be saved in this path for skipping the pre-compute
         process in the next usage.
+        This is an additional step that LIMEPrior Interpreter has to perform before interpretation.
 
         Args:
-            list_file_paths: 
-            batch_size: 
-            weights_file_path: 
+            list_file_paths:
+            batch_size:
+            weights_file_path:
 
         Returns:
 
@@ -63,14 +68,22 @@ class LIMEPriorInterpreter(LIMEInterpreter):
             self.global_weights = precomputed_weights
         else:
             self.global_weights = precompute_global_prior(
-                list_file_paths, self.predict_fn, batch_size, self.prior_method
-            )
+                list_file_paths, self.predict_fn, batch_size,
+                self.prior_method)
             if weights_file_path is not None:
                 np.save(weights_file_path, self.global_weights)
 
-    def interpret(self, data_path, interpret_class=None, num_samples=1000, batch_size=50, visual=True, save_path=None):
+    def interpret(self,
+                  data_path,
+                  interpret_class=None,
+                  num_samples=1000,
+                  batch_size=50,
+                  visual=True,
+                  save_path=None):
         if self.global_weights is None and self.prior_method != "none":
-            raise ValueError("The interpreter is not prepared. Call prepare() before interpretation.")
+            raise ValueError(
+                "The interpreter is not prepared. Call prepare() before interpretation."
+            )
 
         data_instance = read_image(data_path)
 
@@ -86,17 +99,21 @@ class LIMEPriorInterpreter(LIMEInterpreter):
         if self.prior_method == "none":
             prior = np.zeros(len(np.unique(segments)))
         else:
-            prior = use_fast_normlime_as_prior(data_instance, segments, interpret_class[0], self.global_weights)
+            prior = use_fast_normlime_as_prior(data_instance, segments,
+                                               interpret_class[0],
+                                               self.global_weights)
 
         lime_weights = self.lime_base.interpret_instance(
-            data_instance[0], self.predict_fn, interpret_class,
+            data_instance[0],
+            self.predict_fn,
+            interpret_class,
             num_samples=num_samples,
             batch_size=batch_size,
             prior=prior,
-            reg_force=self.prior_reg_force
-        )
+            reg_force=self.prior_reg_force)
 
-        interpretation = show_important_parts(data_instance[0], lime_weights, interpret_class[0],
+        interpretation = show_important_parts(data_instance[0], lime_weights,
+                                              interpret_class[0],
                                               self.lime_base.segments)
 
         if visual:
@@ -104,5 +121,3 @@ class LIMEPriorInterpreter(LIMEInterpreter):
 
         if save_path is not None:
             plt.imsave(save_path, interpretation)
-
-

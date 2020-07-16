@@ -30,9 +30,18 @@ def lime_gp_example():
     image_paths = glob.glob(dataset_dir + "/*")
     image_paths = image_paths[:1000]
 
-    limegp = LIMEPriorInterpreter(predict_fn, trained_model, prior_method="ridge")
-    limegp.prepare(image_paths, batch_size=100, weights_file_path="assets/gp_weights.npy", prior_reg_force=1.0)
-    limegp.interpret(image_paths[0], num_samples=1000, batch_size=100, save_path='assets/lime_gp.png')
+    limegp = LIMEPriorInterpreter(
+        predict_fn, trained_model, prior_method="ridge")
+    limegp.interpreter_init(
+        image_paths,
+        batch_size=100,
+        weights_file_path="assets/gp_weights.npy",
+        prior_reg_force=1.0)
+    limegp.interpret(
+        image_paths[0],
+        num_samples=1000,
+        batch_size=100,
+        save_path='assets/lime_gp.png')
 
 
 if __name__ == '__main__':

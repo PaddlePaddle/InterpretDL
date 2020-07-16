@@ -13,7 +13,6 @@ import paddle.fluid as fluid
 
 
 class LIMEInterpreter(Interpreter):
-
     """
     LIME Interpreter.
 
@@ -26,7 +25,6 @@ class LIMEInterpreter(Interpreter):
                  trained_model_path: str,
                  model_input_shape=[3, 224, 224],
                  use_cuda=True) -> None:
-
         """
 
         Args:
@@ -55,8 +53,13 @@ class LIMEInterpreter(Interpreter):
         # use the default LIME setting
         self.lime_base = LimeBase()
 
-    def interpret(self, data_path, interpret_class=None, num_samples=1000, batch_size=50,
-                  visual=True, save_path=None):
+    def interpret(self,
+                  data_path,
+                  interpret_class=None,
+                  num_samples=1000,
+                  batch_size=50,
+                  visual=True,
+                  save_path=None):
         """
 
         Args:
@@ -83,11 +86,16 @@ class LIMEInterpreter(Interpreter):
             pred_label = np.argsort(probability)
             interpret_class = pred_label[-1:]
 
-        lime_weights = self.lime_base.interpret_instance(data_instance[0], self.predict_fn, interpret_class,
-                                                         num_samples=num_samples,
-                                                         batch_size=batch_size)
+        lime_weights = self.lime_base.interpret_instance(
+            data_instance[0],
+            self.predict_fn,
+            interpret_class,
+            num_samples=num_samples,
+            batch_size=batch_size)
 
-        interpretation = show_important_parts(data_instance[0], lime_weights, interpret_class[0], self.lime_base.segments)
+        interpretation = show_important_parts(data_instance[0], lime_weights,
+                                              interpret_class[0],
+                                              self.lime_base.segments)
 
         if visual:
             visualize_image(interpretation)
@@ -95,33 +103,40 @@ class LIMEInterpreter(Interpreter):
         if save_path is not None:
             plt.imsave(save_path, interpretation)
 
-    def _paddle_prepare(self):
+    def _paddle_prepare(self, predict_fn=None):
+        if predict_fn is None:
+            startup_prog = fluid.Program()
+            main_program = fluid.Program()
+            with fluid.program_guard(main_program, startup_prog):
+                with fluid.unique_name.guard():
+                    image_op = fluid.data(
+                        name='image',
+                        shape=[None] + self.model_input_shape,
+                        dtype='float32')
+                    probs = self.paddle_model(image_input=image_op)
+                    if isinstance(probs, tuple):
+                        probs = probs[0]
+                    main_program = main_program.clone(for_test=True)
 
-        startup_prog = fluid.Program()
-        main_program = fluid.Program()
-        with fluid.program_guard(main_program, startup_prog):
-            with fluid.unique_name.guard():
-                image_op = fluid.data(name='image', shape=[None] + self.model_input_shape, dtype='float32')
-                probs = self.paddle_model(image_input=image_op)
-                if isinstance(probs, tuple):
-                    probs = probs[0]
-                main_program = main_program.clone(for_test=True)
+            if self.use_cuda:
+                gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
+                place = fluid.CUDAPlace(gpu_id)
+            else:
+                place = fluid.CPUPlace()
+            exe = fluid.Executor(place)
 
-        if self.use_cuda:
-            gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
-            place = fluid.CUDAPlace(gpu_id)
-        else:
-            place = fluid.CPUPlace()
-        exe = fluid.Executor(place)
+            fluid.io.load_persistables(exe, self.trained_model_path,
+                                       main_program)
 
-        fluid.io.load_persistables(exe, self.trained_model_path, main_program)
+            def predict_fn(visual_images):
+                images = preprocess_image(
+                    visual_images
+                )  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
+                [result] = exe.run(main_program,
+                                   fetch_list=[probs],
+                                   feed={'image': images})
 
-        def predict_fn(visual_images):
-            images = preprocess_image(visual_images)  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
-            [result] = exe.run(main_program, fetch_list=[probs], feed={'image': images})
-
-            return result
+                return result
 
         self.predict_fn = predict_fn
-
         self.paddle_prepared = True
