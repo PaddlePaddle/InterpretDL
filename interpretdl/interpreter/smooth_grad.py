@@ -186,9 +186,8 @@ class SmoothGradInterpreter(Interpreter):
                 gradients_map = fluid.gradients(one_hot, x_plus_noise)[0]
 
         fluid.io.load_persistables(exe, self.trained_model_path, main_program)
-
+        total_gradients = np.zeros_like(gradients)
         for i in range(n_samples):
-            total_gradients = np.zeros_like(gradients)
             [gradients] = exe.run(
                 main_program,
                 feed={'data': data,
