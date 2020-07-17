@@ -27,7 +27,7 @@ def smooth_grad_example():
     gradients = sg.interpret(
         img_path,
         label=None,
-        noise=0.1,
+        noise_amout=0.1,
         n_samples=50,
         visual=True,
         save_path='sg_test.jpg')
