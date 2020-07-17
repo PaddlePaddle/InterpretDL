@@ -153,6 +153,8 @@ class SmoothGradInterpreter(Interpreter):
                                        main_program)
 
             def predict_fn(data, label_index, noise=0.0):
+                if isinstance(noise, (float, int)):
+                    noise = np.ones_like(data) * noise
                 gradients, out = exe.run(main_program,
                                          feed={
                                              'data': data,
