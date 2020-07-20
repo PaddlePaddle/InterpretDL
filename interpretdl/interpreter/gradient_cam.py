@@ -137,6 +137,8 @@ class GradCAMInterpreter(Interpreter):
                     for op in main_program.global_block().ops:
                         if op.type == 'batch_norm':
                             op._set_attr('use_global_stats', True)
+                        elif op.type == 'dropout':
+                            op._set_attr('dropout_prob', 0.0)
 
                     # fetch the target layer
                     trainable_vars = list(main_program.list_vars())

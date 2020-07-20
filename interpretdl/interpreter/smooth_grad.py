@@ -132,7 +132,7 @@ class SmoothGradInterpreter(Interpreter):
                         if op.type == 'batch_norm':
                             op._set_attr('use_global_stats', True)
                         elif op.type == 'dropout':
-                            op._set_attr('is_test', True)
+                            op._set_attr('dropout_prob', 0.0)
 
                     class_num = probs.shape[-1]
                     one_hot = fluid.layers.one_hot(label_op, class_num)

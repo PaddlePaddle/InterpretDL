@@ -142,7 +142,7 @@ class IntGradInterpreter(Interpreter):
                         if op.type == 'batch_norm':
                             op._set_attr('use_global_stats', True)
                         elif op.type == 'dropout':
-                            op._set_attr('is_test', True)
+                            op._set_attr('dropout_prob', 0.0)
 
                     one_hot = fluid.layers.one_hot(label_op, self.class_num)
                     one_hot = fluid.layers.elementwise_mul(probs, one_hot)
