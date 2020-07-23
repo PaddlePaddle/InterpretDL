@@ -1,15 +1,11 @@
-
 import os
 import os.path as osp
 import numpy as np
 import tqdm
-
-import paddle.fluid as fluid
-from paddle.fluid.param_attr import ParamAttr
-
 from sklearn.linear_model import Ridge
-from interpretdl.data_processor.readers import read_image, load_pickle_file
-from interpretdl.common.paddle_utils import FeatureExtractor, extract_superpixel_features, get_pre_models
+
+from ..data_processor.readers import read_image, load_pickle_file
+from ..common.paddle_utils import FeatureExtractor, extract_superpixel_features, get_pre_models
 
 
 def data_labels(file_path_list, predict_fn, batch_size):
@@ -32,7 +28,8 @@ def data_labels(file_path_list, predict_fn, batch_size):
 
         feature = fextractor.forward(image_show).transpose((1, 2, 0))
         # print(time.time() - end)  # 40 % time.
-        segments = np.zeros((image_show.shape[1], image_show.shape[2]), np.int32)
+        segments = np.zeros((image_show.shape[1], image_show.shape[2]),
+                            np.int32)
         num_blocks = 10
         height_per_i = segments.shape[0] // num_blocks + 1
         width_per_i = segments.shape[1] // num_blocks + 1
@@ -97,7 +94,11 @@ def ridge_regressor(x_data, y_labels, softmax):
     return global_weights_all_labels
 
 
-def precompute_global_prior(test_set_file_list, predict_fn, batch_size, gp_method="ridge", softmax=False):
+def precompute_global_prior(test_set_file_list,
+                            predict_fn,
+                            batch_size,
+                            gp_method="ridge",
+                            softmax=False):
 
     x_data, y_labels = data_labels(test_set_file_list, predict_fn, batch_size)
 
@@ -109,7 +110,8 @@ def precompute_global_prior(test_set_file_list, predict_fn, batch_size, gp_metho
     return global_weights_all_labels
 
 
-def use_fast_normlime_as_prior(image_show, segments, label_index, global_weights):
+def use_fast_normlime_as_prior(image_show, segments, label_index,
+                               global_weights):
     assert isinstance(global_weights, dict)
 
     _, h_pre_models_kmeans = get_pre_models()
@@ -117,8 +119,9 @@ def use_fast_normlime_as_prior(image_show, segments, label_index, global_weights
     try:
         kmeans_model = load_pickle_file(h_pre_models_kmeans)
     except:
-        raise ValueError("NormLIME needs the KMeans model, where we provided a default one in "
-                         "pre_models/kmeans_model.pkl.")
+        raise ValueError(
+            "NormLIME needs the KMeans model, where we provided a default one in "
+            "pre_models/kmeans_model.pkl.")
 
     fextractor = FeatureExtractor()
     feature = fextractor.forward(image_show).transpose((1, 2, 0))

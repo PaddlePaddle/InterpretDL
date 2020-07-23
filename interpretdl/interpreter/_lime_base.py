@@ -23,7 +23,6 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
-
 """
 The code in this file (_lime_base.py) is largely simplified and modified from https://github.com/marcotcr/lime.
 """
@@ -46,6 +45,7 @@ class LimeBase(object):
     """
     Class for learning a locally linear sparse model from perturbed data
     """
+
     def __init__(self,
                  kernel_width=0.25,
                  kernel=None,
@@ -56,8 +56,9 @@ class LimeBase(object):
         """
 
         if kernel is None:
+
             def kernel(d, kernel_width):
-                return np.sqrt(np.exp(-(d ** 2) / kernel_width ** 2))
+                return np.sqrt(np.exp(-(d**2) / kernel_width**2))
 
         kernel_fn = partial(kernel, kernel_width=kernel_width)
 
@@ -77,33 +78,30 @@ class LimeBase(object):
         used_features = np.array(range(neighborhood_data.shape[1]))
 
         if model_regressor is None:
-            model_regressor = Ridge(alpha=1, fit_intercept=True,
-                                    random_state=self.random_state)
+            model_regressor = Ridge(
+                alpha=1, fit_intercept=True, random_state=self.random_state)
         easy_model = model_regressor
-        easy_model.fit(neighborhood_data,
-                       labels_column, sample_weight=weights)
+        easy_model.fit(neighborhood_data, labels_column, sample_weight=weights)
+        # R^2 between easy_model.predict(X) and y.
         prediction_score = easy_model.score(
-            neighborhood_data,
-            labels_column, sample_weight=weights)
+            neighborhood_data, labels_column, sample_weight=weights)
 
-        local_pred = easy_model.predict(neighborhood_data[0, used_features].reshape(1, -1))
+        local_pred = easy_model.predict(neighborhood_data[0, used_features]
+                                        .reshape(1, -1))
 
         if self.verbose:
             print('Intercept', easy_model.intercept_)
-            print('Prediction_local', local_pred,)
+            print(
+                'Prediction_local',
+                local_pred, )
             print('Right:', neighborhood_labels[0, label])
-        return (easy_model.intercept_,
-                sorted(zip(used_features, easy_model.coef_),
-                       key=lambda x: np.abs(x[1]), reverse=True),
-                prediction_score, local_pred)
+        return (easy_model.intercept_, sorted(
+            zip(used_features, easy_model.coef_),
+            key=lambda x: np.abs(x[1]),
+            reverse=True), prediction_score, local_pred)
 
-    def _data_labels(self,
-                     image,
-                     fudged_image,
-                     segments,
-                     classifier_fn,
-                     num_samples,
-                     batch_size):
+    def _data_labels(self, image, fudged_image, segments, classifier_fn,
+                     num_samples, batch_size):
         """Generates images and predictions in the neighborhood of this image.
 
         Args:
@@ -155,16 +153,15 @@ class LimeBase(object):
                                  label,
                                  prior=None,
                                  prior_scale=1.0,
-                                 reg_force=1.0
-                                 ):
+                                 reg_force=1.0):
 
         weights = self.kernel_fn(distances)
         labels_column = neighborhood_labels[:, label]
         used_features = np.array(range(neighborhood_data.shape[1]))
 
         # use this regressor just for creating an instance of estimator.
-        model_regressor = Ridge(alpha=0, fit_intercept=True,
-                                random_state=self.random_state)
+        model_regressor = Ridge(
+            alpha=0, fit_intercept=True, random_state=self.random_state)
         easy_model = model_regressor
 
         X = np.float32(neighborhood_data[:, used_features])
@@ -198,7 +195,9 @@ class LimeBase(object):
 
         beta = reg_force
         tau = prior_scale
-        w = np.dot(np.linalg.inv(np.dot(X.T, X) + beta * I), np.dot(X.T, y) + beta * tau * w0)
+        w = np.dot(
+            np.linalg.inv(np.dot(X.T, X) + beta * I),
+            np.dot(X.T, y) + beta * tau * w0)
 
         easy_model.coef_ = w
         easy_model.intercept_ = 0
@@ -206,16 +205,15 @@ class LimeBase(object):
         if self.verbose:
             print('Intercept', easy_model.intercept_)
             print('Right:', neighborhood_labels[0, label])
-        return (
-            easy_model.intercept_,
-            sorted(zip(used_features, easy_model.coef_),
-                   key=lambda x: np.abs(x[1]), reverse=True),
-            0,
-            0
-        )
+        return (easy_model.intercept_, sorted(
+            zip(used_features, easy_model.coef_),
+            key=lambda x: np.abs(x[1]),
+            reverse=True), 0, 0)
 
-    def interpret_instance(self, image, classifier_fn,
-                           interpret_labels=(1,),
+    def interpret_instance(self,
+                           image,
+                           classifier_fn,
+                           interpret_labels=(1, ),
                            num_samples=1000,
                            batch_size=10,
                            hide_color=None,
@@ -223,8 +221,7 @@ class LimeBase(object):
                            model_regressor=None,
                            segments=None,
                            prior=None,
-                           reg_force=1.0
-                           ):
+                           reg_force=1.0):
         """
         Generates interpretations for a prediction.
         """
@@ -261,28 +258,31 @@ class LimeBase(object):
         else:
             fudged_image[:] = 0
 
-        data, labels = self._data_labels(image, fudged_image, segments,
-                                         classifier_fn, num_samples,
-                                         batch_size=batch_size)
+        data, labels = self._data_labels(
+            image,
+            fudged_image,
+            segments,
+            classifier_fn,
+            num_samples,
+            batch_size=batch_size)
 
         distances = sklearn.metrics.pairwise_distances(
-            data,
-            data[0].reshape(1, -1),
-            metric=distance_metric
-        ).ravel()
+            data, data[0].reshape(1, -1), metric=distance_metric).ravel()
 
         lime_weights = {}
         for l in interpret_labels:
             if prior is None:
-                (_, lime_weights[l], _, _) = self._fitting_data(data, labels, distances, l, model_regressor)
+                (_, lime_weights[l], _, _) = self._fitting_data(
+                    data, labels, distances, l, model_regressor)
             else:
-                (_, lime_weights[l], _, _) = self._fitting_data_with_prior(data, labels, distances, l,
-                                                                           prior, reg_force=reg_force)
+                (_, lime_weights[l], _, _) = self._fitting_data_with_prior(
+                    data, labels, distances, l, prior, reg_force=reg_force)
 
         return lime_weights
 
 
 def compute_segments(image):
-    assert len(image.shape) == 3 and image.shape[-1] == 3, "Shape Error when computing superpixels."
+    assert len(image.shape) == 3 and image.shape[
+        -1] == 3, "Shape Error when computing superpixels."
     segments = quickshift(image, sigma=1)
     return segments

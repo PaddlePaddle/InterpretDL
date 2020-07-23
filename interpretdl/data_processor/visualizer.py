@@ -54,6 +54,10 @@ def visualize_image(image):
         plt.show()
 
 
+def save_image(file_path, image):
+    plt.imsave(file_path, image)
+
+
 def visualize_ig(gradients, img, visual=True, save_path=None):
     gradients = gradients[0].transpose((1, 2, 0))
     interpretation = np.clip(gradients, 0, 1)

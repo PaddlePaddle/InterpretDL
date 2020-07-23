@@ -1,15 +1,13 @@
 import os
 import typing
 from typing import Any, Callable, List, Tuple, Union
+import numpy as np
 
 from .lime import LIMEInterpreter
 from ._lime_base import compute_segments
-from interpretdl.data_processor.readers import preprocess_image, read_image, load_npy_dict_file
-from interpretdl.data_processor.visualizer import show_important_parts, visualize_image
 from ._global_prior_base import precompute_global_prior, use_fast_normlime_as_prior
-
-import matplotlib.pyplot as plt
-import numpy as np
+from ..data_processor.readers import read_image, load_npy_dict_file
+from ..data_processor.visualizer import show_important_parts, visualize_image, save_image
 
 
 class LIMEPriorInterpreter(LIMEInterpreter):
@@ -134,7 +132,7 @@ class LIMEPriorInterpreter(LIMEInterpreter):
             visualize_image(interpretation)
 
         if save_path is not None:
-            plt.imsave(save_path, interpretation)
+            save_image(save_path, interpretation)
 
         self.lime_intermediate_results['probability'] = probability
         self.lime_intermediate_results['input'] = data_instance[0]

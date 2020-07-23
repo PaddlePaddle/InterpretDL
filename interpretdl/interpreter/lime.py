@@ -1,14 +1,13 @@
 import os
 import typing
 from typing import Any, Callable, List, Tuple, Union
-
-from interpretdl.interpreter.abc_interpreter import Interpreter
-from ._lime_base import LimeBase
-from interpretdl.data_processor.readers import preprocess_image, read_image
-from interpretdl.data_processor.visualizer import show_important_parts, visualize_image
-
-import matplotlib.pyplot as plt
 import numpy as np
+
+from ..data_processor.readers import preprocess_image, read_image
+from ..data_processor.visualizer import show_important_parts, visualize_image, save_image
+
+from ._lime_base import LimeBase
+from .abc_interpreter import Interpreter
 
 
 class LIMEInterpreter(Interpreter):
@@ -103,7 +102,7 @@ class LIMEInterpreter(Interpreter):
             visualize_image(interpretation)
 
         if save_path is not None:
-            plt.imsave(save_path, interpretation)
+            save_image(save_path, interpretation)
 
         self.lime_intermediate_results['probability'] = probability
         self.lime_intermediate_results['input'] = data_instance[0]
