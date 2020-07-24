@@ -1,16 +1,15 @@
 import typing
 from typing import Any, Callable, List, Tuple, Union
 
-from interpretdl.interpreter.abc_interpreter import Interpreter
-from interpretdl.data_processor.readers import preprocess_image, read_image
-from interpretdl.data_processor.visualizer import visualize_ig
-
 import IPython.display as display
 import cv2
 import numpy as np
-import paddle.fluid as fluid
 import os, sys
 from PIL import Image
+
+from .abc_interpreter import Interpreter
+from ..data_processor.readers import preprocess_image, read_image
+from ..data_processor.visualizer import visualize_ig
 
 
 class SmoothGradInterpreter(Interpreter):
@@ -110,6 +109,7 @@ class SmoothGradInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
+            import paddle.fluid as fluid
             startup_prog = fluid.Program()
             main_program = fluid.Program()
             with fluid.program_guard(main_program, startup_prog):
