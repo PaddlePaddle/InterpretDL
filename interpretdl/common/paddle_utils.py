@@ -1,10 +1,11 @@
 import os
 import paddle.fluid as fluid
 import numpy as np
-from paddle.fluid.param_attr import ParamAttr
-from interpretdl.data_processor.readers import preprocess_image
-from interpretdl.common.file_utils import download_and_decompress, gen_user_home
 import os.path as osp
+from paddle.fluid.param_attr import ParamAttr
+
+from ..data_processor.readers import preprocess_image
+from .file_utils import download_and_decompress, gen_user_home
 
 
 def paddle_get_fc_weights(var_name="fc_0.w_0"):
@@ -13,7 +14,8 @@ def paddle_get_fc_weights(var_name="fc_0.w_0"):
 
 
 def paddle_resize(extracted_features, outsize):
-    resized_features = fluid.layers.resize_bilinear(extracted_features, outsize)
+    resized_features = fluid.layers.resize_bilinear(extracted_features,
+                                                    outsize)
     return resized_features
 
 
@@ -61,6 +63,7 @@ class FeatureExtractor(object):
     """
     This is only used for NormLIME related interpreters.
     """
+
     def __init__(self):
         self.forward_fn = None
         self.h_pre_model_path = None
@@ -103,14 +106,14 @@ class FeatureExtractor(object):
                 bias_attr=ParamAttr(global_name + bn_name + '_offset'),
                 moving_mean_name=global_name + bn_name + '_mean',
                 moving_variance_name=global_name + bn_name + '_variance',
-                use_global_stats=is_test
-            )
+                use_global_stats=is_test)
 
         startup_prog = fluid.Program()
         prog = fluid.Program()
         with fluid.program_guard(prog, startup_prog):
             with fluid.unique_name.guard():
-                image_op = fluid.data(name='image', shape=[None, 3, 224, 224], dtype='float32')
+                image_op = fluid.data(
+                    name='image', shape=[None, 3, 224, 224], dtype='float32')
 
                 conv = conv_bn_layer(
                     input=image_op,
@@ -134,7 +137,8 @@ class FeatureExtractor(object):
                     act='relu',
                     name='conv1_3')
                 extracted_features = conv
-                resized_features = fluid.layers.resize_bilinear(extracted_features, image_op.shape[2:])
+                resized_features = fluid.layers.resize_bilinear(
+                    extracted_features, image_op.shape[2:])
 
                 prog = prog.clone(for_test=True)
 
@@ -145,8 +149,11 @@ class FeatureExtractor(object):
         fluid.io.load_persistables(exe, self.h_pre_model_path, prog)
 
         def forward_fn(data_content):
-            images = preprocess_image(data_content)  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
-            result = exe.run(prog, fetch_list=[resized_features], feed={'image': images})
+            images = preprocess_image(
+                data_content)  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
+            result = exe.run(prog,
+                             fetch_list=[resized_features],
+                             feed={'image': images})
             return result[0][0]
 
         self.output = resized_features

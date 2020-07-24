@@ -187,7 +187,8 @@ class LimeBase(object):
         if prior is not None:
             w0 = np.zeros(len(used_features)) if prior is None else prior
             w0 = np.array(w0)
-            w0 = w0 / np.sum(np.abs(w0))
+            if np.sum(np.abs(w0)) > 0.0:
+                w0 = w0 / np.sum(np.abs(w0))
         else:
             w0 = np.zeros(len(used_features))
 

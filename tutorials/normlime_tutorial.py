@@ -1,11 +1,14 @@
+import glob
 import sys
 sys.path.append('..')
 
-from tutorials.assets.resnet import ResNet101
+from interpretdl.interpreter._normlime_base import NormLIMEBase
 from interpretdl import LIMEInterpreter
 
+from assets.resnet import ResNet101
 
-def lime_example():
+
+def normlime_example():
     def predict_fn(image_input):
         import paddle.fluid as fluid
         class_num = 1000
@@ -19,12 +22,18 @@ def lime_example():
     # More pretrained models can be found in
     # https://github.com/PaddlePaddle/models/tree/release/1.8/PaddleCV/image_classification
     lime = LIMEInterpreter(predict_fn, "assets/ResNet101_pretrained")
-    lime_weights = lime.interpret(
-        'assets/catdog.png',
-        num_samples=1000,
-        batch_size=100,
-        save_path='assets/catdog_lime.png')
+    lime._paddle_prepare()
+
+    # 10 images are used here for example, but more images should be used.
+    dataset_dir = "assets/ILSVRC2012_images_val/val"
+    image_paths = sorted(glob.glob(dataset_dir + "/*"))
+    image_paths = image_paths[:10]
+
+    normlime = NormLIMEBase(image_paths, lime.predict_fn)
+
+    # this can be very slow.
+    normlime.compute_normlime()
 
 
 if __name__ == '__main__':
-    lime_example()
+    normlime_example()

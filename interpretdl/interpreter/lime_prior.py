@@ -34,8 +34,7 @@ class LIMEPriorInterpreter(LIMEInterpreter):
     def interpreter_init(self,
                          list_file_paths=None,
                          batch_size=0,
-                         weights_file_path=None,
-                         prior_reg_force=1.0):
+                         weights_file_path=None):
         """
         Pre-compute global weights.
         If `weights_file_path` is given and has contents, then skip the pre-compute process and
@@ -60,7 +59,6 @@ class LIMEPriorInterpreter(LIMEInterpreter):
         if not self.paddle_prepared:
             self._paddle_prepare()
 
-        self.prior_reg_force = prior_reg_force
         precomputed_weights = load_npy_dict_file(weights_file_path)
         if precomputed_weights is not None:
             self.global_weights = precomputed_weights
@@ -74,6 +72,7 @@ class LIMEPriorInterpreter(LIMEInterpreter):
     def interpret(self,
                   data_path,
                   interpret_class=None,
+                  prior_reg_force=1.0,
                   num_samples=1000,
                   batch_size=50,
                   visual=True,
@@ -83,6 +82,7 @@ class LIMEPriorInterpreter(LIMEInterpreter):
         Args:
             data_path: The input file path.
             interpret_class: The index of class to interpret. If None, the most likely label will be used.
+            prior_reg_force: The regularization force to apply.
             num_samples: LIME sampling numbers. Larger number of samples usually gives more accurate interpretation.
             batch_size: Number of samples to forward each time.
             visual: Whether or not to visualize the processed image.
@@ -122,7 +122,7 @@ class LIMEPriorInterpreter(LIMEInterpreter):
             num_samples=num_samples,
             batch_size=batch_size,
             prior=prior,
-            reg_force=self.prior_reg_force)
+            reg_force=prior_reg_force)
 
         interpretation = show_important_parts(data_instance[0], lime_weights,
                                               interpret_class[0],

@@ -3,13 +3,11 @@ import typing
 from typing import Any, Callable, List, Tuple, Union
 
 from .abc_interpreter import Interpreter
-from interpretdl.interpreter.abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_image, read_image
 from ..data_processor.visualizer import visualize_grayscale
 
 import matplotlib.pyplot as plt
 import numpy as np
-import paddle.fluid as fluid
 
 
 class OcclusionInterpreter(Interpreter):
