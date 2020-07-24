@@ -8,8 +8,9 @@ from .lime_prior import LIMEPriorInterpreter
 from .gradient_cam import GradCAMInterpreter
 from .integrated_gradients import IntGradInterpreter
 from .smooth_grad import SmoothGradInterpreter
+from .occlusion import OcclusionInterpreter
 
 __all__ = [
     "LIMEInterpreter", "LIMEPriorInterpreter", "GradCAMInterpreter",
-    "IntGradInterpreter", "SmoothGradInterpreter"
+    "IntGradInterpreter", "SmoothGradInterpreter", "OcclusionInterpreter"
 ]
