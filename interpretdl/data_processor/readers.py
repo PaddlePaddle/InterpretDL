@@ -1,5 +1,7 @@
 import os
-import sys; sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import sys
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import cv2
 import numpy as np
 import six
@@ -139,7 +141,10 @@ def _find_classes(dir):
     return classes, class_to_idx
 
 
-def get_typical_dataset_info(dataset_dir, subset="test", shuffle=False, random_seed=None):
+def get_typical_dataset_info(dataset_dir,
+                             subset="test",
+                             shuffle=False,
+                             random_seed=None):
     """
     where {dataset_dir}/{train,test,segmentations}}/{class1, class2, ...}/*.png exists.
 
@@ -153,7 +158,8 @@ def get_typical_dataset_info(dataset_dir, subset="test", shuffle=False, random_s
     Returns:
 
     """
-    IMG_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif', '.tiff', '.webp')
+    IMG_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif',
+                      '.tiff', '.webp')
 
     # read
     set_dir = os.path.join(dataset_dir, subset)
@@ -171,7 +177,10 @@ def get_typical_dataset_info(dataset_dir, subset="test", shuffle=False, random_s
                 continue
 
             image_paths.append(img_path)
-            seg_paths.append(os.path.join(seg_dir, img_path.split('test/')[-1].replace('jpg', 'png')))
+            seg_paths.append(
+                os.path.join(seg_dir,
+                             img_path.split('test/')[-1].replace('jpg',
+                                                                 'png')))
             labels.append(class_to_idx[class_name])
 
             assert os.path.exists(seg_paths[-1]), seg_paths[-1]
@@ -188,3 +197,15 @@ def get_typical_dataset_info(dataset_dir, subset="test", shuffle=False, random_s
         labels = labels[random_per]
 
     return image_paths, seg_paths, labels, len(class_names)
+
+
+def restore_image(img):
+    mean = [0.485, 0.456, 0.406]
+    std = [0.229, 0.224, 0.225]
+    img_mean = np.array(mean).reshape((3, 1, 1))
+    img_std = np.array(std).reshape((3, 1, 1))
+    img *= img_std
+    img += img_mean
+    img *= 255
+    img = np.uint8(img.transpose((0, 2, 3, 1)))
+    return img

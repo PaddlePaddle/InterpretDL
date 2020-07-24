@@ -4,7 +4,7 @@ import numpy as np
 import os, sys
 
 from .abc_interpreter import Interpreter
-from ..data_processor.readers import preprocess_image, read_image
+from ..data_processor.readers import preprocess_image, read_image, restore_image
 from ..data_processor.visualizer import visualize_ig
 
 
@@ -93,6 +93,9 @@ class IntGradInterpreter(Interpreter):
         if isinstance(data, str):
             img = read_image(data, crop_size=self.model_input_shape[1])
             data = preprocess_image(img)
+
+        else:
+            img = restore_image(data.copy())
 
         self.data_type = np.array(data).dtype
 
