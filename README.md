@@ -54,9 +54,10 @@ We are planning to implement the algorithms below (categorized into sensitivity 
 
 - [x] LIME
 - [x] FastNormLIME
-- [ ] NormLIME
+- [x] NormLIME
 - [x] LIMEPrior
-- [ ] SmoothGrad
+- [x] SmoothGrad
+- [x] Occlusion
 - [ ] DeepLIFT
 - [ ] SHAP
 - [x] GradCAM
