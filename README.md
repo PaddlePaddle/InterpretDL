@@ -26,7 +26,7 @@ Interpretation algorithms give a hint of why the black-box model makes this deci
 
 * [Demo](#demo)
 * [Installation](#Installation)
-    * [Pip installation](#)
+    * [Pip installation](#pip-installation)
     * [Developer installation](#developer-installation)
 * [Documentation](#Documentation)
 * [Usage Guideline](#Usage-Guideline)
@@ -55,8 +55,8 @@ pip install interpretdl -i https://mirror.baidu.com/pypi/simple
 git clone https://github.com/PaddlePaddle/InterpretDL.git
 # ... fix bugs or add new features
 python setup.py install
+# welcome to propose pull request and contribute
 ```
-
 
 
 # Documentation
