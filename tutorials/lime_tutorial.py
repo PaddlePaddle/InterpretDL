@@ -6,7 +6,7 @@ from interpretdl import LIMEInterpreter
 
 
 def lime_example():
-    def predict_fn(image_input):
+    def paddle_model(image_input):
         import paddle.fluid as fluid
         class_num = 1000
         model = ResNet101()
@@ -18,7 +18,7 @@ def lime_example():
     # http://paddle-imagenet-models-name.bj.bcebos.com/ResNet101_pretrained.tar
     # More pretrained models can be found in
     # https://github.com/PaddlePaddle/models/tree/release/1.8/PaddleCV/image_classification
-    lime = LIMEInterpreter(predict_fn, "assets/ResNet101_pretrained")
+    lime = LIMEInterpreter(paddle_model, "assets/ResNet101_pretrained")
     lime_weights = lime.interpret(
         'assets/catdog.png',
         num_samples=1000,

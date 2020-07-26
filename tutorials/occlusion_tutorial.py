@@ -9,7 +9,7 @@ import numpy as np
 
 
 def occlusion_example():
-    def predict_fn(image_input):
+    def paddle_model(image_input):
         import paddle.fluid as fluid
 
         class_num = 1000
@@ -25,7 +25,7 @@ def occlusion_example():
     # https://github.com/PaddlePaddle/models/tree/release/1.8/PaddleCV/image_classification
     img_path = 'assets/catdog.png'
 
-    oc = OcclusionInterpreter(predict_fn, "assets/ResNet50_pretrained")
+    oc = OcclusionInterpreter(paddle_model, "assets/ResNet50_pretrained")
     attributions = oc.interpret(
         img_path,
         sliding_window_shapes=(1, 30, 30),

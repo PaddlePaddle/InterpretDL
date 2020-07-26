@@ -8,7 +8,7 @@ import glob
 
 
 def lime_gp_example():
-    def predict_fn(image_input):
+    def paddle_model(image_input):
         import paddle.fluid as fluid
 
         class_num = 1000
@@ -32,7 +32,7 @@ def lime_gp_example():
     image_paths = image_paths[:1000]
 
     limegp = LIMEPriorInterpreter(
-        predict_fn, trained_model, prior_method="ridge")
+        paddle_model, trained_model, prior_method="ridge")
     limegp.interpreter_init(
         image_paths, batch_size=100, weights_file_path="assets/gp_weights.npy")
     lime_weights = limegp.interpret(

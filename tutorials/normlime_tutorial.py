@@ -9,7 +9,7 @@ from assets.resnet import ResNet101
 
 
 def normlime_example():
-    def predict_fn(image_input):
+    def paddle_model(image_input):
         import paddle.fluid as fluid
         class_num = 1000
         model = ResNet101()
@@ -21,7 +21,7 @@ def normlime_example():
     # http://paddle-imagenet-models-name.bj.bcebos.com/ResNet101_pretrained.tar
     # More pretrained models can be found in
     # https://github.com/PaddlePaddle/models/tree/release/1.8/PaddleCV/image_classification
-    lime = LIMEInterpreter(predict_fn, "assets/ResNet101_pretrained")
+    lime = LIMEInterpreter(paddle_model, "assets/ResNet101_pretrained")
     lime._paddle_prepare()
 
     # 10 images are used here for example, but more images should be used.

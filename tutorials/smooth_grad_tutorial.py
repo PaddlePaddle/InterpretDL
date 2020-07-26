@@ -14,7 +14,7 @@ import cv2
 
 
 def smooth_grad_example():
-    def predict_fn(data):
+    def paddle_model(data):
         class_num = 1000
         model = ResNet50()
         logits = model.net(input=data, class_dim=class_num)
@@ -23,7 +23,7 @@ def smooth_grad_example():
         return probs
 
     img_path = 'assets/deer.png'
-    sg = SmoothGradInterpreter(predict_fn, "assets/ResNet50_pretrained")
+    sg = SmoothGradInterpreter(paddle_model, "assets/ResNet50_pretrained")
     gradients = sg.interpret(img_path, visual=True, save_path='sg_test.jpg')
 
     # optional
