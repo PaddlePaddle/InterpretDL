@@ -23,8 +23,7 @@ class SmoothGradInterpreter(Interpreter):
     def __init__(self,
                  paddle_model,
                  trained_model_path,
-                 class_num,
-                 use_cuda,
+                 use_cuda=True,
                  model_input_shape=[3, 224, 224]):
         """
         Initialize the IntGradInterpreter
@@ -42,7 +41,6 @@ class SmoothGradInterpreter(Interpreter):
                             probs = fluid.layers.softmax(logits, axis=-1)
                             return probs
             trained_model_path: The pretrained model directory.
-            class_num: Number of classes for the model.
             use_cuda: Whether or not to use cuda.
             model_input_shape: The input shape of the model
 
@@ -51,7 +49,6 @@ class SmoothGradInterpreter(Interpreter):
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
         self.trained_model_path = trained_model_path
-        self.class_num = class_num
         self.use_cuda = use_cuda
         self.model_input_shape = model_input_shape
         self.data_type = 'float32'

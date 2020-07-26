@@ -23,8 +23,7 @@ def int_grad_example():
 
     img_path = 'assets/fireboat.png'
     #https://github.com/PaddlePaddle/models/tree/release/1.8/PaddleCV/image_classification
-    ig = IntGradInterpreter(paddle_model, "assets/ResNet50_pretrained", 1000,
-                            True)
+    ig = IntGradInterpreter(paddle_model, "assets/ResNet50_pretrained", True)
     gradients = ig.interpret(
         img_path,
         label=None,

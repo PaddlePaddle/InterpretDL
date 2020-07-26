@@ -1,4 +1,6 @@
 from assets.resnet import ResNet50
+from assets.resnet_vc import ResNet50_vc
+from assets.efficientnet import EfficientNetB0_Small
 from assets.bilstm import bilstm_net
 import paddle.fluid as fluid
 import numpy as np
@@ -13,7 +15,6 @@ import cv2
 
 def smooth_grad_example():
     def predict_fn(data):
-
         class_num = 1000
         model = ResNet50()
         logits = model.net(input=data, class_dim=class_num)
@@ -22,15 +23,8 @@ def smooth_grad_example():
         return probs
 
     img_path = 'assets/deer.png'
-    sg = SmoothGradInterpreter(predict_fn, "assets/ResNet50_pretrained", 1000,
-                               True)
-    gradients = sg.interpret(
-        img_path,
-        label=None,
-        noise_amout=0.1,
-        n_samples=50,
-        visual=True,
-        save_path='sg_test.jpg')
+    sg = SmoothGradInterpreter(predict_fn, "assets/ResNet50_pretrained")
+    gradients = sg.interpret(img_path, visual=True, save_path='sg_test.jpg')
 
     # optional
     visualize_grayscale(gradients, save_path='sg_gray.jpg')

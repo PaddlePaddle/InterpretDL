@@ -22,9 +22,8 @@ class GradCAMInterpreter(Interpreter):
     def __init__(self,
                  paddle_model,
                  trained_model_path,
-                 class_num,
                  target_layer_name,
-                 use_cuda,
+                 use_cuda=True,
                  model_input_shape=[3, 224, 224]) -> None:
         """
         Initialize the GradCAMInterpreter
@@ -41,7 +40,6 @@ class GradCAMInterpreter(Interpreter):
                         probs = fluid.layers.softmax(logits, axis=-1)
                         return probs
             trained_model_path: The pretrained model directory.
-            class_num: Number of classes for the model.
             target_layer_name: The target layer to calculate gradients.
             use_cuda: Whether or not to use cuda.
             model_input_shape: The input shape of the model
@@ -49,7 +47,6 @@ class GradCAMInterpreter(Interpreter):
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
         self.trained_model_path = trained_model_path
-        self.class_num = class_num
         self.target_layer_name = target_layer_name
         self.use_cuda = use_cuda
         self.model_input_shape = model_input_shape
@@ -146,7 +143,8 @@ class GradCAMInterpreter(Interpreter):
                         if v.name == self.target_layer_name:
                             conv = v
 
-                    one_hot = fluid.layers.one_hot(label_op, self.class_num)
+                    class_num = probs.shape[-1]
+                    one_hot = fluid.layers.one_hot(label_op, class_num)
                     one_hot = fluid.layers.elementwise_mul(probs, one_hot)
                     target_category_loss = fluid.layers.reduce_sum(one_hot)
                     # target_category_loss = - fluid.layers.cross_entropy(probs, label_op)[0]
