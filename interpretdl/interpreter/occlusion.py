@@ -118,7 +118,7 @@ class OcclusionInterpreter(Interpreter):
                         name='image',
                         shape=[None] + self.model_input_shape,
                         dtype='float32')
-                    probs = self.paddle_model(image_input=image_op)
+                    probs = self.paddle_model(image_op)
                     if isinstance(probs, tuple):
                         probs = probs[0]
                     main_program = main_program.clone(for_test=True)
