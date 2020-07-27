@@ -100,8 +100,8 @@ class LimeBase(object):
             key=lambda x: np.abs(x[1]),
             reverse=True), prediction_score, local_pred)
 
-    def _data_labels(self, image, fudged_image, segments, classifier_fn,
-                     num_samples, batch_size):
+    def _data_labels(self, image, segments, classifier_fn, num_samples,
+                     batch_size, hide_color, distance_metric):
         """Generates images and predictions in the neighborhood of this image.
 
         Args:
@@ -119,6 +119,32 @@ class LimeBase(object):
                 data: dense num_samples * num_superpixels
                 labels: prediction probabilities matrix
         """
+
+        fudged_image = image.copy()
+        if hide_color is None:
+            # if no hide_color, use the mean
+            for x in np.unique(segments):
+                mx = np.mean(image[segments == x], axis=0)
+                fudged_image[segments == x] = mx
+        elif hide_color == 'avg_from_neighbor':
+            from scipy.spatial.distance import cdist
+
+            n_features = np.unique(segments).shape[0]
+            regions = regionprops(segments + 1)
+            centroids = np.zeros((n_features, 2))
+            for i, x in enumerate(regions):
+                centroids[i] = np.array(x.centroid)
+
+            d = cdist(centroids, centroids, 'sqeuclidean')
+
+            for x in np.unique(segments):
+                # print(np.argmin(d[x]))
+                a = [image[segments == i] for i in np.argsort(d[x])[1:6]]
+                mx = np.mean(np.concatenate(a), axis=0)
+                fudged_image[segments == x] = mx
+        else:
+            fudged_image[:] = 0
+
         n_features = np.unique(segments).shape[0]
         data = self.random_state.randint(0, 2, num_samples * n_features) \
             .reshape((num_samples, n_features))
@@ -144,7 +170,11 @@ class LimeBase(object):
         if len(imgs) > 0:
             preds = classifier_fn(np.array(imgs))
             labels.extend(preds)
-        return data, np.array(labels)
+
+        distances = sklearn.metrics.pairwise_distances(
+            data, data[0].reshape(1, -1), metric=distance_metric).ravel()
+
+        return data, np.array(labels), distances
 
     def _fitting_data_with_prior(self,
                                  neighborhood_data,
@@ -234,41 +264,9 @@ class LimeBase(object):
 
         self.segments = segments
 
-        fudged_image = image.copy()
-        if hide_color is None:
-            # if no hide_color, use the mean
-            for x in np.unique(segments):
-                mx = np.mean(image[segments == x], axis=0)
-                fudged_image[segments == x] = mx
-        elif hide_color == 'avg_from_neighbor':
-            from scipy.spatial.distance import cdist
-
-            n_features = np.unique(segments).shape[0]
-            regions = regionprops(segments + 1)
-            centroids = np.zeros((n_features, 2))
-            for i, x in enumerate(regions):
-                centroids[i] = np.array(x.centroid)
-
-            d = cdist(centroids, centroids, 'sqeuclidean')
-
-            for x in np.unique(segments):
-                # print(np.argmin(d[x]))
-                a = [image[segments == i] for i in np.argsort(d[x])[1:6]]
-                mx = np.mean(np.concatenate(a), axis=0)
-                fudged_image[segments == x] = mx
-        else:
-            fudged_image[:] = 0
-
-        data, labels = self._data_labels(
-            image,
-            fudged_image,
-            segments,
-            classifier_fn,
-            num_samples,
-            batch_size=batch_size)
-
-        distances = sklearn.metrics.pairwise_distances(
-            data, data[0].reshape(1, -1), metric=distance_metric).ravel()
+        data, labels, distances = self._data_labels(
+            image, segments, classifier_fn, num_samples, batch_size,
+            hide_color, distance_metric)
 
         lime_weights = {}
         for l in interpret_labels:
