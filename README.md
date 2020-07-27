@@ -18,7 +18,10 @@ It also contains (and will contain) SOTA and new interpretation algorithms.
 
 Interpretation algorithms give a hint of why the black-box model makes this decision.
 
-[ADD SOME FIGURES]
+The following table gives visualizations of several interpretation algorithms applied to the original image with respect to the label "bull_mastiff."
+Original Image | Integrated Gradients | SmoothGrad | LIME | Grad-CAM
+:--------------:|:-----------:|:-----------:|:-----------:|:-----------:
+![](imgs/catdog.jpg)|![](imgs/catdog_ig.jpg)|![](imgs/catdog_sg.jpg)|![](imgs/catdog_lime.jpg)|![](imgs/catdog_gradcam.jpg)
 
 
 
