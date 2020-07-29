@@ -13,6 +13,7 @@ import numpy as np
 class OcclusionInterpreter(Interpreter):
     """
     Occlusion Interpreter.
+
     More details regarding the Occlusion method can be found in the original paper:
     https://arxiv.org/abs/1311.2901
     """

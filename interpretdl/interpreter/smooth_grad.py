@@ -14,10 +14,10 @@ from ..data_processor.visualizer import visualize_ig
 
 class SmoothGradInterpreter(Interpreter):
     """
-    Integrated Gradients Interpreter.
+    Smooth Gradients Interpreter.
 
-    More details regarding the Integrated Gradients method can be found in the original paper:
-    http://proceedings.mlr.press/v70/sundararajan17a/sundararajan17a.pdf
+    More details regarding the Smooth Gradients method can be found in the original paper:
+    http://arxiv.org/pdf/1706.03825.pdf
     """
 
     def __init__(self,

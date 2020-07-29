@@ -40,24 +40,28 @@ class GradCAMInterpreter(Interpreter):
                         probs = fluid.layers.softmax(logits, axis=-1)
                         return probs
             trained_model_path: The pretrained model directory.
-            target_layer_name: The target layer to calculate gradients.
             use_cuda: Whether or not to use cuda.
             model_input_shape: The input shape of the model
         """
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
         self.trained_model_path = trained_model_path
-        self.target_layer_name = target_layer_name
         self.use_cuda = use_cuda
         self.model_input_shape = model_input_shape
         self.paddle_prepared = False
 
-    def interpret(self, data, label=None, visual=True, save_path=None):
+    def interpret(self,
+                  data,
+                  target_layer_name,
+                  label=None,
+                  visual=True,
+                  save_path=None):
         """
         Main function of the interpreter.
 
         Args:
-            img_path: The input image filepath or numpy array.
+            data: The input image filepath or numpy array.
+            target_layer_name: The target layer to calculate gradients.
             label: The target label to analyze. If None, the most likely label will be used.
             visual: Whether or not to visualize the processed image.
             save_path: The filepath to save the processed image. If None, the image will not be saved.
@@ -76,6 +80,7 @@ class GradCAMInterpreter(Interpreter):
         else:
             org = data.copy
 
+        self.target_layer_name = target_layer_name
         self.label = label
 
         if not self.paddle_prepared:

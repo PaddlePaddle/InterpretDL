@@ -3,5 +3,6 @@ from .interpreter import *
 
 __all__ = [
     "LIMEInterpreter", "LIMEPriorInterpreter", "GradCAMInterpreter",
-    "IntGradInterpreter", "SmoothGradInterpreter", "OcclusionInterpreter"
+    "IntGradInterpreter", "SmoothGradInterpreter", "OcclusionInterpreter",
+    "GradShapInterpreter"
 ]

@@ -13,6 +13,18 @@ Integrated Gradients
 .. autoclass:: interpretdl.IntGradInterpreter
    :members:
 
+Smooth Gradients
+----------------
+
+.. autoclass:: interpretdl.SmoothGradInterpreter
+   :members:
+
+Gradient Shap
+-------------
+
+.. autoclass:: interpretdl.GradShapInterpreter
+   :members:
+
 Features
 ========
 
@@ -26,4 +38,10 @@ LIME With Global Prior
 --------------------
 
 .. autoclass:: interpretdl.LIMEPriorInterpreter
+   :members:
+
+Occlusion
+---------
+
+.. autoclass:: interpretdl.OcclusionInterpreter
    :members:

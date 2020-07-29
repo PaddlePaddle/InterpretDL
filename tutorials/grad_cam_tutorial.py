@@ -17,9 +17,10 @@ def grad_cam_example():
         return probs
 
     gradcam = GradCAMInterpreter(paddle_model, "assets/ResNet50_pretrained",
-                                 'res5c.add.output.5.tmp_0', True)
+                                 True)
     gradcam.interpret(
         'assets/catdog.png',
+        'res5c.add.output.5.tmp_0',
         label=None,
         visual=True,
         save_path='gradcam_test.jpg')

@@ -57,6 +57,7 @@ class GradShapInterpreter(Interpreter):
                   save_path=None):
         """
         Main function of the interpreter.
+
         Args:
             data: The image filepath or processed image.
             label: The target label to analyze. If None, the most likely label will be used.
