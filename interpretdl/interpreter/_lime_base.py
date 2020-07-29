@@ -195,7 +195,7 @@ class LimeBase(object):
         easy_model = model_regressor
 
         X = np.float32(neighborhood_data[:, used_features])
-        y = labels_column
+        y = np.copy(labels_column)
 
         # pre-process
         X_offset = np.average(X, axis=0, weights=weights)
