@@ -104,8 +104,6 @@ def precompute_global_prior(test_set_file_list,
 
     if gp_method.lower() == 'ridge':
         global_weights_all_labels = ridge_regressor(x_data, y_labels, softmax)
-    elif gp_method.lower() == 'normlime':
-        global_weights_all_labels = ridge_regressor(x_data, y_labels, softmax)
     else:
         return None
 

@@ -16,3 +16,10 @@ tutorials/assets/ResNet101_pretrained
 
 # misc
 .DS_Store
+
+# results
+*.npy
+*.npz
+*.png
+*.jpg
+*.jpeg
