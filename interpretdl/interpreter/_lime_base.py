@@ -200,12 +200,12 @@ class LimeBase(object):
         # pre-process
         X_offset = np.average(X, axis=0, weights=weights)
         X -= X_offset
-        X, X_scale = normalize(X, axis=0, copy=False, return_norm=True)
+        X, X_scale = normalize(X, axis=0, copy=True, return_norm=True)
 
         y_offset = np.average(y, axis=0, weights=weights)
         y -= y_offset
         y = np.reshape(y, (-1, 1))
-        y, y_scale = normalize(y, axis=0, copy=False, return_norm=True)
+        y, y_scale = normalize(y, axis=0, copy=True, return_norm=True)
         y = np.reshape(y, (-1))
 
         if weights is not None:
