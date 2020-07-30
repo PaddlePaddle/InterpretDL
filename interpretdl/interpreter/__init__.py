@@ -10,9 +10,10 @@ from .integrated_gradients import IntGradInterpreter
 from .smooth_grad import SmoothGradInterpreter
 from .occlusion import OcclusionInterpreter
 from .gradient_shap import GradShapInterpreter
+from .forgetting_events import ForgettingEventsInterpreter
 
 __all__ = [
     "LIMEInterpreter", "LIMEPriorInterpreter", "GradCAMInterpreter",
     "IntGradInterpreter", "SmoothGradInterpreter", "OcclusionInterpreter",
-    "GradShapInterpreter"
+    "GradShapInterpreter", "ForgettingEventsInterpreter"
 ]
