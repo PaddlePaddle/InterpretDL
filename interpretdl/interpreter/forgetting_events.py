@@ -5,9 +5,7 @@ import paddle.fluid as fluid
 import typing
 from typing import Any, Callable, List, Tuple, Union
 
-from interpretdl.interpreter.abc_interpreter import Interpreter
-from interpretdl.data_processor.readers import preprocess_image, read_image, restore_image
-from interpretdl.data_processor.visualizer import visualize_ig
+from .abc_interpreter import Interpreter
 
 import IPython.display as display
 import cv2
