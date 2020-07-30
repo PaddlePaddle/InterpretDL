@@ -45,3 +45,12 @@ Occlusion
 
 .. autoclass:: interpretdl.OcclusionInterpreter
    :members:
+
+Other
+=====
+
+Forgetting events
+-----------------
+
+.. autoclass:: interpretdl.ForgettingEventsInterpreter
+   :members:
