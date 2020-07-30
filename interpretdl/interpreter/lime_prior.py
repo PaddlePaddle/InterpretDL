@@ -11,6 +11,10 @@ from ..data_processor.visualizer import show_important_parts, visualize_image, s
 
 
 class LIMEPriorInterpreter(LIMEInterpreter):
+    """
+    LIME Prior Interpreter.
+    """
+
     def __init__(self,
                  paddle_model: Callable,
                  trained_model_path: str,
@@ -18,13 +22,19 @@ class LIMEPriorInterpreter(LIMEInterpreter):
                  prior_method="none",
                  use_cuda=True) -> None:
         """
-
         Args:
-            paddle_model:
-            trained_model_path:
-            model_input_shape:
-            prior_method:
-            use_cuda:
+            paddle_model (callable): A user-defined function that gives access to model predictions.
+                It takes the following arguments:
+
+                - data: Data input.
+                and outputs predictions. See the example at the end of ``interpret()``.
+            trained_model_path (str): The pretrained model directory. It will be loaded by ``fluid.io.load_persistables``.
+            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
+            prior_method: Prior method. Can be chosen from ``{"none", "ridge"}``.
+                Defaults to ``"none"``, which is equivalent to LIME.
+                If ``"none"``, ``interpret()`` will use zeros as prior;
+                Otherwise, the loaded prior will be used.
+            use_cuda: Whether to use CUDA. Defaults to ``True``.
         """
         LIMEInterpreter.__init__(self, paddle_model, trained_model_path,
                                  model_input_shape, use_cuda)
@@ -37,7 +47,8 @@ class LIMEPriorInterpreter(LIMEInterpreter):
                          weights_file_path=None):
         """
         Pre-compute global weights.
-        If `weights_file_path` is given and has contents, then skip the pre-compute process and
+
+        If ``weights_file_path`` is given and has contents, then skip the pre-compute process and
         read the content as the global weights; else the pre-compute process should be performed
         with `list_file_paths`. After the pre-compute process, if `weights_file_path` is given,
         then the prec-computed weights will be saved in this path for skipping the pre-compute
@@ -45,11 +56,12 @@ class LIMEPriorInterpreter(LIMEInterpreter):
         This is an additional step that LIMEPrior Interpreter has to perform before interpretation.
 
         Args:
-            list_file_paths:
-            batch_size:
-            weights_file_path:
+            list_file_paths: List of files used to compute the global prior.
+            batch_size: Number of samples to forward each time.
+            weights_file_path: Path to load as prior.
 
         Returns:
+            None.
 
         """
 
@@ -78,6 +90,7 @@ class LIMEPriorInterpreter(LIMEInterpreter):
                   visual=True,
                   save_path=None):
         """
+        Note that for LIME prior interpreter, ``interpreter_init()`` needs to be called before calling ``interpret()``.
 
         Args:
             data_path: The input file path.
@@ -89,7 +102,28 @@ class LIMEPriorInterpreter(LIMEInterpreter):
             save_path: The path to save the processed image. If None, the image will not be saved.
 
         Returns:
-            lime_weights: a dict {interpret_label_i: weights on features}
+            ``dict``: LIME Prior weights: {interpret_label_i: weights on features}
+
+        Example::
+
+            def paddle_model(data):
+                import paddle.fluid as fluid
+                class_num = 1000
+                model = ResNet50()
+                logits = model.net(input=image_input, class_dim=class_num)
+                probs = fluid.layers.softmax(logits, axis=-1)
+                return probs
+
+            limegp = LIMEPriorInterpreter(
+                paddle_model, trained_model, prior_method="ridge")
+            limegp.interpreter_init(
+                image_paths, batch_size=100, weights_file_path="assets/gp_weights.npy")
+            lime_weights = limegp.interpret(
+                image_paths[0],
+                num_samples=1000,
+                batch_size=100,
+                save_path='assets/lime_gp.png',
+                prior_reg_force=1.0)
 
         """
         if self.global_weights is None and self.prior_method != "none":

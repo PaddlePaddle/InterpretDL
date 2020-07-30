@@ -41,6 +41,7 @@ class GradCAMInterpreter(Interpreter):
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
         self.trained_model_path = trained_model_path
+        self.target_layer_name = target_layer_name
         self.use_cuda = use_cuda
         self.model_input_shape = model_input_shape
         self.paddle_prepared = False

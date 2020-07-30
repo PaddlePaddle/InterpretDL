@@ -68,19 +68,22 @@ class LIMEInterpreter(Interpreter):
         Returns:
             a dict whose key is interpret_label_i and value is weights on features: lime_weights
 
-        >>> def paddle_model(data):
-        ...     import paddle.fluid as fluid
-        ...     class_num = 1000
-        ...     model = ResNet50()
-        ...     logits = model.net(input=image_input, class_dim=class_num)
-        ...     probs = fluid.layers.softmax(logits, axis=-1)
-        ...     return probs
-        >>> lime = LIMEInterpreter(paddle_model, "assets/ResNet101_pretrained")
-        >>> lime_weights = lime.interpret(
-        ...         'assets/catdog.png',
-        ...         num_samples=1000,
-        ...         batch_size=100,
-        ...         save_path='assets/catdog_lime.png')
+        Example::
+
+            def paddle_model(data):
+                import paddle.fluid as fluid
+                class_num = 1000
+                model = ResNet50()
+                logits = model.net(input=image_input, class_dim=class_num)
+                probs = fluid.layers.softmax(logits, axis=-1)
+                return probs
+            lime = LIMEInterpreter(paddle_model, "assets/ResNet101_pretrained")
+            lime_weights = lime.interpret(
+                    'assets/catdog.png',
+                    num_samples=1000,
+                    batch_size=100,
+                    save_path='assets/catdog_lime.png')
+
         """
         if not self.paddle_prepared:
             self._paddle_prepare()
