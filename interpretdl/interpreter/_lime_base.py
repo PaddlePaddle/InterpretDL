@@ -34,7 +34,7 @@ from skimage.color import gray2rgb
 from sklearn.linear_model import Ridge
 from sklearn.utils import check_random_state
 from sklearn.preprocessing import normalize
-from sklearn.metrics import r2_score
+from sklearn.metrics import r2_score, pairwise_distances
 
 import copy
 from functools import partial
@@ -243,7 +243,6 @@ class LimeBase(object):
             y_pred,
             sample_weight=weights,
             multioutput='variance_weighted')
-        print(predict_r2_score)
 
         if self.verbose:
             print('Intercept', easy_model.intercept_)
