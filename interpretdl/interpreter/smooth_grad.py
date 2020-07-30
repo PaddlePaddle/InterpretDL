@@ -26,14 +26,14 @@ class SmoothGradInterpreter(Interpreter):
                  use_cuda=True,
                  model_input_shape=[3, 224, 224]):
         """
-        Initialize the IntGradInterpreter
+        Initialize the SmoothGradInterpreter.
 
         Args:
             paddle_model (callable): A user-defined function that gives access to model predictions.
                     It takes the following arguments:
 
                     - data: Data input.
-                    and outputs predictions.
+                    and outputs predictions. See the example at the end of ``interpret()``.
             trained_model_path (str): The pretrained model directory.
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
@@ -68,15 +68,17 @@ class SmoothGradInterpreter(Interpreter):
         Returns:
             numpy.ndarray: avg_gradients
 
-        >>> def paddle_model(data):
-        ...     import paddle.fluid as fluid
-        ...     class_num = 1000
-        ...     model = ResNet50()
-        ...     logits = model.net(input=image_input, class_dim=class_num)
-        ...     probs = fluid.layers.softmax(logits, axis=-1)
-        ...     return probs
-        >>> sg = SmoothGradInterpreter(paddle_model, "assets/ResNet50_pretrained")
-        >>> gradients = sg.interpret(img_path, visual=True, save_path='sg_test.jpg')
+        Example::
+
+            def paddle_model(data):
+                import paddle.fluid as fluid
+                class_num = 1000
+                model = ResNet50()
+                logits = model.net(input=image_input, class_dim=class_num)
+                probs = fluid.layers.softmax(logits, axis=-1)
+                return probs
+            sg = SmoothGradInterpreter(paddle_model, "assets/ResNet50_pretrained")
+            gradients = sg.interpret(img_path, visual=True, save_path='sg_test.jpg')
         """
 
         # Read in image

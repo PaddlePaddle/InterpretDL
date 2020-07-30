@@ -24,11 +24,13 @@ class OcclusionInterpreter(Interpreter):
                  model_input_shape=[3, 224, 224],
                  use_cuda=True) -> None:
         """
+        Initialize the OcclusionInterpreter.
+
         Args:
             paddle_model (callable): A user-defined function that gives access to model predictions. It takes the following arguments:
 
                     - data: Data inputs.
-                    and outputs predictions.
+                    and outputs predictions. See the example at the end of ``interpret()``.
 
             trained_model_path (str): The pretrained model directory.
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
@@ -52,6 +54,8 @@ class OcclusionInterpreter(Interpreter):
                   visual=True,
                   save_path=None):
         """
+        Main function of the interpreter.
+
         Args:
             data (str or numpy.ndarray): The image filepath or processed image.
             sliding_window_shapes (tuple): Shape of sliding windows to occlude data.
@@ -66,23 +70,25 @@ class OcclusionInterpreter(Interpreter):
         Returns:
             numpy.ndarray: total_attrib
 
-        >>> def paddle_model(data):
-        ...     import paddle.fluid as fluid
-        ...     class_num = 1000
-        ...     model = ResNet50()
-        ...     logits = model.net(input=image_input, class_dim=class_num)
-        ...     probs = fluid.layers.softmax(logits, axis=-1)
-        ...     return probs
-        >>> oc = OcclusionInterpreter(paddle_model, "assets/ResNet50_pretrained")
-        >>> attributions = oc.interpret(
-        ...         'assets/catdog.png',
-        ...         sliding_window_shapes=(1, 30, 30),
-        ...         interpret_class=None,
-        ...         strides=(1, 10, 10),
-        ...         baseline=None,
-        ...         perturbations_per_eval=5,
-        ...         visual=True,
-        ...         save_path='occlusion_gray.jpg')
+        Example::
+
+            def paddle_model(data):
+                import paddle.fluid as fluid
+                class_num = 1000
+                model = ResNet50()
+                logits = model.net(input=image_input, class_dim=class_num)
+                probs = fluid.layers.softmax(logits, axis=-1)
+                return probs
+            oc = OcclusionInterpreter(paddle_model, "assets/ResNet50_pretrained")
+            attributions = oc.interpret(
+                    'assets/catdog.png',
+                    sliding_window_shapes=(1, 30, 30),
+                    interpret_class=None,
+                    strides=(1, 10, 10),
+                    baseline=None,
+                    perturbations_per_eval=5,
+                    visual=True,
+                    save_path='occlusion_gray.jpg')
         """
         if not self.paddle_prepared:
             self._paddle_prepare()

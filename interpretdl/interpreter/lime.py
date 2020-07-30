@@ -30,7 +30,7 @@ class LIMEInterpreter(Interpreter):
                     It takes the following arguments:
 
                     - data: Data inputs.
-                    and outputs predictions
+                    and outputs predictions. See the example at the end of ``interpret()``.
             trained_model_path (str): The pretrained model directory.
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
@@ -56,6 +56,7 @@ class LIMEInterpreter(Interpreter):
                   visual=True,
                   save_path=None):
         """
+        Main function of the interpreter.
 
         Args:
             data_path (str): The input file path.
@@ -66,7 +67,7 @@ class LIMEInterpreter(Interpreter):
             save_path (str, optional): The path to save the processed image. If None, the image will not be saved. Default: None
 
         Returns:
-            a dict whose key is interpret_label_i and value is weights on features: lime_weights
+            ``dict``: LIME Prior weights: {interpret_label_i: weights on features}
 
         Example::
 

@@ -21,14 +21,14 @@ class GradShapInterpreter(Interpreter):
                  use_cuda,
                  model_input_shape=[3, 224, 224]) -> None:
         """
-        Initialize the GradShapInterpreter
+        Initialize the GradShapInterpreter.
 
         Args:
             paddle_model (callable): A user-defined function that gives access to model predictions.
                 It takes the following arguments:
 
                 - data: Data inputs.
-                and outputs predictions.
+                and outputs predictions. See the example at the end of ``interpret()``.
             trained_model_path (str): The pretrained model directory.
             class_num (int): Number of classes for the model.
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
@@ -65,21 +65,23 @@ class GradShapInterpreter(Interpreter):
         Returns:
             numpy.ndarray: avg_attributions
 
-        >>> def paddle_model(data):
-        ...     import paddle.fluid as fluid
-        ...     class_num = 1000
-        ...     model = ResNet50()
-        ...     logits = model.net(input=image_input, class_dim=class_num)
-        ...     probs = fluid.layers.softmax(logits, axis=-1)
-        ...     return probs
-        >>> gs = GradShapInterpreter(predict_fn, "assets/ResNet50_pretrained", 1000, True)
-        >>> avg_attributions = gs.interpret(
-        ...                     img_path,
-        ...                     label=None,
-        ...                     noise_amout=0.1,
-        ...                     n_samples=5,
-        ...                     visual=True,
-        ...                     save_path='grad_shap_test.jpg')
+        Example::
+
+            def paddle_model(data):
+                import paddle.fluid as fluid
+                class_num = 1000
+                model = ResNet50()
+                logits = model.net(input=image_input, class_dim=class_num)
+                probs = fluid.layers.softmax(logits, axis=-1)
+                return probs
+            gs = GradShapInterpreter(predict_fn, "assets/ResNet50_pretrained", 1000, True)
+            avg_attributions = gs.interpret(
+                                img_path,
+                                label=None,
+                                noise_amout=0.1,
+                                n_samples=5,
+                                visual=True,
+                                save_path='grad_shap_test.jpg')
         """
 
         def add_noise_to_inputs():

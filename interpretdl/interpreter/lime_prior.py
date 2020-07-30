@@ -93,13 +93,13 @@ class LIMEPriorInterpreter(LIMEInterpreter):
         Note that for LIME prior interpreter, ``interpreter_init()`` needs to be called before calling ``interpret()``.
 
         Args:
-            data_path: The input file path.
-            interpret_class: The index of class to interpret. If None, the most likely label will be used.
-            prior_reg_force: The regularization force to apply.
-            num_samples: LIME sampling numbers. Larger number of samples usually gives more accurate interpretation.
-            batch_size: Number of samples to forward each time.
-            visual: Whether or not to visualize the processed image.
-            save_path: The path to save the processed image. If None, the image will not be saved.
+            data_path (str): The input file path.
+            interpret_class (int, optional): The index of class to interpret. If None, the most likely label will be used. Default: None
+            prior_reg_force (float, optional): The regularization force to apply. Default: 1.0
+            num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate interpretation. Default: 1000
+            batch_size (int, optional): Number of samples to forward each time. Default: 50
+            visual (bool, optional): Whether or not to visualize the processed image. Default: True
+            save_path (str, optional): The path to save the processed image. If None, the image will not be saved. Default: None
 
         Returns:
             ``dict``: LIME Prior weights: {interpret_label_i: weights on features}

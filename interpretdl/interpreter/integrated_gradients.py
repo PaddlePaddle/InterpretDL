@@ -22,7 +22,7 @@ class IntGradInterpreter(Interpreter):
                  use_cuda=True,
                  model_input_shape=[3, 224, 224]) -> None:
         """
-        Initialize the IntGradInterpreter
+        Initialize the IntGradInterpreter.
 
         Args:
             paddle_model: A user-defined function that gives access to model predictions.
@@ -31,7 +31,7 @@ class IntGradInterpreter(Interpreter):
                 - data: Data input.
                 - alpha: A scalar for calculating the path integral
                 - baseline: The baseline input.
-                and outputs predictions
+                and outputs predictions. See the example at the end of ``interpret()``.
             trained_model_path (str): The pretrained model directory.
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
             model_input_shape (list, optional): The input shape of the model. Default: [3, 244, 244]
@@ -67,23 +67,26 @@ class IntGradInterpreter(Interpreter):
 
         Returns:
             numpy.ndarray: avg_gradients
-        >>> def paddle_model(data, alpha, baseline):
-        ...     import paddle.fluid as fluid
-        ...     class_num = 1000
-        ...     image_input = baseline + alpha * data
-        ...     model = ResNet50()
-        ...     logits = model.net(input=image_input, class_dim=class_num)
-        ...     probs = fluid.layers.softmax(logits, axis=-1)
-        ...     return image_input, probs
-        >>> ig = IntGradInterpreter(paddle_model, "assets/ResNet50_pretrained", True)
-        >>> gradients = ig.interpret(
-        ...         'assets/catdog.png',
-        ...         label=None,
-        ...         baseline='random',
-        ...         steps=50,
-        ...         num_random_trials=1,
-        ...         visual=True,
-        ...         save_path='ig_test.jpg')
+
+        Example::
+
+            def paddle_model(data, alpha, baseline):
+                import paddle.fluid as fluid
+                class_num = 1000
+                image_input = baseline + alpha * data
+                model = ResNet50()
+                logits = model.net(input=image_input, class_dim=class_num)
+                probs = fluid.layers.softmax(logits, axis=-1)
+                return image_input, probs
+            ig = IntGradInterpreter(paddle_model, "assets/ResNet50_pretrained", True)
+            gradients = ig.interpret(
+                    'assets/catdog.png',
+                    label=None,
+                    baseline='random',
+                    steps=50,
+                    num_random_trials=1,
+                    visual=True,
+                    save_path='ig_test.jpg')
         """
 
         if isinstance(data, str) or len(np.array(data).shape) > 2:
