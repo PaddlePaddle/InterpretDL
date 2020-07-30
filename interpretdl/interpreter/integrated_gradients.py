@@ -25,23 +25,16 @@ class IntGradInterpreter(Interpreter):
         Initialize the IntGradInterpreter
 
         Args:
-            paddle_model: A user-defined function that gives access to model predictions. It takes the following arguments:
+            paddle_model: A user-defined function that gives access to model predictions.
+                It takes the following arguments:
+
                 - data: Data input.
                 - alpha: A scalar for calculating the path integral
                 - baseline: The baseline input.
-                example:
-                    def paddle_model(data, alpha, baseline):
-                        import paddle.fluid as fluid
-                        class_num = 1000
-                        image_input = baseline + alpha * data
-                        model = ResNet50()
-                        logits = model.net(input=image_input, class_dim=class_num)
-
-                        probs = fluid.layers.softmax(logits, axis=-1)
-                        return image_input, probs
-            trained_model_path: The pretrained model directory.
-            use_cuda: Whether or not to use cuda.
-            model_input_shape: The input shape of the model
+                and outputs predictions
+            trained_model_path (str): The pretrained model directory.
+            use_cuda (bool, optional): Whether or not to use cuda. Default: True
+            model_input_shape (list, optional): The input shape of the model. Default: [3, 244, 244]
 
         Returns:
         """
@@ -64,15 +57,33 @@ class IntGradInterpreter(Interpreter):
         Main function of the interpreter.
 
         Args:
-            data: If task is cv, input can be the image filepath or processed image; if task is nlp, input a sequence of word ids.
-            label: The target label to analyze. If None, the most likely label will be used.
-            baseline: The baseline input. If None, all zeros will be used. If 'random', random Guassian initialization will be used.
-            setps: number of steps in the Riemman approximation of the integral
-            num_random_trials: number of random initializations to take average in the end.
-            visual: Whether or not to visualize the processed image.
-            save_path: The filepath to save the processed image. If None, the image will not be saved.
+            data (str or numpy.ndarray): If task is cv, input can be the image filepath or processed image; if task is nlp, input a sequence of word ids.
+            label (int, optional): The target label to analyze. If None, the most likely label will be used. Default: None
+            baseline (str, optional): The baseline input. If None, all zeros will be used. If 'random', random Guassian initialization will be used.
+            setps (int, optional): number of steps in the Riemman approximation of the integral. Default: 50
+            num_random_trials (int, optional): number of random initializations to take average in the end. Default: 10
+            visual (bool, optional): Whether or not to visualize the processed image. Default: True
+            save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
 
         Returns:
+            numpy.ndarray: avg_gradients
+        >>> def paddle_model(data, alpha, baseline):
+        ...     import paddle.fluid as fluid
+        ...     class_num = 1000
+        ...     image_input = baseline + alpha * data
+        ...     model = ResNet50()
+        ...     logits = model.net(input=image_input, class_dim=class_num)
+        ...     probs = fluid.layers.softmax(logits, axis=-1)
+        ...     return image_input, probs
+        >>> ig = IntGradInterpreter(paddle_model, "assets/ResNet50_pretrained", True)
+        >>> gradients = ig.interpret(
+        ...         'assets/catdog.png',
+        ...         label=None,
+        ...         baseline='random',
+        ...         steps=50,
+        ...         num_random_trials=1,
+        ...         visual=True,
+        ...         save_path='ig_test.jpg')
         """
 
         if isinstance(data, str) or len(np.array(data).shape) > 2:

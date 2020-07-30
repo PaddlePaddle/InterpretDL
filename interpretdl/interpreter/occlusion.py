@@ -25,20 +25,14 @@ class OcclusionInterpreter(Interpreter):
                  use_cuda=True) -> None:
         """
         Args:
-            paddle_model: A user-defined function that gives access to model predictions. It takes the following arguments:
-                    - image_input: An image input.
-                    example:
-                        def paddle_model(image_input):
-                            import paddle.fluid as fluid
-                            class_num = 1000
-                            model = ResNet50()
-                            logits = model.net(input=image_input, class_dim=class_num)
-                            probs = fluid.layers.softmax(logits, axis=-1)
-                            return probs
+            paddle_model (callable): A user-defined function that gives access to model predictions. It takes the following arguments:
 
-            trained_model_path: The pretrained model directory.
-            model_input_shape: The input shape of the model
-            use_cuda: Whether or not to use cuda.
+                    - data: Data inputs.
+                    and outputs predictions.
+
+            trained_model_path (str): The pretrained model directory.
+            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
+            use_cuda (bool, optional): Whether or not to use cuda. Default: True
         """
 
         Interpreter.__init__(self)
@@ -59,15 +53,36 @@ class OcclusionInterpreter(Interpreter):
                   save_path=None):
         """
         Args:
-            data: The image filepath or processed image.
-            sliding_window_shapes: Shape of sliding windows to occlude data.
-            interpret_class: The index of class to interpret. If None, the most likely label will be used.
-            strides: The step by which the occlusion should be shifted by in each direction for each iteration.
-            baseline: The reference values that replace occlusioned features.
-            perturbations_per_eval: number of occlusions in each batch.
-            visual: Whether or not to visualize the processed image.
-            save_path: The path to save the processed image. If None, the image will not be saved.
+            data (str or numpy.ndarray): The image filepath or processed image.
+            sliding_window_shapes (tuple): Shape of sliding windows to occlude data.
+            interpret_class (int, optional): The index of class to interpret. If None, the most likely label will be used.
+            strides (int or tuple): The step by which the occlusion should be shifted by in each direction for each iteration.
+                                    If int, the step size in each direction will be the same. Default: 1
+            baseline (numpy.ndarray, optional): The reference values that replace occlusioned features. Default: None
+            perturbations_per_eval (int, optional): number of occlusions in each batch. Default: 1
+            visual (bool, optional): Whether or not to visualize the processed image. Default: True
+            save_path (str, optional): The path to save the processed image. If None, the image will not be saved. Default: None
+
         Returns:
+            numpy.ndarray: total_attrib
+
+        >>> def paddle_model(data):
+        ...     import paddle.fluid as fluid
+        ...     class_num = 1000
+        ...     model = ResNet50()
+        ...     logits = model.net(input=image_input, class_dim=class_num)
+        ...     probs = fluid.layers.softmax(logits, axis=-1)
+        ...     return probs
+        >>> oc = OcclusionInterpreter(paddle_model, "assets/ResNet50_pretrained")
+        >>> attributions = oc.interpret(
+        ...         'assets/catdog.png',
+        ...         sliding_window_shapes=(1, 30, 30),
+        ...         interpret_class=None,
+        ...         strides=(1, 10, 10),
+        ...         baseline=None,
+        ...         perturbations_per_eval=5,
+        ...         visual=True,
+        ...         save_path='occlusion_gray.jpg')
         """
         if not self.paddle_prepared:
             self._paddle_prepare()

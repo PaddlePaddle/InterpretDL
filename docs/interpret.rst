@@ -29,13 +29,13 @@ Features
 ========
 
 LIME
---------------------
+----
 
 .. autoclass:: interpretdl.LIMEInterpreter
    :members:
 
 LIME With Global Prior
---------------------
+----------------------
 
 .. autoclass:: interpretdl.LIMEPriorInterpreter
    :members:

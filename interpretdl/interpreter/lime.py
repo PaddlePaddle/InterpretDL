@@ -26,19 +26,14 @@ class LIMEInterpreter(Interpreter):
         """
 
         Args:
-            paddle_model: A user-defined function that gives access to model predictions. It takes the following arguments:
-                    - image_input: An image input.
-                    example:
-                        def paddle_model(image_input):
-                            import paddle.fluid as fluid
-                            class_num = 1000
-                            model = ResNet50()
-                            logits = model.net(input=image_input, class_dim=class_num)
-                            probs = fluid.layers.softmax(logits, axis=-1)
-                            return probs
-            trained_model_path:
-            model_input_shape:
-            use_cuda:
+            paddle_model (callable): A user-defined function that gives access to model predictions.
+                    It takes the following arguments:
+
+                    - data: Data inputs.
+                    and outputs predictions
+            trained_model_path (str): The pretrained model directory.
+            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
+            use_cuda (bool, optional): Whether or not to use cuda. Default: True
         """
 
         Interpreter.__init__(self)
@@ -63,16 +58,29 @@ class LIMEInterpreter(Interpreter):
         """
 
         Args:
-            data_path: The input file path.
-            interpret_class: The index of class to interpret. If None, the most likely label will be used.
-            num_samples: LIME sampling numbers. Larger number of samples usually gives more accurate interpretation.
-            batch_size: Number of samples to forward each time.
-            visual: Whether or not to visualize the processed image.
-            save_path: The path to save the processed image. If None, the image will not be saved.
+            data_path (str): The input file path.
+            interpret_class (int, optional): The index of class to interpret. If None, the most likely label will be used. Default: None
+            num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate interpretation. Default: 1000
+            batch_size (int, optional): Number of samples to forward each time. Default: 50
+            visual (bool, optional): Whether or not to visualize the processed image. Default: True
+            save_path (str, optional): The path to save the processed image. If None, the image will not be saved. Default: None
 
         Returns:
-            lime_weights: a dict {interpret_label_i: weights on features}
+            a dict whose key is interpret_label_i and value is weights on features: lime_weights
 
+        >>> def paddle_model(data):
+        ...     import paddle.fluid as fluid
+        ...     class_num = 1000
+        ...     model = ResNet50()
+        ...     logits = model.net(input=image_input, class_dim=class_num)
+        ...     probs = fluid.layers.softmax(logits, axis=-1)
+        ...     return probs
+        >>> lime = LIMEInterpreter(paddle_model, "assets/ResNet101_pretrained")
+        >>> lime_weights = lime.interpret(
+        ...         'assets/catdog.png',
+        ...         num_samples=1000,
+        ...         batch_size=100,
+        ...         save_path='assets/catdog_lime.png')
         """
         if not self.paddle_prepared:
             self._paddle_prepare()

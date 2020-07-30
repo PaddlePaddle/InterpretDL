@@ -22,23 +22,17 @@ class GradShapInterpreter(Interpreter):
                  model_input_shape=[3, 224, 224]) -> None:
         """
         Initialize the GradShapInterpreter
+
         Args:
-            paddle_model: A user-defined function that gives access to model predictions. It takes the following arguments:
-                - data: Data input.
-                - alpha: A scalar for calculating the path integral
-                - baseline: The baseline input.
-                example:
-                    def predict_fn(data):
-                        class_num = 1000
-                        model = ResNet50()
-                        logits = model.net(input=data, class_dim=class_num)
-                        probs = fluid.layers.softmax(logits, axis=-1)
-                        return probs
-            trained_model_path: The pretrained model directory.
-            class_num: Number of classes for the model.
-            use_cuda: Whether or not to use cuda.
-            model_input_shape: The input shape of the model
-        Returns:
+            paddle_model (callable): A user-defined function that gives access to model predictions.
+                It takes the following arguments:
+
+                - data: Data inputs.
+                and outputs predictions.
+            trained_model_path (str): The pretrained model directory.
+            class_num (int): Number of classes for the model.
+            use_cuda (bool, optional): Whether or not to use cuda. Default: True
+            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
@@ -59,13 +53,33 @@ class GradShapInterpreter(Interpreter):
         Main function of the interpreter.
 
         Args:
-            data: The image filepath or processed image.
-            label: The target label to analyze. If None, the most likely label will be used.
-            baseline: The baseline input. If None, all zeros will be used.
-            n_samples: The number of randomly generated samples.
-            visual: Whether or not to visualize the processed image.
-            save_path: The filepath to save the processed image. If None, the image will not be saved.
+            data (str or numpy.ndarray): The image filepath or processed image.
+            label (int, optional): The target label to analyze. If None, the most likely label will be used. Default: None.
+            baseline (numpy.ndarray, optional): The baseline input. If None, all zeros will be used. Default: None
+            n_samples (int, optional): The number of randomly generated samples. Default: 5.
+            noise_amount (float, optional): Noise level of added noise to the image.
+                                            The std of Guassian random noise is noise_amount * (x_max - x_min). Default: 0.1
+            visual (bool, optional): Whether or not to visualize the processed image. Default: True.
+            save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
+
         Returns:
+            numpy.ndarray: avg_attributions
+
+        >>> def paddle_model(data):
+        ...     import paddle.fluid as fluid
+        ...     class_num = 1000
+        ...     model = ResNet50()
+        ...     logits = model.net(input=image_input, class_dim=class_num)
+        ...     probs = fluid.layers.softmax(logits, axis=-1)
+        ...     return probs
+        >>> gs = GradShapInterpreter(predict_fn, "assets/ResNet50_pretrained", 1000, True)
+        >>> avg_attributions = gs.interpret(
+        ...                     img_path,
+        ...                     label=None,
+        ...                     noise_amout=0.1,
+        ...                     n_samples=5,
+        ...                     visual=True,
+        ...                     save_path='grad_shap_test.jpg')
         """
 
         def add_noise_to_inputs():

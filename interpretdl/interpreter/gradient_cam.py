@@ -29,19 +29,14 @@ class GradCAMInterpreter(Interpreter):
         Initialize the GradCAMInterpreter
 
         Args:
-            paddle_model: A user-defined function that gives access to model predictions. It takes the following arguments:
-                - image_input: An image input.
-                example:
-                    def paddle_model(image_input):
-                        import paddle.fluid as fluid
-                        class_num = 1000
-                        model = ResNet50()
-                        logits = model.net(input=image_input, class_dim=class_num)
-                        probs = fluid.layers.softmax(logits, axis=-1)
-                        return probs
-            trained_model_path: The pretrained model directory.
-            use_cuda: Whether or not to use cuda.
-            model_input_shape: The input shape of the model
+            paddle_model (callable): A user-defined function that gives access to model predictions.
+                It takes the following arguments:
+
+                - data: Data inputs.
+                and outputs predictions.
+            trained_model_path (str): The pretrained model directory.
+            use_cuda (bool, optional): Whether or not to use cuda. Default: True
+            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
@@ -60,13 +55,29 @@ class GradCAMInterpreter(Interpreter):
         Main function of the interpreter.
 
         Args:
-            data: The input image filepath or numpy array.
-            target_layer_name: The target layer to calculate gradients.
-            label: The target label to analyze. If None, the most likely label will be used.
-            visual: Whether or not to visualize the processed image.
-            save_path: The filepath to save the processed image. If None, the image will not be saved.
+            data (str or numpy.ndarray): The input image filepath or numpy array.
+            target_layer_name (str): The target layer to calculate gradients.
+            label (int, optional): The target label to analyze. If None, the most likely label will be used. Default: None
+            visual (bool, optional): Whether or not to visualize the processed image. Default: True
+            save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
 
         Returns:
+            None
+
+        >>> def paddle_model(data):
+        ...     import paddle.fluid as fluid
+        ...     class_num = 1000
+        ...     model = ResNet50()
+        ...     logits = model.net(input=image_input, class_dim=class_num)
+        ...     probs = fluid.layers.softmax(logits, axis=-1)
+        ...     return probs
+        >>> gradcam = GradCAMInterpreter(paddle_model, "assets/ResNet50_pretrained",True)
+        >>> gradcam.interpret(
+        ...         'assets/catdog.png',
+        ...         'res5c.add.output.5.tmp_0',
+        ...         label=None,
+        ...         visual=True,
+        ...         save_path='gradcam_test.jpg')
         """
 
         # Read in image
