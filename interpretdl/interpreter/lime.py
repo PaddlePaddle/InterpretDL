@@ -87,7 +87,7 @@ class LIMEInterpreter(Interpreter):
             pred_label = np.argsort(probability)
             interpret_class = pred_label[-1:]
 
-        lime_weights = self.lime_base.interpret_instance(
+        lime_weights, r2_scores = self.lime_base.interpret_instance(
             data_instance[0],
             self.predict_fn,
             interpret_class,
@@ -108,6 +108,7 @@ class LIMEInterpreter(Interpreter):
         self.lime_intermediate_results['input'] = data_instance[0]
         self.lime_intermediate_results[
             'segmentation'] = self.lime_base.segments
+        self.lime_intermediate_results['r2_scores'] = r2_scores
 
         return lime_weights
 

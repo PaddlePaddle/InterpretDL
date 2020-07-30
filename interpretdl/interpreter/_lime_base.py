@@ -34,6 +34,7 @@ from skimage.color import gray2rgb
 from sklearn.linear_model import Ridge
 from sklearn.utils import check_random_state
 from sklearn.preprocessing import normalize
+from sklearn.metrics import r2_score
 
 import copy
 from functools import partial
@@ -79,7 +80,10 @@ class LimeBase(object):
 
         if model_regressor is None:
             model_regressor = Ridge(
-                alpha=1, fit_intercept=True, random_state=self.random_state)
+                alpha=1.0,
+                fit_intercept=True,
+                normalize=True,
+                random_state=self.random_state)
         easy_model = model_regressor
         easy_model.fit(neighborhood_data, labels_column, sample_weight=weights)
         # R^2 between easy_model.predict(X) and y.
@@ -233,13 +237,21 @@ class LimeBase(object):
         easy_model.coef_ = w
         easy_model.intercept_ = 0
 
+        y_pred = np.dot(X, w) * y_scale + y_offset
+        predict_r2_score = r2_score(
+            labels_column,
+            y_pred,
+            sample_weight=weights,
+            multioutput='variance_weighted')
+        print(predict_r2_score)
+
         if self.verbose:
             print('Intercept', easy_model.intercept_)
             print('Right:', neighborhood_labels[0, label])
         return (easy_model.intercept_, sorted(
             zip(used_features, easy_model.coef_),
             key=lambda x: np.abs(x[1]),
-            reverse=True), 0, 0)
+            reverse=True), predict_r2_score, 0)
 
     def interpret_instance(self,
                            image,
@@ -269,15 +281,18 @@ class LimeBase(object):
             hide_color, distance_metric)
 
         lime_weights = {}
+        prediction_scores = {}
         for l in interpret_labels:
             if prior is None:
-                (_, lime_weights[l], _, _) = self._fitting_data(
-                    data, labels, distances, l, model_regressor)
+                (_, lime_weights[l], prediction_scores[l],
+                 _) = self._fitting_data(data, labels, distances, l,
+                                         model_regressor)
             else:
-                (_, lime_weights[l], _, _) = self._fitting_data_with_prior(
-                    data, labels, distances, l, prior, reg_force=reg_force)
+                (_, lime_weights[l], prediction_scores[l],
+                 _) = self._fitting_data_with_prior(
+                     data, labels, distances, l, prior, reg_force=reg_force)
 
-        return lime_weights
+        return lime_weights, prediction_scores
 
 
 def compute_segments(image):

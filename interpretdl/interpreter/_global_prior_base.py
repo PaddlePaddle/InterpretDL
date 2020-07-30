@@ -72,9 +72,9 @@ def ridge_regressor(x_data, y_labels, softmax):
     global_weights_all_labels = {}
 
     if len(y_labels) / num_classes < 3:
-        print("Warning: The test samples in the dataset is limited.\n \
-                     NormLIME may have no effect on the results.\n \
-                     Try to add more test samples, or see the results of LIME.")
+        print("Warning: The test samples in the dataset is limited.\n "
+              "NormLIME may have no effect on the results.\n "
+              "Try to add more test samples, or see the results of LIME.")
 
     # clf.coef_ has shape of [len(np.unique(y_labels)), num_features]
     #

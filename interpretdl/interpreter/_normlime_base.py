@@ -91,7 +91,6 @@ class NormLIMEBase(object):
 
             lime_weights = temp['lime_weights']
             pred_labels = lime_weights.keys()
-            print(pred_labels)
             for y in pred_labels:
                 normlime_weights_label_y = normlime_weights_all_labels.get(y,
                                                                            {})
