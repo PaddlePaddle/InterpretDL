@@ -8,3 +8,4 @@ opencv-python
 matplotlib
 IPython
 paddlepaddle-gpu
+paddlepaddle
