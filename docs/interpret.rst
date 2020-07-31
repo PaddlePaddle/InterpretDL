@@ -49,7 +49,7 @@ Occlusion
 Other
 =====
 
-Forgetting events
+Forgetting Events
 -----------------
 
 .. autoclass:: interpretdl.ForgettingEventsInterpreter
