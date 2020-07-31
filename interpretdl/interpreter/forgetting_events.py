@@ -205,7 +205,7 @@ class ForgettingEventsInterpreter(Interpreter):
             place = fluid.CPUPlace()
         exe = fluid.Executor(place)
 
-        avg_cost, probs, label = self._inference()
+        avg_cost, probs, label = self._forward()
 
         optimizer.minimize(avg_cost)
 
@@ -259,7 +259,7 @@ class ForgettingEventsInterpreter(Interpreter):
 
         return count_forgotten, forgotten
 
-    def _inference(self):
+    def _forward(self):
 
         images = fluid.data(
             name='data',
