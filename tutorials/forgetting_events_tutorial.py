@@ -66,29 +66,12 @@ def resnet_cifar10(ipt, depth=32):
     return predict
 
 
-def reader_creator(filename, sub_name, cycle=False):
-    def read_batch(batch):
-        data = batch[b'data']
-        labels = batch.get(b'labels', batch.get(b'fine_labels', None))
-        assert labels is not None
+def reader_prepare(data, labels):
+    def reader():
+        counter_ = -1
         for sample, label in zip(data, labels):
-            global counter_
             counter_ += 1
             yield counter_, (sample / 255.0).astype(np.float32), int(label)
-
-    def reader():
-        global counter_
-        counter_ = -1
-        with tarfile.open(filename, mode='r') as f:
-            names = (each_item.name for each_item in f
-                     if sub_name in each_item.name)
-            while True:
-                for name in names:
-                    batch = pickle.load(f.extractfile(name), encoding='bytes')
-                    for item in read_batch(batch):
-                        yield item
-                if not cycle:
-                    break
 
     return reader
 
@@ -118,12 +101,10 @@ if __name__ == '__main__':
 
     fe = ForgettingEventsInterpreter(resnet_cifar10, True, [3, 32, 32])
 
-    paddle.dataset.cifar.reader_creator = reader_creator
-
     BATCH_SIZE = 128
 
     train_reader = paddle.batch(
-        paddle.dataset.cifar.train10(), batch_size=BATCH_SIZE)
+        reader_prepare(all_data, all_labels), batch_size=BATCH_SIZE)
 
     optimizer = fluid.optimizer.Adam(learning_rate=0.001)
     epochs = 100
