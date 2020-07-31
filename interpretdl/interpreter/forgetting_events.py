@@ -51,9 +51,8 @@ class ForgettingEventsInterpreter(Interpreter):
             epochs (int): The number of epochs to train the model.
             save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
 
-        Returns:
-            numpy.ndarray: ordered_indices, the indices of data in the dataset ordered by count of forgetting events
-            numpy.ndarray: ordered_stats, ordered count of forgetting events that corresponds to the indices of data
+        :return: (count_forgotten, forgotten) where count_forgotten is {count of forgetting events: list of data indices with such count of forgetting events} and forgotten is {data index: numpy.ndarray of wrong predictions that follow true predictions in the training process}
+        :rtype: (dict, dict)
 
         Example::
 
@@ -106,59 +105,93 @@ class ForgettingEventsInterpreter(Interpreter):
                 predict = fluid.layers.fc(input=pool, size=10, act='softmax')
                 return predict
 
-            def reader_creator(filename, sub_name, cycle=False):
-                def read_batch(batch, counter):
+            def reader_prepare(data, labels):
+                def reader():
+                    counter_ = -1
+                    for sample, label in zip(data, labels):
+                        counter_ += 1
+                        yield counter_, (sample / 255.0).astype(np.float32), int(label)
+
+                return reader
+
+            CIFAR10_URL = 'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz'
+            CIFAR10_MD5 = 'c58f30108f718f92721af3b95e74349a'
+            filename = paddle.dataset.common.download(CIFAR10_URL, 'cifar',
+                                                      CIFAR10_MD5)
+
+            all_data = []
+            all_labels = []
+            with tarfile.open(filename, mode='r') as f:
+                names = (each_item.name for each_item in f
+                         if 'data_batch' in each_item.name)
+                for name in names:
+                    batch = pickle.load(f.extractfile(name), encoding='bytes')
                     data = batch[b'data']
                     labels = batch.get(b'labels', batch.get(b'fine_labels', None))
-                    assert labels is not None
-                    for sample, label in zip(data, labels):
-                        global saved
-                        if not saved:
-                            global samples, sample_labels
-                            samples.append(sample)
-                            sample_labels.append(label)
-                        counter += 1
-                        yield counter, (sample / 255.0).astype(np.float32), int(label)
+                    all_data.extend(data)
+                    all_labels.extend(labels)
 
-                def reader():
-                    global samples, sample_labels
-                    counter = 0
-                    with tarfile.open(filename, mode='r') as f:
-                        names = (each_item.name for each_item in f
-                                 if sub_name in each_item.name)
-                        while True:
-                            for name in names:
-                                batch = pickle.load(f.extractfile(name), encoding = 'bytes')
-                                for item in read_batch(batch, counter):
-                                    yield item
-                            if not cycle:
-                                break
-                        global saved
-                        saved = True
-                return reader
+            with open("assets/samples.pkl", "wb") as f:
+                pickle.dump(np.array(all_data), f)
+            with open("assets/sample_labels.pkl", "wb") as f:
+                pickle.dump(np.array(all_labels), f)
 
             fe = ForgettingEventsInterpreter(resnet_cifar10, True, [3, 32, 32])
 
-            samples = []
-            sample_labels = []
-            saved = False
-            paddle.dataset.cifar.reader_creator = reader_creator
-
             BATCH_SIZE = 128
-            train_reader = paddle.batch(paddle.dataset.cifar.train10(), batch_size=BATCH_SIZE)
+
+            train_reader = paddle.batch(
+                reader_prepare(all_data, all_labels), batch_size=BATCH_SIZE)
 
             optimizer = fluid.optimizer.Adam(learning_rate=0.001)
+            epochs = 100
+            print('Training %d epochs. This may take some time.' % epochs)
+            count_forgotten, forgotten = fe.interpret(
+                train_reader,
+                optimizer,
+                batch_size=BATCH_SIZE,
+                epochs=epochs,
+                save_path='assets/test_')
 
-            results = fe.interpret(train_reader,
-                          optimizer,
-                          batch_size = BATCH_SIZE,
-                          epochs = 2,
-                          save_path = 'assets/test')
+            print([
+                '0 - airplance', '1 - automobile', '2 - bird', '3 - cat', '4 - deer',
+                '5 - dog', '6 - frog', '7 - horse', '8 - ship', '9 - truck'
+            ])
 
-            with open("assets/samples.pkl", "wb") as f:
-                pickle.dump(np.array(samples), f)
-            with open("assets/sample_labels.pkl", "wb") as f:
-                pickle.dump(np.array(sample_labels), f)
+            max_count = max(count_forgotten.keys())
+            max_count_n = len(count_forgotten[max_count])
+
+            show_n = 9
+            count = 0
+            fig = plt.figure(figsize=(12, 12))
+            axes = []
+            print('The most frequently forgotten samples: ')
+            for k in np.sort(np.array(list(count_forgotten.keys())))[::-1]:
+                for idx, i in enumerate(count_forgotten[k][:show_n - count]):
+                    x = all_data[i].reshape((3, 32, 32)).transpose((1, 2, 0))
+                    axes.append(fig.add_subplot(3, 3, idx + count + 1))
+                    axes[-1].set_title(
+                        'Forgotten {} times, True label: {}, Learned as: {}'.format(
+                            k, all_labels[i], np.unique(forgotten[i])))
+                    axes[-1].axis('off')
+                    plt.imshow(x)
+                count += len(count_forgotten[k][:show_n - count])
+                if count >= show_n:
+                    break
+            plt.show()
+
+            axes = []
+            fig = plt.figure(figsize=(12, 12))
+            zero_count_n = len(count_forgotten.get(0, []))
+            print('Number of never forgotten samples is %d.' % (zero_count_n))
+            for idx, i in enumerate(count_forgotten.get(0, [])[:show_n]):
+                x = all_data[i].reshape((3, 32, 32)).transpose((1, 2, 0))
+                axes.append(fig.add_subplot(3, 3, idx + 1))
+                axes[-1].set_title('label {}'.format(all_labels[i]))
+                axes[-1].axis('off')
+                plt.imshow(x)
+            plt.show()
+
         """
         stats = {}
 
