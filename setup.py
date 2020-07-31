@@ -37,7 +37,7 @@ setup(
     python_requires=">=3.7.*",
     install_requires=[
         'numpy', 'requests', 'scikit-image', 'scikit-learn', 'tqdm', 'pillow',
-        'opencv-python', 'matplotlib', 'IPython', 'pickle'
+        'opencv-python', 'matplotlib', 'IPython'
     ],
     license='Apache 2.0',
     zip_safe=False,
