@@ -135,37 +135,54 @@ if __name__ == '__main__':
         epochs=epochs,
         save_path='assets/test_')
 
+    print([
+        '0 - airplance', '1 - automobile', '2 - bird', '3 - cat', '4 - deer',
+        '5 - dog', '6 - frog', '7 - horse', '8 - ship', '9 - truck'
+    ])
+
     max_count = max(count_forgotten.keys())
     max_count_n = len(count_forgotten[max_count])
 
     show_n = 9
     count = 0
-    print('\n The most frequently forgotten samples: ')
+    fig = plt.figure(figsize=(12, 12))
+    axes = []
+    print('The most frequently forgotten samples: ')
     for k in np.sort(np.array(list(count_forgotten.keys())))[::-1]:
-        for i in count_forgotten[k][:show_n - count]:
-            print('image: ', )
-            plt.imshow(all_data[i].reshape((3, 32, 32)).transpose((1, 2, 0)))
-            plt.show()
-            print('Forgotten %d times' % k)
-            print('True label: ', all_labels[i])
-            print('Learned as: ', np.unique(forgotten[i]))
+        for idx, i in enumerate(count_forgotten[k][:show_n - count]):
+            x = all_data[i].reshape((3, 32, 32)).transpose((1, 2, 0))
+            axes.append(fig.add_subplot(3, 3, idx + count + 1))
+            axes[-1].set_title(
+                'Forgotten {} times, \n True label: {}, Learned as: {}'.format(
+                    k, all_labels[i], np.unique(forgotten[i])))
+            axes[-1].axis('off')
+            plt.imshow(x)
         count += len(count_forgotten[k][:show_n - count])
         if count >= show_n:
             break
+    plt.show()
 
+    axes = []
+    fig = plt.figure(figsize=(12, 12))
     zero_count_n = len(count_forgotten.get(0, []))
-    print('\n Number of always learned samples is %d.' % (zero_count_n))
-    for i in count_forgotten.get(0, [])[:show_n]:
-        print('image: ')
-        plt.imshow(all_data[i].reshape((3, 32, 32)).transpose((1, 2, 0)))
-        plt.show()
-        print('true label: ', all_labels[i])
+    print('Number of always learned samples is %d.' % (zero_count_n))
+    for idx, i in enumerate(count_forgotten.get(0, [])[:show_n]):
+        x = all_data[i].reshape((3, 32, 32)).transpose((1, 2, 0))
+        axes.append(fig.add_subplot(3, 3, idx + 1))
+        axes[-1].set_title('label {}'.format(all_labels[i]))
+        axes[-1].axis('off')
+        plt.imshow(x)
+    plt.show()
 
+    axes = []
+    fig = plt.figure(figsize=(12, 12))
     negative_count_n = len(count_forgotten.get(-1, []))
-    print('\n Number of never learned samples is %d.' % (negative_count_n))
-    for i in count_forgotten.get(-1, [])[:show_n]:
-        print('image: ')
-        plt.imshow(all_data[i].reshape((3, 32, 32)).transpose((1, 2, 0)))
-        plt.show()
-        print('true label: ', all_labels[i])
-        print('learned as: ', np.unique(forgotten[i]))
+    print('Number of never learned samples is %d.' % (negative_count_n))
+    for idx, i in enumerate(count_forgotten.get(-1, [])[:show_n]):
+        x = all_data[i].reshape((3, 32, 32)).transpose((1, 2, 0))
+        axes.append(fig.add_subplot(3, 3, idx + 1))
+        axes[-1].set_title('True label: {}, Learned as: {}'.format(all_labels[
+            i], np.unique(forgotten[i])))
+        axes[-1].axis('off')
+        plt.imshow(x)
+    plt.show()
