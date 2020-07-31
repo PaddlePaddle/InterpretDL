@@ -78,7 +78,7 @@ def reader_creator(filename, sub_name, cycle=False):
 
     def reader():
         global counter_
-        counter_ = 0
+        counter_ = -1
         with tarfile.open(filename, mode='r') as f:
             names = (each_item.name for each_item in f
                      if sub_name in each_item.name)
@@ -144,11 +144,10 @@ if __name__ == '__main__':
     for k in np.sort(np.array(list(count_forgotten.keys())))[::-1]:
         for i in count_forgotten[k][:show_n - count]:
             print('image: ', )
-            plt.imshow(all_data[i - 1].reshape((3, 32, 32)).transpose((1, 2, 0
-                                                                       )))
+            plt.imshow(all_data[i].reshape((3, 32, 32)).transpose((1, 2, 0)))
             plt.show()
             print('Forgotten %d times' % k)
-            print('True label: ', all_labels[i - 1])
+            print('True label: ', all_labels[i])
             print('Learned as: ', np.unique(forgotten[i]))
         count += len(count_forgotten[k][:show_n - count])
         if count >= show_n:
@@ -158,15 +157,15 @@ if __name__ == '__main__':
     print('\n Number of always learned samples is %d.' % (zero_count_n))
     for i in count_forgotten.get(0, [])[:show_n]:
         print('image: ')
-        plt.imshow(all_data[i - 1].reshape((3, 32, 32)).transpose((1, 2, 0)))
+        plt.imshow(all_data[i].reshape((3, 32, 32)).transpose((1, 2, 0)))
         plt.show()
-        print('true label: ', all_labels[i - 1])
+        print('true label: ', all_labels[i])
 
     negative_count_n = len(count_forgotten.get(-1, []))
     print('\n Number of never learned samples is %d.' % (negative_count_n))
     for i in count_forgotten.get(-1, [])[:show_n]:
         print('image: ')
-        plt.imshow(all_data[i - 1].reshape((3, 32, 32)).transpose((1, 2, 0)))
+        plt.imshow(all_data[i].reshape((3, 32, 32)).transpose((1, 2, 0)))
         plt.show()
-        print('true label: ', all_labels[i - 1])
+        print('true label: ', all_labels[i])
         print('learned as: ', np.unique(forgotten[i]))
