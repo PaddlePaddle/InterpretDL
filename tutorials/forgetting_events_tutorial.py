@@ -126,7 +126,7 @@ if __name__ == '__main__':
         paddle.dataset.cifar.train10(), batch_size=BATCH_SIZE)
 
     optimizer = fluid.optimizer.Adam(learning_rate=0.001)
-    epochs = 10
+    epochs = 100
     print('Training %d epochs. This may take some time.' % epochs)
     count_forgotten, forgotten = fe.interpret(
         train_reader,
@@ -140,7 +140,7 @@ if __name__ == '__main__':
 
     show_n = 9
     count = 0
-    print('The most frequently forgotten samples: ')
+    print('\n The most frequently forgotten samples: ')
     for k in np.sort(np.array(list(count_forgotten.keys())))[::-1]:
         for i in count_forgotten[k][:show_n - count]:
             print('image: ', )
@@ -155,7 +155,7 @@ if __name__ == '__main__':
             break
 
     zero_count_n = len(count_forgotten.get(0, []))
-    print('Number of always learned samples is %d.' % (zero_count_n))
+    print('\n Number of always learned samples is %d.' % (zero_count_n))
     for i in count_forgotten.get(0, [])[:show_n]:
         print('image: ')
         plt.imshow(all_data[i - 1].reshape((3, 32, 32)).transpose((1, 2, 0)))
@@ -163,7 +163,7 @@ if __name__ == '__main__':
         print('true label: ', all_labels[i - 1])
 
     negative_count_n = len(count_forgotten.get(-1, []))
-    print('Number of never learned samples is %d.' % (negative_count_n))
+    print('\n Number of never learned samples is %d.' % (negative_count_n))
     for i in count_forgotten.get(-1, [])[:show_n]:
         print('image: ')
         plt.imshow(all_data[i - 1].reshape((3, 32, 32)).transpose((1, 2, 0)))
