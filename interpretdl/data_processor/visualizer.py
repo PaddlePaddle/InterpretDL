@@ -1,7 +1,9 @@
 from skimage.segmentation import quickshift, mark_boundaries
 import numpy as np
 import matplotlib.pyplot as plt
+import IPython.display as display
 from PIL import Image
+import cv2
 
 
 def is_jupyter():
@@ -58,7 +60,7 @@ def save_image(file_path, image):
     plt.imsave(file_path, image)
 
 
-def visualize_ig(gradients, img, visual=True, save_path=None):
+def visualize_overlay(gradients, img, visual=True, save_path=None):
     gradients = gradients[0].transpose((1, 2, 0))
     interpretation = np.clip(gradients, 0, 1)
     channel = [0, 255, 0]
@@ -101,3 +103,31 @@ def visualize_grayscale(gradients, percentile=99, visual=True, save_path=None):
 
     if save_path is not None:
         x.save(save_path)
+
+
+def visualize_gradcam(feature_map, gradients, org, visual=True,
+                      save_path=None):
+    # take the average of gradient for each channel
+    mean_g = np.mean(gradients, (1, 2))
+    heatmap = feature_map.transpose([1, 2, 0])
+    # multiply the feature map by average gradients
+    for i in range(len(mean_g)):
+        heatmap[:, :, i] *= mean_g[i]
+
+    heatmap = np.mean(heatmap, axis=-1)
+    # ReLU
+    heatmap = np.maximum(heatmap, 0)
+    heatmap /= np.max(heatmap)
+    org = np.array(org).astype('float32')
+    org = cv2.cvtColor(org, cv2.COLOR_BGR2RGB)
+
+    heatmap = cv2.resize(heatmap, (org.shape[1], org.shape[0]))
+    heatmap = np.uint8(255 * heatmap)
+    heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
+
+    x = heatmap * 0.8 + org
+    if visual:
+        display.display(display.Image(x))
+
+    if save_path is not None:
+        cv2.imwrite(save_path, x)

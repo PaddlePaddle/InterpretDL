@@ -201,8 +201,10 @@ class ForgettingEventsInterpreter(Interpreter):
                 acc = (predicted == label_out).astype(int)
                 for k in range(bsz):
                     idx = data_train[k][0]
-                    index_stats = stats.get(idx, [])
-                    index_stats.append(acc[k])
+                    # first list is acc, second list is predicted label
+                    index_stats = stats.get(idx, [[], []])
+                    index_stats[0].append(acc[k])
+                    index_stats[1].append(predicted[k])
                     stats[idx] = index_stats
 
                 correct += np.sum(acc)
@@ -214,14 +216,15 @@ class ForgettingEventsInterpreter(Interpreter):
                      100. * correct / total))
                 sys.stdout.flush()
 
-        ordered_indices, ordered_stats = self._compute_and_order_forgetting_stats(
+        count_forgotten, forgotten = self._compute_and_order_forgetting_stats(
             stats, epochs)
         if save_path is not None:
-            with open(save_path + "_ordered_indices.pkl", "wb") as f:
-                pickle.dump(ordered_indices, f)
-            with open(save_path + "_ordered_stats.pkl", "wb") as f:
-                pickle.dump(ordered_stats, f)
-        return ordered_indices, ordered_stats
+            with open(save_path + "count_forgotten.pkl", "wb") as f:
+                pickle.dump(count_forgotten, f)
+            with open(save_path + "forgotten.pkl", "wb") as f:
+                pickle.dump(forgotten, f)
+
+        return count_forgotten, forgotten
 
     def _inference(self):
 
@@ -240,37 +243,45 @@ class ForgettingEventsInterpreter(Interpreter):
     def _compute_and_order_forgetting_stats(self, stats, epochs):
         unlearned_per_presentation = {}
         first_learned = {}
+        forgotten = {}
 
         for example_id, example_stats in stats.items():
 
-            presentation_acc = np.array(example_stats[:epochs])
+            # accuracies
+            presentation_acc = np.array(example_stats[0][:epochs])
+            # predicted labels
+            presentation_predicted = np.array(example_stats[1][:epochs])
             transitions = presentation_acc[1:] - presentation_acc[:-1]
 
             if len(np.where(transitions == -1)[0]) > 0:
+                # forgotten epochs
                 unlearned_per_presentation[example_id] = np.where(transitions
                                                                   == -1)[0] + 2
+                # forgotten indices
+                forgotten[example_id] = presentation_predicted[np.where(
+                    transitions == -1)[0] + 1]
+
             else:
                 unlearned_per_presentation[example_id] = []
+                forgotten[example_id] = np.array([])
 
             if len(np.where(presentation_acc == 1)[0]) > 0:
                 first_learned[example_id] = np.where(
                     presentation_acc == 1)[0][0]
             else:
                 first_learned[example_id] = np.nan
+                forgotten[example_id] = presentation_predicted
 
-        example_original_order = []
-        example_stats = []
-        for example_id in unlearned_per_presentation:
-            example_original_order.append(example_id)
+        count_forgotten = {}
 
+        for example_id, forgotten_epochs in unlearned_per_presentation.items():
             if np.isnan(first_learned[example_id]):
-                example_stats.append(epochs)
+                count = -1
             else:
-                example_stats.append(
-                    len(unlearned_per_presentation[example_id]))
+                count = len(forgotten_epochs)
 
-        print('\n Number of unforgettable examples: {}'.format(
-            len(np.where(np.array(example_stats) == 0)[0])))
+            count_stats = count_forgotten.get(count, [])
+            count_stats.append(example_id)
+            count_forgotten[count] = count_stats
 
-        return np.array(example_original_order)[np.argsort(
-            example_stats)], np.sort(example_stats)
+        return count_forgotten, forgotten

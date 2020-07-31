@@ -5,7 +5,7 @@ import os, sys
 
 from .abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_image, read_image, restore_image
-from ..data_processor.visualizer import visualize_ig
+from ..data_processor.visualizer import visualize_overlay
 
 
 class IntGradInterpreter(Interpreter):
@@ -116,7 +116,7 @@ class IntGradInterpreter(Interpreter):
         avg_gradients = self.predict_fn(data)
 
         if input_type == 'cv':
-            visualize_ig(avg_gradients, img, visual, save_path)
+            visualize_overlay(avg_gradients, img, visual, save_path)
 
         return avg_gradients
 

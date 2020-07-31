@@ -9,6 +9,7 @@ from PIL import Image
 
 from .abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_image, read_image
+from ..data_processor.visualizer import visualize_gradcam
 
 
 class GradCAMInterpreter(Interpreter):
@@ -102,31 +103,8 @@ class GradCAMInterpreter(Interpreter):
 
         f = np.array(feature_map)[0]
         g = np.array(gradients)[0]
-        # take the average of gradient for each channel
-        mean_g = np.mean(g, (1, 2))
-        heatmap = f.transpose([1, 2, 0])
-        # multiply the feature map by average gradients
-        for i in range(len(mean_g)):
-            heatmap[:, :, i] *= mean_g[i]
 
-        heatmap = np.mean(heatmap, axis=-1)
-        # ReLU
-        heatmap = np.maximum(heatmap, 0)
-        heatmap /= np.max(heatmap)
-
-        org = np.array(org).astype('float32')
-        org = cv2.cvtColor(org, cv2.COLOR_BGR2RGB)
-
-        heatmap = cv2.resize(heatmap, (org.shape[1], org.shape[0]))
-        heatmap = np.uint8(255 * heatmap)
-        heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
-
-        x = heatmap * 0.8 + org
-        if visual:
-            display.display(display.Image(x))
-
-        if save_path is not None:
-            cv2.imwrite(save_path, x)
+        visualize_gradcam(f, g, org, visual, save_path)
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:

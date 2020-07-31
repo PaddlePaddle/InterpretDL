@@ -117,7 +117,7 @@ We are planning to implement the algorithms below (categorized into sensitivity 
 - [x] SmoothGrad
 - [x] Occlusion
 - [ ] DeepLIFT
-- [ ] SHAP
+- [x] GradientSHAP
 - [x] GradCAM
 - [x] IntegratedGradients
 - [ ] InfluenceFunction

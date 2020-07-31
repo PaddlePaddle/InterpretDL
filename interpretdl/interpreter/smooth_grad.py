@@ -9,7 +9,7 @@ from PIL import Image
 
 from .abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_image, read_image
-from ..data_processor.visualizer import visualize_ig
+from ..data_processor.visualizer import visualize_overlay
 
 
 class SmoothGradInterpreter(Interpreter):
@@ -106,7 +106,7 @@ class SmoothGradInterpreter(Interpreter):
         avg_gradients = total_gradients / n_samples
 
         if visual:
-            visualize_ig(avg_gradients, img, visual, save_path)
+            visualize_overlay(avg_gradients, img, visual, save_path)
 
         return avg_gradients
 
