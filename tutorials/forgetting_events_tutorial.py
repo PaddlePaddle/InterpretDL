@@ -165,24 +165,11 @@ if __name__ == '__main__':
     axes = []
     fig = plt.figure(figsize=(12, 12))
     zero_count_n = len(count_forgotten.get(0, []))
-    print('Number of always learned samples is %d.' % (zero_count_n))
+    print('Number of never forgotten samples is %d.' % (zero_count_n))
     for idx, i in enumerate(count_forgotten.get(0, [])[:show_n]):
         x = all_data[i].reshape((3, 32, 32)).transpose((1, 2, 0))
         axes.append(fig.add_subplot(3, 3, idx + 1))
         axes[-1].set_title('label {}'.format(all_labels[i]))
-        axes[-1].axis('off')
-        plt.imshow(x)
-    plt.show()
-
-    axes = []
-    fig = plt.figure(figsize=(12, 12))
-    negative_count_n = len(count_forgotten.get(-1, []))
-    print('Number of never learned samples is %d.' % (negative_count_n))
-    for idx, i in enumerate(count_forgotten.get(-1, [])[:show_n]):
-        x = all_data[i].reshape((3, 32, 32)).transpose((1, 2, 0))
-        axes.append(fig.add_subplot(3, 3, idx + 1))
-        axes[-1].set_title('True label: {}, Learned as: {}'.format(all_labels[
-            i], np.unique(forgotten[i])))
         axes[-1].axis('off')
         plt.imshow(x)
     plt.show()
