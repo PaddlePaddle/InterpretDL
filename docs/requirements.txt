@@ -7,4 +7,3 @@ pillow
 opencv-python
 matplotlib
 IPython
-pickle
