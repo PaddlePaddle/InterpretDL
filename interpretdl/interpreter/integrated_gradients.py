@@ -36,7 +36,6 @@ class IntGradInterpreter(Interpreter):
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
             model_input_shape (list, optional): The input shape of the model. Default: [3, 244, 244]
 
-        Returns:
         """
         Interpreter.__init__(self)
         self.paddle_model = paddle_model

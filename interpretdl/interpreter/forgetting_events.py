@@ -17,6 +17,13 @@ import pickle
 
 
 class ForgettingEventsInterpreter(Interpreter):
+    """
+    Forgetting Events Interpreter.
+
+    More details regarding the Forgetting Events method can be found in the original paper:
+    https://arxiv.org/pdf/1812.05159.pdf
+    """
+
     def __init__(self,
                  paddle_model,
                  use_cuda=True,
