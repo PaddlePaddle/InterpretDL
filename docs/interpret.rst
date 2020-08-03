@@ -46,7 +46,7 @@ Occlusion
 .. autoclass:: interpretdl.OcclusionInterpreter
    :members:
 
-Other
+Training
 =====
 
 Forgetting Events

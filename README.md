@@ -64,7 +64,9 @@ python setup.py install
 
 # Documentation
 
-## Offline
+Online link: [interpretdl.readthedocs.io](https://interpretdl.readthedocs.io/en/latest/interpretdl.html).
+
+Or generate the docs locally:
 
 ```bash
 git clone https://github.com/PaddlePaddle/InterpretDL.git
@@ -73,9 +75,6 @@ make html
 open _build/html/index.html
 ```
 
-## Online
-
-To be appeared.
 
 # Usage Guideline
 
@@ -121,7 +120,7 @@ We are planning to implement the algorithms below (categorized into sensitivity 
 - [x] GradCAM
 - [x] IntegratedGradients
 - [ ] InfluenceFunction
-- [ ] ForgettingEvent
+- [x] ForgettingEvent
 - [ ] SGDNoise
 - [ ] More ...
 
