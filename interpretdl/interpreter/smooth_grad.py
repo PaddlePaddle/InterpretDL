@@ -16,6 +16,10 @@ class SmoothGradInterpreter(Interpreter):
     """
     Smooth Gradients Interpreter.
 
+    Smooth Gradients method solves the problem of meaningless local variations in partial derivatives
+    by adding random noise to the inputs multiple times and take the average of the
+    gradients.
+
     More details regarding the Smooth Gradients method can be found in the original paper:
     http://arxiv.org/pdf/1706.03825.pdf
     """

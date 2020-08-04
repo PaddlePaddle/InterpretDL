@@ -12,6 +12,11 @@ class IntGradInterpreter(Interpreter):
     """
     Integrated Gradients Interpreter.
 
+    Integrated gradients aggregate the gradients along the inputs that fall on
+    the straightline between the baseline and the input.
+
+    This implementation approximates the integral by Riemann Sum Approximation.
+
     More details regarding the Integrated Gradients method can be found in the original paper:
     http://proceedings.mlr.press/v70/sundararajan17a/sundararajan17a.pdf
     """
