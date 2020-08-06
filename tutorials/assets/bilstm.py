@@ -1,6 +1,8 @@
 import paddle.fluid as fluid
 
-def bilstm_net(data,
+
+# Modified from https://github.com/PaddlePaddle/models/blob/release/1.7/PaddleNLP/shared_modules/models/classification/nets.py
+def bilstm_net(emb,
                seq_len,
                label,
                dict_dim,
@@ -9,20 +11,11 @@ def bilstm_net(data,
                hid_dim2=96,
                class_dim=2,
                emb_lr=30.0,
-               is_prediction=False,
-               alpha=1):
+               is_prediction=False):
     """
     Bi-Lstm net
     """
-    # embedding layer
-    emb = fluid.embedding(
-        input=data,
-        size=[dict_dim, emb_dim],
-        param_attr=fluid.ParamAttr(learning_rate=emb_lr))
-    
-    emb = fluid.layers.sequence_unpad(emb, length=seq_len)
-    emb *= alpha
-    
+
     fc0 = fluid.layers.fc(input=emb, size=hid_dim * 4)
     rfc0 = fluid.layers.fc(input=emb, size=hid_dim * 4)
     lstm_h, c = fluid.layers.dynamic_lstm(
@@ -42,7 +35,7 @@ def bilstm_net(data,
     # softmax layer
     prediction = fluid.layers.fc(input=fc1, size=class_dim, act='softmax')
     if is_prediction:
-        return emb, prediction
+        return prediction
     cost = fluid.layers.cross_entropy(input=prediction, label=label)
     avg_cost = fluid.layers.mean(x=cost)
     acc = fluid.layers.accuracy(input=prediction, label=label)

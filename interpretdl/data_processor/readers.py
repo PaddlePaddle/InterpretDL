@@ -209,3 +209,15 @@ def restore_image(img):
     img *= 255
     img = np.uint8(img.transpose((0, 2, 3, 1)))
     return img
+
+
+def extract_img_paths(directory):
+    IMG_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif',
+                      '.tiff', '.webp')
+    img_paths = []
+    img_names = []
+    for file in os.listdir(directory):
+        if file.lower().endswith(IMG_EXTENSIONS):
+            img_paths.append(os.path.join(directory, file))
+            img_names.append(file)
+    return img_paths, img_names
