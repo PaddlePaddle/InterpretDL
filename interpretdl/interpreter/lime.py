@@ -168,18 +168,26 @@ class LIMEInterpreter(Interpreter):
                 place = fluid.CUDAPlace(gpu_id)
             else:
                 place = fluid.CPUPlace()
+            self.place = place
             exe = fluid.Executor(place)
 
             fluid.io.load_persistables(exe, self.trained_model_path,
                                        main_program)
 
             def predict_fn(data_instance):
-                if self.input_type == np.ndarray:
+                if self.input_type == fluid.LoDTensor:
+                    if isinstance(data_instance, fluid.LoDTensor):
+                        data = data_instance
+                    else:
+                        batch_size, n_features = np.array(data_instance).shape
+                        samples = np.array(
+                            sum(data_instance, []), dtype=np.int64)
+                        data = fluid.create_lod_tensor(
+                            samples, [[n_features] * batch_size], self.place)
+                else:
                     data = preprocess_image(
                         data_instance
                     )  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
-                else:
-                    data = data_instance
                 [result] = exe.run(main_program,
                                    fetch_list=[probs],
                                    feed={'data': data})

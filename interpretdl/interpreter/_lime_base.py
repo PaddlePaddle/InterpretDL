@@ -340,19 +340,11 @@ class LimeBase(object):
                 temp[z] = unk_id
             samples.append(temp.tolist())
             if len(samples) == batch_size:
-                samples = np.array(sum(samples, []), dtype=np.int64)
-                preds = classifier_fn(
-                    fluid.create_lod_tensor(samples, [[n_features] *
-                                                      batch_size],
-                                            fluid.CUDAPlace(0))).tolist()
+                preds = classifier_fn(samples).tolist()
                 labels.extend(preds)
                 samples = []
         if len(samples) > 0:
-            n = len(samples)
-            samples = np.array(sum(samples, []), dtype=np.int64)
-            preds = classifier_fn(
-                fluid.create_lod_tensor(samples, [[n_features] * n],
-                                        fluid.CUDAPlace(0))).tolist()
+            preds = classifier_fn(samples).tolist()
             labels.extend(preds)
 
         distances = sklearn.metrics.pairwise_distances(
