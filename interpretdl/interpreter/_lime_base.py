@@ -165,7 +165,6 @@ class LimeBase(object):
             imgs.append(temp)
             if len(imgs) == batch_size:
                 preds = classifier_fn(np.array(imgs))
-
                 if isinstance(preds, list):
                     preds = preds[0]
 
@@ -292,6 +291,74 @@ class LimeBase(object):
                      data, labels, distances, l, prior, reg_force=reg_force)
 
         return lime_weights, prediction_scores
+
+    def interpret_instance_text(self,
+                                word_ids,
+                                classifier_fn,
+                                interpret_labels=(1, ),
+                                num_samples=1000,
+                                batch_size=10,
+                                unk_id=0,
+                                distance_metric='cosine',
+                                model_regressor=None,
+                                prior=None,
+                                reg_force=1.0):
+        """
+        Generates interpretations for a prediction.
+        """
+        word_ids = np.array(word_ids)
+        data, labels, distances = self._data_labels_text(
+            word_ids, unk_id, classifier_fn, num_samples, batch_size,
+            distance_metric)
+        lime_weights = {}
+        prediction_scores = {}
+        for l in interpret_labels:
+            if prior is None:
+                (_, lime_weights[l], prediction_scores[l],
+                 _) = self._fitting_data(data, labels, distances, l,
+                                         model_regressor)
+            else:
+                (_, lime_weights[l], prediction_scores[l],
+                 _) = self._fitting_data_with_prior(
+                     data, labels, distances, l, prior, reg_force=reg_force)
+
+        return lime_weights, prediction_scores
+
+    def _data_labels_text(self, word_ids, unk_id, classifier_fn, num_samples,
+                          batch_size, distance_metric):
+        from paddle import fluid
+        n_features = len(word_ids)
+        data = self.random_state.randint(0, 2, num_samples * n_features) \
+            .reshape((num_samples, n_features))
+        labels = []
+        data[0, :] = 1
+        samples = []
+        for row in data:
+            temp = copy.deepcopy(word_ids)
+            zeros = np.where(row == 0)[0]
+            for z in zeros:
+                temp[z] = unk_id
+            samples.append(temp.tolist())
+            if len(samples) == batch_size:
+                samples = np.array(sum(samples, []), dtype=np.int64)
+                preds = classifier_fn(
+                    fluid.create_lod_tensor(samples, [[n_features] *
+                                                      batch_size],
+                                            fluid.CUDAPlace(0))).tolist()
+                labels.extend(preds)
+                samples = []
+        if len(samples) > 0:
+            n = len(samples)
+            samples = np.array(sum(samples, []), dtype=np.int64)
+            preds = classifier_fn(
+                fluid.create_lod_tensor(samples, [[n_features] * n],
+                                        fluid.CUDAPlace(0))).tolist()
+            labels.extend(preds)
+
+        distances = sklearn.metrics.pairwise_distances(
+            data, data[0].reshape(1, -1), metric=distance_metric).ravel()
+
+        return data, np.array(labels), distances
 
 
 def compute_segments(image):

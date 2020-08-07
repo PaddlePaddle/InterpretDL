@@ -53,6 +53,7 @@ class LIMEInterpreter(Interpreter):
                   interpret_class=None,
                   num_samples=1000,
                   batch_size=50,
+                  unk_id=None,
                   visual=True,
                   save_path=None):
         """
@@ -86,11 +87,17 @@ class LIMEInterpreter(Interpreter):
                     save_path='assets/catdog_lime.png')
 
         """
+
+        if isinstance(data_path, str):
+            data_instance = read_image(data_path)
+        else:
+            data_instance = data_path
+
+        self.input_type = type(data_instance)
+        self.data_type = np.array(data_instance).dtype
+
         if not self.paddle_prepared:
             self._paddle_prepare()
-
-        data_instance = read_image(data_path)
-
         # only one example here
         probability = self.predict_fn(data_instance)[0]
 
@@ -99,12 +106,21 @@ class LIMEInterpreter(Interpreter):
             pred_label = np.argsort(probability)
             interpret_class = pred_label[-1:]
 
-        lime_weights, r2_scores = self.lime_base.interpret_instance(
-            data_instance[0],
-            self.predict_fn,
-            interpret_class,
-            num_samples=num_samples,
-            batch_size=batch_size)
+        if isinstance(data_instance, np.ndarray):
+            lime_weights, r2_scores = self.lime_base.interpret_instance(
+                data_instance[0],
+                self.predict_fn,
+                interpret_class,
+                num_samples=num_samples,
+                batch_size=batch_size)
+        else:
+            lime_weights, r2_scores = self.lime_base.interpret_instance_text(
+                data_instance,
+                self.predict_fn,
+                interpret_class,
+                num_samples=num_samples,
+                batch_size=batch_size)
+            return lime_weights
 
         interpretation = show_important_parts(data_instance[0], lime_weights,
                                               interpret_class[0],
@@ -131,11 +147,18 @@ class LIMEInterpreter(Interpreter):
             main_program = fluid.Program()
             with fluid.program_guard(main_program, startup_prog):
                 with fluid.unique_name.guard():
-                    image_op = fluid.data(
-                        name='image',
-                        shape=[None] + self.model_input_shape,
-                        dtype='float32')
-                    probs = self.paddle_model(image_op)
+                    if self.input_type == fluid.LoDTensor:
+                        data_op = fluid.data(
+                            name='data',
+                            shape=[None],
+                            dtype=self.data_type,
+                            lod_level=1)
+                    else:
+                        data_op = fluid.data(
+                            name='data',
+                            shape=[None] + self.model_input_shape,
+                            dtype='float32')
+                    probs = self.paddle_model(data_op)
                     if isinstance(probs, tuple):
                         probs = probs[0]
                     main_program = main_program.clone(for_test=True)
@@ -150,13 +173,16 @@ class LIMEInterpreter(Interpreter):
             fluid.io.load_persistables(exe, self.trained_model_path,
                                        main_program)
 
-            def predict_fn(visual_images):
-                images = preprocess_image(
-                    visual_images
-                )  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
+            def predict_fn(data_instance):
+                if self.input_type == np.ndarray:
+                    data = preprocess_image(
+                        data_instance
+                    )  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
+                else:
+                    data = data_instance
                 [result] = exe.run(main_program,
                                    fetch_list=[probs],
-                                   feed={'image': images})
+                                   feed={'data': data})
 
                 return result
 

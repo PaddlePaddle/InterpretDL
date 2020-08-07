@@ -65,11 +65,11 @@ def nlp_example():
 
     ig = IntGradInterpreter(
         paddle_model,
-        "../../senta_model/bilstm_model/params",
+        "assets/senta_model/bilstm_model/params",
         True,
         model_input_shape=None)
 
-    word_dict = load_vocab("../../senta_model/bilstm_model/word_dict.txt")
+    word_dict = load_vocab("assets/senta_model/bilstm_model/word_dict.txt")
     unk_id = word_dict["<unk>"]
     reviews = [[
         '交通', '方便', '；', '环境', '很好', '；', '服务态度', '很好', '', '', '房间', '较小'
