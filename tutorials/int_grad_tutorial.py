@@ -5,32 +5,30 @@ import paddle
 import numpy as np
 import sys
 sys.path.append('..')
-from interpretdl.interpreter.integrated_gradients import IntGradInterpreter
+from interpretdl.interpreter.integrated_gradients import IntGradCVInterpreter, IntGradNLPInterpreter
 from interpretdl.data_processor.readers import preprocess_image, read_image
 from interpretdl.data_processor.visualizer import visualize_overlay
 from PIL import Image
 
 
 def int_grad_example():
-    def paddle_model(data, alpha, baseline):
+    def paddle_model(data):
 
         class_num = 1000
-        image_input = baseline + alpha * (data - baseline)
         model = ResNet50()
-        logits = model.net(input=image_input, class_dim=class_num)
-
+        logits = model.net(input=data, class_dim=class_num)
         probs = fluid.layers.softmax(logits, axis=-1)
-        return image_input, probs
+        return probs
 
     img_path = 'assets/fireboat.png'
     #https://github.com/PaddlePaddle/models/tree/release/1.8/PaddleCV/image_classification
-    ig = IntGradInterpreter(paddle_model, "assets/ResNet50_pretrained", True)
+    ig = IntGradCVInterpreter(paddle_model, "assets/ResNet50_pretrained", True)
     gradients = ig.interpret(
         img_path,
         label=None,
         baseline='random',
         steps=50,
-        num_random_trials=10,
+        num_random_trials=2,
         visual=True,
         save_path='generated/ig_test.jpg')
 
@@ -54,7 +52,7 @@ def nlp_example():
         vocab["<unk>"] = len(vocab)
         return vocab
 
-    def paddle_model(data, alpha, baseline):
+    def paddle_model(data, alpha):
         dict_dim = 1256606
         emb_dim = 128
         # embedding layer
@@ -63,11 +61,8 @@ def nlp_example():
         probs = bilstm_net_emb(emb, None, None, dict_dim, is_prediction=True)
         return emb, probs
 
-    ig = IntGradInterpreter(
-        paddle_model,
-        "assets/senta_model/bilstm_model/params",
-        True,
-        model_input_shape=None)
+    ig = IntGradNLPInterpreter(paddle_model,
+                               "assets/senta_model/bilstm_model/params", True)
 
     word_dict = load_vocab("assets/senta_model/bilstm_model/word_dict.txt")
     unk_id = word_dict["<unk>"]
@@ -83,20 +78,15 @@ def nlp_example():
     data = fluid.create_lod_tensor(lod, base_shape, fluid.CPUPlace())
 
     avg_gradients = ig.interpret(
-        data,
-        label=None,
-        baseline='random',
-        steps=50,
-        num_random_trials=1,
-        visual=True,
-        save_path='ig_test.jpg')
+        data, label=None, steps=50, visual=True, save_path='ig_test.jpg')
 
     sum_gradients = np.sum(avg_gradients, axis=1).tolist()
     lod = data.lod()
 
     new_array = []
     for i in range(len(lod[0]) - 1):
-        new_array.append(sum_gradients[lod[0][i]:lod[0][i + 1]])
+        new_array.append(
+            dict(zip(reviews[i], sum_gradients[lod[0][i]:lod[0][i + 1]])))
 
     print(new_array)
 
@@ -127,7 +117,7 @@ def nlp_example2():
     BATCH_SIZE = 128
     word_dict = paddle.dataset.imdb.word_dict()
 
-    def paddle_model(data, alpha, baseline):
+    def paddle_model(data, alpha):
         emb = fluid.embedding(
             input=data, size=[len(word_dict), EMB_DIM], is_sparse=True)
         emb = emb * alpha
@@ -135,11 +125,10 @@ def nlp_example2():
                                 len(word_dict), CLASS_DIM, EMB_DIM, HID_DIM)
         return emb, probs
 
-    ig = IntGradInterpreter(
+    ig = IntGradNLPInterpreter(
         paddle_model,
         "assets/sent_persistables",  #Training based on https://www.paddlepaddle.org.cn/documentation/docs/en/user_guides/nlp_case/understand_sentiment/README.html
-        True,
-        model_input_shape=None)
+        True)
 
     reviews_str = [
         b'read the book forget the movie', b'this is a great movie',
@@ -155,20 +144,15 @@ def nlp_example2():
     data = fluid.create_lod_tensor(lod, base_shape, fluid.CUDAPlace(0))
 
     avg_gradients = ig.interpret(
-        data,
-        label=None,
-        baseline='random',
-        steps=50,
-        num_random_trials=1,
-        visual=True,
-        save_path='ig_test.jpg')
+        data, label=None, steps=50, visual=True, save_path='ig_test.jpg')
 
     sum_gradients = np.sum(avg_gradients, axis=1).tolist()
     lod = data.lod()
 
     new_array = []
     for i in range(len(lod[0]) - 1):
-        new_array.append(sum_gradients[lod[0][i]:lod[0][i + 1]])
+        new_array.append(
+            dict(zip(reviews[i], sum_gradients[lod[0][i]:lod[0][i + 1]])))
 
     print(new_array)
 

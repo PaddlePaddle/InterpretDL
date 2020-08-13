@@ -1,14 +1,13 @@
-
 from .lime import LIMEInterpreter
 from .gradient_cam import GradCAMInterpreter
-from .integrated_gradients import IntGradInterpreter
+from .integrated_gradients import IntGradCVInterpreter, IntGradNLPInterpreter
 from .smooth_grad import SmoothGradInterpreter
 from .occlusion import OcclusionInterpreter
 from .gradient_shap import GradShapInterpreter
 
 __all__ = [
-    "LIMEInterpreter", "GradCAMInterpreter",
-    "IntGradInterpreter", "SmoothGradInterpreter", "OcclusionInterpreter",
+    "LIMEInterpreter", "GradCAMInterpreter", "IntGradCVInterpreter",
+    "IntGradNLPInterpreter", "SmoothGradInterpreter", "OcclusionInterpreter",
     "GradShapInterpreter"
 ]
 
@@ -20,4 +19,6 @@ try:
     __all__.append("LIMEPriorInterpreter")
     __all__.append("ForgettingEventsInterpreter")
 except ModuleNotFoundError:
-    print("Warning: Paddle should be installed before using LIMEPriorInterpreter or ForgettingEventsInterpreter.")
+    print(
+        "Warning: Paddle should be installed before using LIMEPriorInterpreter or ForgettingEventsInterpreter."
+    )
