@@ -13,11 +13,10 @@ import os, sys
 from PIL import Image
 
 
-class GradShapInterpreter(Interpreter):
+class GradShapCVInterpreter(Interpreter):
     def __init__(self,
                  paddle_model,
                  trained_model_path,
-                 #class_num,
                  use_cuda,
                  model_input_shape=[3, 224, 224]) -> None:
         """
@@ -41,7 +40,14 @@ class GradShapInterpreter(Interpreter):
         self.model_input_shape = model_input_shape
         self.paddle_prepared = False
 
-    def interpret(self, data, label=None, baseline=None, n_samples=5, noise_amount=0.1, visual=True, save_path=None):
+    def interpret(self,
+                  data,
+                  label=None,
+                  baseline=None,
+                  n_samples=5,
+                  noise_amount=0.1,
+                  visual=True,
+                  save_path=None):
         """
         Main function of the interpreter.
 
@@ -76,27 +82,14 @@ class GradShapInterpreter(Interpreter):
                                 visual=True,
                                 save_path='grad_shap_test.jpg')
         """
-        if isinstance(data, np.ndarray) or isinstance(data, str):
-            return self.interpret_image(data=data, label=label, baseline=baseline, n_samples=n_samples, noise_amount=noise_amount, visual=visual, save_path=save_path)
-        else:
-            return self.interpret_text(data=data, label=label, baseline=baseline, n_samples=n_samples, noise_amount=noise_amount, visual=visual, save_path=save_path)
 
-
-    def interpret_image(self,
-                  data,
-                  label=None,
-                  baseline=None,
-                  n_samples=5,
-                  noise_amount=0.1,
-                  visual=True,
-                  save_path=None):
-        
         def add_noise_to_inputs():
             std = noise_amount * (np.max(data) - np.min(data))
             noise = np.random.normal(
                 0.0, std,
                 (n_samples, ) + data.shape[1:]).astype(self.data_type)
             return data.repeat(n_samples, axis=0) + noise
+
         # Read in image
         if isinstance(data, str):
             img = read_image(data, crop_size=self.model_input_shape[1])
@@ -113,12 +106,12 @@ class GradShapInterpreter(Interpreter):
         baseline = baseline.repeat(n_samples, axis=0)
 
         if not self.paddle_prepared:
-            self._paddle_prepare_image()
+            self._paddle_prepare()
 
         if label is None:
             _, out = self.predict_fn(data, np.array([[0]]))
             label = np.argmax(out[0])
-        label = np.array([[label]]).repeat(n_samples, axis=0)
+        label = np.array(label).reshape((1, 1)).repeat(n_samples, axis=0)
 
         rand_scales = np.random.uniform(0.0, 1.0,
                                         (n_samples, 1)).astype(self.data_type)
@@ -138,10 +131,8 @@ class GradShapInterpreter(Interpreter):
         visualize_grayscale(avg_attributions, visual, save_path)
 
         return avg_attributions
-    
-    
 
-    def _paddle_prepare_image(self, predict_fn=None):
+    def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
             startup_prog = fluid.Program()
             main_program = fluid.Program()
@@ -166,7 +157,8 @@ class GradShapInterpreter(Interpreter):
                     class_num = probs.shape[-1]
                     one_hot = fluid.layers.one_hot(label_op, class_num)
                     one_hot = fluid.layers.elementwise_mul(probs, one_hot)
-                    target_category_loss = fluid.layers.reduce_sum(one_hot, dim=1)
+                    target_category_loss = fluid.layers.reduce_sum(
+                        one_hot, dim=1)
 
                     p_g_list = fluid.backward.append_backward(
                         target_category_loss)
@@ -190,49 +182,75 @@ class GradShapInterpreter(Interpreter):
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True
-      
-    
-    def interpret_text(self,
+
+
+class GradShapNLPInterpreter(Interpreter):
+    def __init__(self, paddle_model, trained_model_path, use_cuda) -> None:
+        """
+        Initialize the GradShapInterpreter.
+
+        Args:
+            paddle_model (callable): A user-defined function that gives access to model predictions.
+                It takes the following arguments:
+
+                - data: Data inputs.
+                and outputs predictions. See the example at the end of ``interpret()``.
+            trained_model_path (str): The pretrained model directory.
+            class_num (int): Number of classes for the model.
+            use_cuda (bool, optional): Whether or not to use cuda. Default: True
+            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
+        """
+        Interpreter.__init__(self)
+        self.paddle_model = paddle_model
+        self.trained_model_path = trained_model_path
+        self.use_cuda = use_cuda
+        self.paddle_prepared = False
+
+    def interpret(self,
                   data,
                   label=None,
                   n_samples=5,
                   noise_amount=0.1,
                   visual=True,
                   save_path=None):
-        
+
         self.noise_amount = noise_amount
         if not self.paddle_prepared:
-            self._paddle_prepare_text()
+            self._paddle_prepare()
 
         n = len(data.recursive_sequence_lengths()[0])
-        
+
+        gradients, out, embedding = self.predict_fn(data,
+                                                    np.array([[0]] * n),
+                                                    np.array([[1]]))
+
         if label is None:
-            gradients, out, embedding = self.predict_fn(data, np.array([[0]]*n), np.array([[1]]))
-            label = np.argmax(out, axis = 1)
+            label = np.argmax(out, axis=1)
+        else:
+            label = np.array(label)
         embedding = np.array(embedding)
         label = label.reshape((n, 1))
 
-        rand_scales = np.random.uniform(0.0, 1.0,
-                                        (n_samples, 1))
-        
+        rand_scales = np.random.uniform(0.0, 1.0, (n_samples, 1))
+
         total_gradients = np.zeros_like(gradients)
         for alpha in rand_scales:
             gradients, _, _ = self.predict_fn(data, label, alpha)
             total_gradients += np.array(gradients)
-        
-        avg_gradients = total_gradients / n_samples 
+
+        avg_gradients = total_gradients / n_samples
         attributions = avg_gradients * embedding
 
         return attributions
-    
-    
-    def _paddle_prepare_text(self, predict_fn=None):
+
+    def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
             startup_prog = fluid.Program()
             main_program = fluid.Program()
             with fluid.program_guard(main_program, startup_prog):
                 with fluid.unique_name.guard():
-                    data_op = fluid.data(name='data', shape=[None], dtype='int64', lod_level=1)
+                    data_op = fluid.data(
+                        name='data', shape=[None], dtype='int64', lod_level=1)
                     label_op = fluid.data(
                         name='label', shape=[None, 1], dtype='int64')
                     alpha_op = fluid.layers.data(
@@ -240,7 +258,8 @@ class GradShapInterpreter(Interpreter):
                     #count_op = fluid.
                     #noise = fluid.layers.gaussian_random(fluid.layers.shape(data_op[]))
                     #data_plus = data_op + fluid.layers.zeros_like(data_op)
-                    emb, probs = self.paddle_model(data_op, alpha_op, self.noise_amount)
+                    emb, probs = self.paddle_model(data_op, alpha_op,
+                                                   self.noise_amount)
 
                     for op in main_program.global_block().ops:
                         if op.type == 'batch_norm':
@@ -251,7 +270,8 @@ class GradShapInterpreter(Interpreter):
                     class_num = probs.shape[-1]
                     one_hot = fluid.layers.one_hot(label_op, class_num)
                     one_hot = fluid.layers.elementwise_mul(probs, one_hot)
-                    target_category_loss = fluid.layers.reduce_sum(one_hot, dim=1)
+                    target_category_loss = fluid.layers.reduce_sum(
+                        one_hot, dim=1)
 
                     p_g_list = fluid.backward.append_backward(
                         target_category_loss)
@@ -267,12 +287,13 @@ class GradShapInterpreter(Interpreter):
                                        main_program)
 
             def predict_fn(data, label, alpha):
-                gradients, out, embedding = exe.run(main_program,
-                                         feed={'data': data,
-                                               'label': label,
-                                               'alpha': alpha},
-                                         fetch_list=[gradients_map, probs, emb],
-                                                   return_numpy=False)
+                gradients, out, embedding = exe.run(
+                    main_program,
+                    feed={'data': data,
+                          'label': label,
+                          'alpha': alpha},
+                    fetch_list=[gradients_map, probs, emb],
+                    return_numpy=False)
                 return gradients, out, embedding
 
         self.predict_fn = predict_fn
