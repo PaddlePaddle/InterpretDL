@@ -4,15 +4,12 @@ import paddle.fluid as fluid
 import numpy as np
 import sys
 sys.path.append('..')
-from interpretdl.interpreter.gradient_shap import GradShapCVInterpreter, GradShapNLPInterpreter
-from interpretdl.data_processor.readers import preprocess_image, read_image
-from interpretdl.data_processor.visualizer import visualize_grayscale
-from PIL import Image
-import cv2
+
+import interpretdl as it
 
 
 def grad_shap_example():
-    def predict_fn(data):
+    def paddle_model(data):
 
         class_num = 1000
         model = ResNet50()
@@ -22,14 +19,15 @@ def grad_shap_example():
         return probs
 
     img_path = 'assets/catdog.png'
-    gs = GradShapCVInterpreter(predict_fn, "assets/ResNet50_pretrained", True)
+    gs = it.GradShapCVInterpreter(
+        paddle_model, "assets/ResNet50_pretrained", use_cuda=True)
     gradients = gs.interpret(
         img_path,
         label=None,
         noise_amount=0.1,
         n_samples=5,
         visual=True,
-        save_path='grad_shap_test.jpg')
+        save_path=None)
 
 
 def nlp_example():
@@ -62,8 +60,8 @@ def nlp_example():
         probs = bilstm_net_emb(emb, None, None, dict_dim, is_prediction=True)
         return emb, probs
 
-    gs = GradShapNLPInterpreter(paddle_model,
-                                "assets/senta_model/bilstm_model/params", True)
+    gs = it.GradShapNLPInterpreter(
+        paddle_model, "assets/senta_model/bilstm_model/params", True)
 
     word_dict = load_vocab("assets/senta_model/bilstm_model/word_dict.txt")
     unk_id = word_dict["<unk>"]

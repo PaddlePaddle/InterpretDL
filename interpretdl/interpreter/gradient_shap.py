@@ -17,7 +17,7 @@ class GradShapCVInterpreter(Interpreter):
     def __init__(self,
                  paddle_model,
                  trained_model_path,
-                 use_cuda,
+                 use_cuda=True,
                  model_input_shape=[3, 224, 224]) -> None:
         """
         Initialize the GradShapInterpreter.
@@ -128,7 +128,8 @@ class GradShapCVInterpreter(Interpreter):
         attributions = gradients * input_baseline_diff
         avg_attributions = np.mean(attributions, axis=0, keepdims=True)
 
-        visualize_grayscale(avg_attributions, visual, save_path)
+        visualize_grayscale(
+            avg_attributions, visual=visual, save_path=save_path)
 
         return avg_attributions
 
