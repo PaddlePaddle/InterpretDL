@@ -125,13 +125,13 @@ class GradShapCVInterpreter(Interpreter):
 
         input_baseline_diff = data_with_noise - baseline
 
-        attributions = gradients * input_baseline_diff
-        avg_attributions = np.mean(attributions, axis=0, keepdims=True)
+        interpretations = gradients * input_baseline_diff
+        interpretations = np.mean(interpretations, axis=0, keepdims=True)
 
         visualize_grayscale(
-            avg_attributions, visual=visual, save_path=save_path)
+            interpretations, visual=visual, save_path=save_path)
 
-        return avg_attributions
+        return interpretations
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
@@ -240,9 +240,9 @@ class GradShapNLPInterpreter(Interpreter):
             total_gradients += np.array(gradients)
 
         avg_gradients = total_gradients / n_samples
-        attributions = avg_gradients * embedding
+        interpretations = avg_gradients * embedding
 
-        return attributions
+        return interpretations
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:

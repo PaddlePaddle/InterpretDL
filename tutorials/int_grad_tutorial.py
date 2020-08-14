@@ -5,6 +5,9 @@ import paddle
 import numpy as np
 import sys
 sys.path.append('..')
+
+import interpretdl as it
+
 from interpretdl.interpreter.integrated_gradients import IntGradCVInterpreter, IntGradNLPInterpreter
 from interpretdl.data_processor.readers import preprocess_image, read_image
 from interpretdl.data_processor.visualizer import visualize_overlay
@@ -22,7 +25,8 @@ def int_grad_example():
 
     img_path = 'assets/fireboat.png'
     #https://github.com/PaddlePaddle/models/tree/release/1.8/PaddleCV/image_classification
-    ig = IntGradCVInterpreter(paddle_model, "assets/ResNet50_pretrained", True)
+    ig = it.IntGradCVInterpreter(paddle_model, "assets/ResNet50_pretrained",
+                                 True)
     gradients = ig.interpret(
         img_path,
         label=None,
@@ -30,7 +34,7 @@ def int_grad_example():
         steps=50,
         num_random_trials=2,
         visual=True,
-        save_path='generated/ig_test.jpg')
+        save_path='ig_test.jpg')
 
 
 def nlp_example():
@@ -61,8 +65,8 @@ def nlp_example():
         probs = bilstm_net_emb(emb, None, None, dict_dim, is_prediction=True)
         return emb, probs
 
-    ig = IntGradNLPInterpreter(paddle_model,
-                               "assets/senta_model/bilstm_model/params", True)
+    ig = it.IntGradNLPInterpreter(
+        paddle_model, "assets/senta_model/bilstm_model/params", True)
 
     word_dict = load_vocab("assets/senta_model/bilstm_model/word_dict.txt")
     unk_id = word_dict["<unk>"]
@@ -125,7 +129,7 @@ def nlp_example2():
                                 len(word_dict), CLASS_DIM, EMB_DIM, HID_DIM)
         return emb, probs
 
-    ig = IntGradNLPInterpreter(
+    ig = it.IntGradNLPInterpreter(
         paddle_model,
         "assets/sent_persistables",  #Training based on https://www.paddlepaddle.org.cn/documentation/docs/en/user_guides/nlp_case/understand_sentiment/README.html
         True)
