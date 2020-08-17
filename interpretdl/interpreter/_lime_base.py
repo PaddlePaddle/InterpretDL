@@ -80,7 +80,7 @@ class LimeBase(object):
 
         if model_regressor is None:
             model_regressor = Ridge(
-                alpha=1.0,
+                alpha=0,
                 fit_intercept=True,
                 normalize=True,
                 random_state=self.random_state)
@@ -89,7 +89,6 @@ class LimeBase(object):
         # R^2 between easy_model.predict(X) and y.
         prediction_score = easy_model.score(
             neighborhood_data, labels_column, sample_weight=weights)
-
         local_pred = easy_model.predict(neighborhood_data[0, used_features]
                                         .reshape(1, -1))
 
@@ -307,6 +306,8 @@ class LimeBase(object):
         Generates interpretations for a prediction.
         """
         word_ids = np.array(word_ids)
+        if len(word_ids.shape) > 1:
+            word_ids = word_ids[0]
         data, labels, distances = self._data_labels_text(
             word_ids, unk_id, classifier_fn, num_samples, batch_size,
             distance_metric)
@@ -340,11 +341,11 @@ class LimeBase(object):
                 temp[z] = unk_id
             samples.append(temp.tolist())
             if len(samples) == batch_size:
-                preds = classifier_fn(samples).tolist()
+                preds = classifier_fn(np.array(samples)).tolist()
                 labels.extend(preds)
                 samples = []
         if len(samples) > 0:
-            preds = classifier_fn(samples).tolist()
+            preds = classifier_fn(np.array(samples)).tolist()
             labels.extend(preds)
 
         distances = sklearn.metrics.pairwise_distances(

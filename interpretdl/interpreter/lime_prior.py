@@ -3,14 +3,14 @@ import typing
 from typing import Any, Callable, List, Tuple, Union
 import numpy as np
 
-from .lime import LIMEInterpreter
+from .lime import LIMECVInterpreter
 from ._lime_base import compute_segments
 from ._global_prior_base import precompute_global_prior, use_fast_normlime_as_prior
 from ..data_processor.readers import read_image, load_npy_dict_file
 from ..data_processor.visualizer import show_important_parts, visualize_image, save_image
 
 
-class LIMEPriorInterpreter(LIMEInterpreter):
+class LIMEPriorInterpreter(LIMECVInterpreter):
     """
     LIME Prior Interpreter.
     """
@@ -36,8 +36,8 @@ class LIMEPriorInterpreter(LIMEInterpreter):
                 Otherwise, the loaded prior will be used.
             use_cuda: Whether to use CUDA. Defaults to ``True``.
         """
-        LIMEInterpreter.__init__(self, paddle_model, trained_model_path,
-                                 model_input_shape, use_cuda)
+        LIMECVInterpreter.__init__(self, paddle_model, trained_model_path,
+                                   model_input_shape, use_cuda)
         self.prior_method = prior_method
         self.global_weights = None
 

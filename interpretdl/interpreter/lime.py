@@ -10,7 +10,7 @@ from ._lime_base import LimeBase
 from .abc_interpreter import Interpreter
 
 
-class LIMEInterpreter(Interpreter):
+class LIMECVInterpreter(Interpreter):
     """
     LIME Interpreter.
 
@@ -49,18 +49,17 @@ class LIMEInterpreter(Interpreter):
         self.lime_intermediate_results = {}
 
     def interpret(self,
-                  data_path,
+                  data,
                   interpret_class=None,
                   num_samples=1000,
                   batch_size=50,
-                  unk_id=None,
                   visual=True,
                   save_path=None):
         """
         Main function of the interpreter.
 
         Args:
-            data_path (str): The input file path.
+            data (str): The input file path.
             interpret_class (int, optional): The index of class to interpret. If None, the most likely label will be used. Default: None
             num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate interpretation. Default: 1000
             batch_size (int, optional): Number of samples to forward each time. Default: 50
@@ -87,11 +86,10 @@ class LIMEInterpreter(Interpreter):
                     save_path='assets/catdog_lime.png')
 
         """
-
-        if isinstance(data_path, str):
-            data_instance = read_image(data_path)
+        if isinstance(data, str):
+            data_instance = read_image(data)
         else:
-            data_instance = data_path
+            data_instance = data
 
         self.input_type = type(data_instance)
         self.data_type = np.array(data_instance).dtype
@@ -106,21 +104,12 @@ class LIMEInterpreter(Interpreter):
             pred_label = np.argsort(probability)
             interpret_class = pred_label[-1:]
 
-        if isinstance(data_instance, np.ndarray):
-            lime_weights, r2_scores = self.lime_base.interpret_instance(
-                data_instance[0],
-                self.predict_fn,
-                interpret_class,
-                num_samples=num_samples,
-                batch_size=batch_size)
-        else:
-            lime_weights, r2_scores = self.lime_base.interpret_instance_text(
-                data_instance,
-                self.predict_fn,
-                interpret_class,
-                num_samples=num_samples,
-                batch_size=batch_size)
-            return lime_weights
+        lime_weights, r2_scores = self.lime_base.interpret_instance(
+            data_instance[0],
+            self.predict_fn,
+            interpret_class,
+            num_samples=num_samples,
+            batch_size=batch_size)
 
         interpretation = show_important_parts(data_instance[0], lime_weights,
                                               interpret_class[0],
@@ -147,17 +136,10 @@ class LIMEInterpreter(Interpreter):
             main_program = fluid.Program()
             with fluid.program_guard(main_program, startup_prog):
                 with fluid.unique_name.guard():
-                    if self.input_type == fluid.LoDTensor:
-                        data_op = fluid.data(
-                            name='data',
-                            shape=[None],
-                            dtype=self.data_type,
-                            lod_level=1)
-                    else:
-                        data_op = fluid.data(
-                            name='data',
-                            shape=[None] + self.model_input_shape,
-                            dtype='float32')
+                    data_op = fluid.data(
+                        name='data',
+                        shape=[None] + self.model_input_shape,
+                        dtype='float32')
                     probs = self.paddle_model(data_op)
                     if isinstance(probs, tuple):
                         probs = probs[0]
@@ -175,19 +157,135 @@ class LIMEInterpreter(Interpreter):
                                        main_program)
 
             def predict_fn(data_instance):
-                if self.input_type == fluid.LoDTensor:
-                    if isinstance(data_instance, fluid.LoDTensor):
-                        data = data_instance
-                    else:
-                        batch_size, n_features = np.array(data_instance).shape
-                        samples = np.array(
-                            sum(data_instance, []), dtype=np.int64)
-                        data = fluid.create_lod_tensor(
-                            samples, [[n_features] * batch_size], self.place)
+                data = preprocess_image(
+                    data_instance
+                )  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
+                [result] = exe.run(main_program,
+                                   fetch_list=[probs],
+                                   feed={'data': data})
+
+                return result
+
+        self.predict_fn = predict_fn
+        self.paddle_prepared = True
+
+
+class LIMENLPInterpreter(Interpreter):
+    """
+    LIME Interpreter.
+
+    More details regarding the LIME method can be found in the original paper:
+    https://arxiv.org/abs/1602.04938
+    """
+
+    def __init__(self,
+                 paddle_model: Callable,
+                 trained_model_path: str,
+                 use_cuda=True) -> None:
+        """
+
+        Args:
+            paddle_model (callable): A user-defined function that gives access to model predictions.
+                    It takes the following arguments:
+
+                    - data: Data inputs.
+                    and outputs predictions. See the example at the end of ``interpret()``.
+            trained_model_path (str): The pretrained model directory.
+            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
+            use_cuda (bool, optional): Whether or not to use cuda. Default: True
+        """
+
+        Interpreter.__init__(self)
+        self.paddle_model = paddle_model
+        self.trained_model_path = trained_model_path
+        self.use_cuda = use_cuda
+        self.paddle_prepared = False
+
+        # use the default LIME setting
+        self.lime_base = LimeBase()
+
+        self.lime_intermediate_results = {}
+
+    def interpret(self,
+                  data,
+                  interpret_class=None,
+                  num_samples=1000,
+                  batch_size=50,
+                  unk_id=None,
+                  visual=True,
+                  save_path=None):
+
+        if isinstance(data, np.ndarray) and len(data.shape) == 1:
+            data_instance = np.array([data])
+        else:
+            data_instance = data
+
+        self.input_type = type(data_instance)
+        self.data_type = np.array(data_instance).dtype
+
+        if not self.paddle_prepared:
+            self._paddle_prepare()
+        # only one example here
+        probability = self.predict_fn(data_instance)[0]
+
+        # only interpret top 1
+        if interpret_class is None:
+            pred_label = np.argsort(probability)
+            interpret_class = pred_label[-1:]
+
+        lime_weights, r2_scores = self.lime_base.interpret_instance_text(
+            data_instance,
+            self.predict_fn,
+            interpret_class,
+            unk_id=unk_id,
+            num_samples=num_samples,
+            batch_size=batch_size)
+
+        data_array = data_instance[0] if isinstance(
+            data_instance, np.ndarray) else np.array(data_instance)
+        for c in lime_weights:
+            weights_c = lime_weights[c]
+            weights_new = [(data_array[tup[0]], tup[1]) for tup in weights_c]
+            lime_weights[c] = weights_new
+
+        return lime_weights
+
+    def _paddle_prepare(self, predict_fn=None):
+        if predict_fn is None:
+            import paddle.fluid as fluid
+            startup_prog = fluid.Program()
+            main_program = fluid.Program()
+            with fluid.program_guard(main_program, startup_prog):
+                with fluid.unique_name.guard():
+                    data_op = fluid.data(
+                        name='data', shape=[None], dtype='int64', lod_level=1)
+
+                    probs = self.paddle_model(data_op)
+                    if isinstance(probs, tuple):
+                        probs = probs[0]
+                    main_program = main_program.clone(for_test=True)
+
+            if self.use_cuda:
+                gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
+                place = fluid.CUDAPlace(gpu_id)
+            else:
+                place = fluid.CPUPlace()
+            self.place = place
+            exe = fluid.Executor(place)
+
+            fluid.io.load_persistables(exe, self.trained_model_path,
+                                       main_program)
+
+            def predict_fn(data_instance):
+                if isinstance(data_instance, fluid.LoDTensor):
+                    data = data_instance
                 else:
-                    data = preprocess_image(
-                        data_instance
-                    )  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
+                    batch_size, n_features = data_instance.shape
+                    samples = np.array(
+                        sum(data_instance.tolist(), []), dtype=np.int64)
+                    data = fluid.create_lod_tensor(
+                        samples, [[n_features] * batch_size], self.place)
+
                 [result] = exe.run(main_program,
                                    fetch_list=[probs],
                                    feed={'data': data})
