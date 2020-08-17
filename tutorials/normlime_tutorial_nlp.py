@@ -29,12 +29,16 @@ def nlp_example(dataset=True):
         return probs
 
     word_dict = load_vocab("assets/senta_model/bilstm_model/word_dict.txt")
+    # the word id that replace occluded word, typical choices include "", <unk>, and <pad>
     unk_id = word_dict[""]  #["<unk>"]
 
     if dataset:
+        # use the senta_data dataset, which can be downloaded from https://baidu-nlp.bj.bcebos.com/sentiment_classification-dataset-1.0.0.tar.gz
+        # it contains 1200 reviews
         pad_id = 0
         all_data = []
         max_len = 512
+        # prepare the dataset as a list of lists
         with io.open(
                 "assets/senta_data/test.tsv", "r", encoding='utf8') as fin:
             for line in fin:
@@ -55,6 +59,7 @@ def nlp_example(dataset=True):
         print('total of %d sentences' % len(all_data))
         lod = all_data
     else:
+        # if not using the senta_data dataset, make some reviews on our own
         reviews = [[
             '交通', '方便', '；', '环境', '很好', '；', '服务态度', '很好', '', '', '房间', '较小'
         ], ['交通', '一般', '；', '环境', '很差', '；', '服务态度', '很差', '房间', '较小']]
@@ -63,6 +68,7 @@ def nlp_example(dataset=True):
         for c in reviews:
             lod.append([word_dict.get(words, unk_id) for words in c])
 
+    # create LoDTensor so that sentences of different lengths can be fed into the model at the same time
     base_shape = [[len(c) for c in lod]]
     lod = np.array(sum(lod, []), dtype=np.int64)
     data = fluid.create_lod_tensor(lod, base_shape, fluid.CPUPlace())
