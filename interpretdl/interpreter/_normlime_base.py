@@ -1,18 +1,22 @@
 import numpy as np
 import os, sys
+from tqdm import tqdm
 
 from ..common.paddle_utils import FeatureExtractor, extract_superpixel_features, get_pre_models
 from ..data_processor.readers import load_pickle_file
 from .lime import LIMECVInterpreter, LIMENLPInterpreter
 
 
-class NormLIMEBase(object):
+class NormLIMECVInterpreter(LIMECVInterpreter):
     def __init__(self,
-                 image_paths,
-                 predict_fn,
-                 temp_data_file='all_lime_weights.npz',
-                 batch_size=50,
-                 num_samples=2000):
+                 paddle_model,
+                 trained_model_path,
+                 model_input_shape=[3, 224, 224],
+                 use_cuda=True,
+                 temp_data_file='all_lime_weights.npz'):
+        LIMECVInterpreter.__init__(self, paddle_model, trained_model_path,
+                                   model_input_shape, use_cuda)
+        self.lime_interpret = super().interpret
 
         if temp_data_file.endswith('.npz'):
             self.filepath_to_save = temp_data_file
@@ -26,73 +30,49 @@ class NormLIMEBase(object):
         else:
             self.all_lime_weights = {}
 
-        self.image_paths = image_paths
-        self.predict_fn = predict_fn
-        self.batch_size = batch_size
-        self.num_samples = num_samples
-
-    def _get_lime_weights(self, data, auto_save=True, **kwargs):
-        if 'unk_id' in kwargs:
-            dict_key = '_'.join(str(i) for i in data)
-        else:
-            dict_key = data
-
-        if dict_key in self.all_lime_weights:
+    def _get_lime_weights(self, data, num_samples, batch_size, auto_save=True):
+        if data in self.all_lime_weights:
             return
+        lime_weights = self.lime_interpret(
+            data, num_samples=num_samples, batch_size=batch_size)
 
-        lime_weights = self.lime_interpreter.interpret(data, **kwargs)
+        sp_seg = self.lime_intermediate_results['segmentation']
+        data_instance = self.lime_intermediate_results['input']
 
-        if 'unk_id' in kwargs:
-            self.all_lime_weights[dict_key] = {'lime_weights': lime_weights, }
-
-        else:
-
-            sp_seg = self.lime_interpreter.lime_intermediate_results[
-                'segmentation']
-            data_instance = self.lime_interpreter.lime_intermediate_results[
-                'input']
-
-            self.all_lime_weights[dict_key] = {
-                'lime_weights': lime_weights,
-                'segmentation': sp_seg,
-                'input': data_instance
-            }
+        self.all_lime_weights[data] = {
+            'lime_weights': lime_weights,
+            'segmentation': sp_seg,
+            'input': data_instance
+        }
 
         if auto_save:
             np.savez(self.filepath_to_save, **self.all_lime_weights)
-            # load: dict(np.load(filepath_to_load, allow_pickle=True))
+            # load: dict(np.load(filepath_to_load, allow_pickle=true))
 
         return
 
-    def compute_normlime(self, save_path='normlime_weights.npy'):
-        self.lime_interpreter = LIMECVInterpreter(None, None)
-        self.lime_interpreter._paddle_prepare(self.predict_fn)
+    def interpret(self,
+                  image_paths,
+                  num_samples=2000,
+                  batch_size=50,
+                  save_path='normlime_weights.npy'):
+        #self.lime_interpreter = limecvinterpreter(none, none)
+        #self.lime_interpreter._paddle_prepare(self.predict_fn)
+
         _, h_pre_models_kmeans = get_pre_models()
         kmeans_model = load_pickle_file(h_pre_models_kmeans)
 
-        last_len = 0
         # compute lime weights and put in self.all_lime_weights
-        for i, image_path in enumerate(self.image_paths):
-            sys.stdout.write('\r')
-            out_str = f"computing {image_path.split('/')[-1]}, {i+1}/{len(self.image_paths)}"
-            sys.stdout.write(out_str + ' ' * max(last_len - len(out_str), 0))
-            last_len = len(out_str)
-            sys.stdout.flush()
-
-            #print(
-            #    f"computing {image_path.split('/')[-1]}, {i}/{len(self.image_paths)}"
-            #)
+        for i in tqdm(range(len(image_paths))):
+            image_path = image_paths[i]
             self._get_lime_weights(
-                image_path,
-                auto_save=(i % 10 == 0),
-                num_samples=self.num_samples,
-                batch_size=self.batch_size)
-        print('\n')
+                image_path, num_samples, batch_size, auto_save=(i % 10 == 0))
+
         np.savez(self.filepath_to_save, **self.all_lime_weights)
 
         # convert superpixel indexes to cluster indexes.
         normlime_weights_all_labels = {}
-        for i, image_path in enumerate(self.image_paths):
+        for i, image_path in enumerate(image_paths):
             temp = self.all_lime_weights[image_path]
             if isinstance(temp, np.ndarray):
                 temp = temp.item()
@@ -100,6 +80,7 @@ class NormLIMEBase(object):
             fextractor = FeatureExtractor()
             f = fextractor.forward(temp['input'][np.newaxis, ...]).transpose(
                 (1, 2, 0))
+
             X = extract_superpixel_features(f, temp['segmentation'])
             try:
                 cluster_labels = kmeans_model.predict(
@@ -157,38 +138,86 @@ class NormLIMEBase(object):
 
         return normlime_weights_all_labels
 
-    def compute_normlime_text(self, unk_id, save_path='normlime_weights.npy'):
-        self.lime_interpreter = LIMENLPInterpreter(None, None)
-        self.lime_interpreter._paddle_prepare(self.predict_fn)
-        data = self.image_paths
-        if isinstance(data, list) or isinstance(data, np.ndarray):
-            self.data = data
+
+class NormLIMENLPInterpreter(LIMENLPInterpreter):
+    def __init__(self,
+                 paddle_model,
+                 trained_model_path,
+                 use_cuda=True,
+                 temp_data_file='all_lime_weights.npz'):
+        LIMENLPInterpreter.__init__(self, paddle_model, trained_model_path,
+                                    use_cuda)
+        self.lime_interpret = super().interpret
+
+        if temp_data_file.endswith('.npz'):
+            self.filepath_to_save = temp_data_file
         else:
-            seq_lens = data.recursive_sequence_lengths()[0]
-            data = np.array(data)
-            self.data = []
+            self.filepath_to_save = temp_data_file + '.npz'
+
+        if os.path.exists(self.filepath_to_save):
+            self.all_lime_weights = dict(
+                np.load(
+                    self.filepath_to_save, allow_pickle=True))
+        else:
+            self.all_lime_weights = {}
+
+    def _get_lime_weights(self,
+                          data,
+                          unk_id,
+                          num_samples,
+                          batch_size,
+                          auto_save=True):
+
+        dict_key = '_'.join(str(i) for i in data)
+
+        if dict_key in self.all_lime_weights:
+            return
+
+        lime_weights = self.lime_interpret(
+            data,
+            unk_id=unk_id,
+            num_samples=num_samples,
+            batch_size=batch_size)
+
+        self.all_lime_weights[dict_key] = {'lime_weights': lime_weights, }
+
+        if auto_save:
+            np.savez(self.filepath_to_save, **self.all_lime_weights)
+            # load: dict(np.load(filepath_to_load, allow_pickle=True))
+
+        return
+
+    def interpret(self,
+                  word_ids,
+                  unk_id,
+                  num_samples,
+                  batch_size,
+                  save_path='normlime_weights.npy'):
+        if isinstance(word_ids, list) or isinstance(word_ids, np.ndarray):
+            data = word_ids
+        else:
+            seq_lens = word_ids.recursive_sequence_lengths()[0]
+            word_ids = np.array(word_ids)
+            data = []
             start = 0
             for l in seq_lens:
-                self.data.append(data[start:start + l])
+                data.append(word_ids[start:start + l])
                 start += l
 
         # compute lime weights and put in self.all_lime_weights
-        for i in range(len(self.data)):
-            sys.stdout.write('\r')
-            sys.stdout.write(f"computing {i+1}/{len(self.data)}")
-            sys.stdout.flush()
+        for i in tqdm(range(len(data))):
             self._get_lime_weights(
-                np.array(self.data[i]),
-                auto_save=(i % 10 == 0),
-                unk_id=unk_id,
-                num_samples=self.num_samples,
-                batch_size=self.batch_size)
-        print('\n')
+                np.array(data[i]),
+                unk_id,
+                num_samples,
+                batch_size,
+                auto_save=(i % 10) == 0)
+
         np.savez(self.filepath_to_save, **self.all_lime_weights)
+
         normlime_weights_all_labels = {}
-        unique_ids = np.unique(data)
-        for i in range(len(self.data)):
-            data_instance = self.data[i]
+        for i in range(len(data)):
+            data_instance = data[i]
             temp = self.all_lime_weights['_'.join(
                 str(i) for i in data_instance)]
             if isinstance(temp, np.ndarray):

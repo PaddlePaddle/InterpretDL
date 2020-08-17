@@ -4,11 +4,12 @@ from .integrated_gradients import IntGradCVInterpreter, IntGradNLPInterpreter
 from .smooth_grad import SmoothGradInterpreter
 from .occlusion import OcclusionInterpreter
 from .gradient_shap import GradShapCVInterpreter, GradShapNLPInterpreter
-
+from ._normlime_base import NormLIMECVInterpreter, NormLIMENLPInterpreter
 __all__ = [
-    "LIMECVInterpreter", "LIMENLPInterpreter", "GradCAMInterpreter",
-    "IntGradCVInterpreter", "IntGradNLPInterpreter", "SmoothGradInterpreter",
-    "OcclusionInterpreter", "GradShapCVInterpreter", "GradShapNLPInterpreter"
+    "LIMECVInterpreter", "LIMENLPInterpreter", "NormLIMECVInterpreter",
+    "NormLIMENLPInterpreter", "GradCAMInterpreter", "IntGradCVInterpreter",
+    "IntGradNLPInterpreter", "SmoothGradInterpreter", "OcclusionInterpreter",
+    "GradShapCVInterpreter", "GradShapNLPInterpreter"
 ]
 
 try:

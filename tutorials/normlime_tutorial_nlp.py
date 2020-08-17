@@ -4,7 +4,6 @@ import numpy as np
 sys.path.append('..')
 
 import interpretdl as it
-from interpretdl.interpreter._normlime_base import NormLIMEBase
 
 
 def nlp_example(dataset=True):
@@ -31,9 +30,6 @@ def nlp_example(dataset=True):
 
     word_dict = load_vocab("assets/senta_model/bilstm_model/word_dict.txt")
     unk_id = word_dict[""]  #["<unk>"]
-    lime = it.LIMENLPInterpreter(paddle_model,
-                                 "assets/senta_model/bilstm_model/params")
-    lime._paddle_prepare()
 
     if dataset:
         pad_id = 0
@@ -71,16 +67,14 @@ def nlp_example(dataset=True):
     lod = np.array(sum(lod, []), dtype=np.int64)
     data = fluid.create_lod_tensor(lod, base_shape, fluid.CPUPlace())
 
-    normlime = NormLIMEBase(
-        data,
-        lime.predict_fn,
-        temp_data_file='all_lime_weights_nlp.npz',
-        batch_size=50,
-        num_samples=500)
+    normlime = it.NormLIMENLPInterpreter(
+        paddle_model,
+        "assets/senta_model/bilstm_model/params",
+        temp_data_file='all_lime_weights_nlp.npz')
 
-    normlime_weights = normlime.compute_normlime_text(unk_id=unk_id)
+    normlime_weights = normlime.interpret(
+        data, unk_id, num_samples=2000, batch_size=50)
 
-    #print(normlime_weights)
     id2word = dict(zip(word_dict.values(), word_dict.keys()))
     for label in normlime_weights:
         print(label)
