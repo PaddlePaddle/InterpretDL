@@ -105,19 +105,7 @@ def visualize_grayscale(gradients, percentile=99, visual=True, save_path=None):
         x.save(save_path)
 
 
-def visualize_gradcam(feature_map, gradients, org, visual=True,
-                      save_path=None):
-    # take the average of gradient for each channel
-    mean_g = np.mean(gradients, (1, 2))
-    heatmap = feature_map.transpose([1, 2, 0])
-    # multiply the feature map by average gradients
-    for i in range(len(mean_g)):
-        heatmap[:, :, i] *= mean_g[i]
-
-    heatmap = np.mean(heatmap, axis=-1)
-    # ReLU
-    heatmap = np.maximum(heatmap, 0)
-    heatmap /= np.max(heatmap)
+def visualize_heatmap(heatmap, org, visual=True, save_path=None):
     org = np.array(org).astype('float32')
     org = cv2.cvtColor(org, cv2.COLOR_BGR2RGB)
 
