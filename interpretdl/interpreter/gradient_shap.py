@@ -20,7 +20,7 @@ class GradShapCVInterpreter(Interpreter):
                  use_cuda=True,
                  model_input_shape=[3, 224, 224]) -> None:
         """
-        Initialize the GradShapInterpreter.
+        Initialize the GradShapCVInterpreter.
 
         Args:
             paddle_model (callable): A user-defined function that gives access to model predictions.
@@ -188,13 +188,15 @@ class GradShapCVInterpreter(Interpreter):
 class GradShapNLPInterpreter(Interpreter):
     def __init__(self, paddle_model, trained_model_path, use_cuda) -> None:
         """
-        Initialize the GradShapInterpreter.
+        Initialize the GradShapNLPInterpreter.
 
         Args:
             paddle_model (callable): A user-defined function that gives access to model predictions.
                 It takes the following arguments:
 
-                - data: Data inputs.
+                - data: Data input.
+                - alpha: A scalar for calculating the path integral
+                - baseline: The baseline input.
                 and outputs predictions. See the example at the end of ``interpret()``.
             trained_model_path (str): The pretrained model directory.
             class_num (int): Number of classes for the model.
@@ -214,6 +216,80 @@ class GradShapNLPInterpreter(Interpreter):
                   noise_amount=0.1,
                   visual=True,
                   save_path=None):
+        """
+        Main function of the interpreter.
+
+        Args:
+            data (str or numpy.ndarray or fluid.LoDTensor): The image filepath or processed image for cv; fluid.LoDTensor of word ids if nlp.
+            label (list or numpy.ndarray, optional): The target label to analyze. If None, the most likely label will be used. Default: None.
+            n_samples (int, optional): The number of randomly generated samples. Default: 5.
+            noise_amount (float, optional): Noise level of added noise to the image.
+                                            The std of Guassian random noise is noise_amount * (x_max - x_min). Default: 0.1
+            visual (bool, optional): Whether or not to visualize the processed image. Default: True.
+            save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
+
+        Returns:
+            numpy.ndarray: avg_attributions
+
+        Example::
+
+            import interpretdl as it
+            def load_vocab(file_path):
+                vocab = {}
+                with io.open(file_path, 'r', encoding='utf8') as f:
+                    wid = 0
+                    for line in f:
+                        if line.strip() not in vocab:
+                            vocab[line.strip()] = wid
+                            wid += 1
+                vocab["<unk>"] = len(vocab)
+                return vocab
+
+            def paddle_model(data, alpha, std):
+                dict_dim = 1256606
+                emb_dim = 128
+                # embedding layer
+                emb = fluid.embedding(input=data, size=[dict_dim, emb_dim])
+                emb += fluid.layers.gaussian_random(fluid.layers.shape(emb), std=std)
+                emb *= alpha
+                probs = bilstm_net_emb(emb, None, None, dict_dim, is_prediction=True)
+                return emb, probs
+
+            gs = it.GradShapNLPInterpreter(
+                paddle_model, "assets/senta_model/bilstm_model/params", True)
+
+            word_dict = load_vocab("assets/senta_model/bilstm_model/word_dict.txt")
+            unk_id = word_dict["<unk>"]
+            reviews = [
+                ['交通', '方便', '；', '环境', '很好', '；', '服务态度', '很好', '', '', '房间', '较小'],
+                ['交通', '不方便', '环境', '很差', '；', '服务态度', '一般', '', '房间', '较小']
+            ]
+
+            lod = []
+            for c in reviews:
+                lod.append([word_dict.get(words, unk_id) for words in c])
+            base_shape = [[len(c) for c in lod]]
+            lod = np.array(sum(lod, []), dtype=np.int64)
+            data = fluid.create_lod_tensor(lod, base_shape, fluid.CPUPlace())
+
+            avg_gradients = gs.interpret(
+                data,
+                label=None,
+                noise_amount=0.1,
+                n_samples=20,
+                visual=True,
+                save_path=None)
+
+            sum_gradients = np.sum(avg_gradients, axis=1).tolist()
+            lod = data.lod()
+
+            new_array = []
+            for i in range(len(lod[0]) - 1):
+                new_array.append(
+                    dict(zip(reviews[i], sum_gradients[lod[0][i]:lod[0][i + 1]])))
+
+            print(new_array)
+        """
 
         self.noise_amount = noise_amount
         if not self.paddle_prepared:

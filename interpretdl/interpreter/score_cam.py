@@ -13,12 +13,31 @@ from ..data_processor.visualizer import visualize_heatmap
 
 
 class ScoreCAMInterpreter(Interpreter):
+    """
+    Score CAM Interpreter.
+
+    More details regarding the Score CAM method can be found in the original paper:
+    https://openaccess.thecvf.com/content_CVPRW_2020/papers/w1/Wang_Score-CAM_Score-Weighted_Visual_Explanations_for_Convolutional_Neural_Networks_CVPRW_2020_paper.pdf
+    """
+
     def __init__(self,
                  paddle_model,
                  trained_model_path,
                  use_cuda=True,
                  model_input_shape=[3, 224, 224]) -> None:
+        """
+        Initialize the GradCAMInterpreter.
 
+        Args:
+            paddle_model (callable): A user-defined function that gives access to model predictions.
+                It takes the following arguments:
+
+                - data: Data inputs.
+                and outputs predictions. See the example at the end of ``interpret()``.
+            trained_model_path (str): The pretrained model directory.
+            use_cuda (bool, optional): Whether or not to use cuda. Default: True
+            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
+        """
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
         self.trained_model_path = trained_model_path
@@ -32,6 +51,39 @@ class ScoreCAMInterpreter(Interpreter):
                   label=None,
                   visual=True,
                   save_path=None):
+        """
+        Main function of the interpreter.
+
+        Args:
+            data (str or numpy.ndarray): The input image filepath or numpy array.
+            target_layer_name (str): The target layer to calculate gradients.
+            label (int, optional): The target label to analyze. If None, the most likely label will be used. Default: None
+            visual (bool, optional): Whether or not to visualize the processed image. Default: True
+            save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
+
+        Returns:
+            None
+
+        Example::
+
+            import interpretdl as it
+            def paddle_model(image_input):
+                import paddle.fluid as fluid
+                class_num = 1000
+                model = ResNet50()
+                logits = model.net(input=image_input, class_dim=class_num)
+                probs = fluid.layers.softmax(logits, axis=-1)
+                return probs
+
+            scorecam = it.ScoreCAMInterpreter(paddle_model,
+                                              "assets/ResNet50_pretrained", True)
+            scorecam.interpret(
+                'assets/catdog.png',
+                'res5c.add.output.5.tmp_0',
+                label=None,
+                visual=True,
+                save_path='assets/scorecam_test.jpg')
+        """
 
         if isinstance(data, str):
             with open(data, 'rb') as f:
