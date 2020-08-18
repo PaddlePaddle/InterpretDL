@@ -13,7 +13,7 @@ class IntGradCVInterpreter(Interpreter):
     Integrated Gradients Interpreter for CV tasks.
 
     More details regarding the Integrated Gradients method can be found in the original paper:
-    http://proceedings.mlr.press/v70/sundararajan17a/sundararajan17a.pdf
+    https://arxiv.org/abs/1703.01365
     """
 
     def __init__(self,
@@ -264,7 +264,7 @@ class IntGradNLPInterpreter(Interpreter):
     Integrated Gradients Interpreter for NLP tasks.
 
     More details regarding the Integrated Gradients method can be found in the original paper:
-    http://proceedings.mlr.press/v70/sundararajan17a/sundararajan17a.pdf
+    https://arxiv.org/abs/1703.01365
     """
 
     def __init__(self, paddle_model, trained_model_path,

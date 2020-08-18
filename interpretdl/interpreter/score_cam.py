@@ -17,7 +17,7 @@ class ScoreCAMInterpreter(Interpreter):
     Score CAM Interpreter.
 
     More details regarding the Score CAM method can be found in the original paper:
-    https://openaccess.thecvf.com/content_CVPRW_2020/papers/w1/Wang_Score-CAM_Score-Weighted_Visual_Explanations_for_Convolutional_Neural_Networks_CVPRW_2020_paper.pdf
+    https://arxiv.org/abs/1910.01279
     """
 
     def __init__(self,

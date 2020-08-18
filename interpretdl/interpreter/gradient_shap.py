@@ -14,6 +14,13 @@ from PIL import Image
 
 
 class GradShapCVInterpreter(Interpreter):
+    """
+    Gradient SHAP Interpreter.
+
+    More details regarding the GradShap method can be found in the original paper:
+    http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions
+    """
+
     def __init__(self,
                  paddle_model,
                  trained_model_path,
