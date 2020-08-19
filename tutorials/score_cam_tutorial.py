@@ -18,7 +18,7 @@ def grad_cam_example():
         return probs
 
     scorecam = it.ScoreCAMInterpreter(paddle_model,
-                                      "../../../ResNet50_pretrained", True)
+                                      "assets/ResNet50_pretrained", True)
     scorecam.interpret(
         'assets/catdog.png',
         'res5c.add.output.5.tmp_0',

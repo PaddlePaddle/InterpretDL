@@ -10,10 +10,10 @@ from ..data_processor.visualizer import visualize_overlay
 
 class IntGradCVInterpreter(Interpreter):
     """
-    Integrated Gradients Interpreter.
+    Integrated Gradients Interpreter for CV tasks.
 
     More details regarding the Integrated Gradients method can be found in the original paper:
-    http://proceedings.mlr.press/v70/sundararajan17a/sundararajan17a.pdf
+    https://arxiv.org/abs/1703.01365
     """
 
     def __init__(self,
@@ -22,15 +22,13 @@ class IntGradCVInterpreter(Interpreter):
                  use_cuda=True,
                  model_input_shape=[3, 224, 224]) -> None:
         """
-        Initialize the IntGradInterpreter.
+        Initialize the IntGradCVInterpreter.
 
         Args:
             paddle_model: A user-defined function that gives access to model predictions.
                 It takes the following arguments:
 
                 - data: Data input.
-                - alpha: A scalar for calculating the path integral
-                - baseline: The baseline input.
                 and outputs predictions. See the example at the end of ``interpret()``.
             trained_model_path (str): The pretrained model directory.
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
@@ -57,10 +55,10 @@ class IntGradCVInterpreter(Interpreter):
         Main function of the interpreter.
 
         Args:
-            data (str or numpy.ndarray): If task is cv, input can be the image filepath or processed image; if task is nlp, input a sequence of word ids.
-            label (int, optional): The target label to analyze. If None, the most likely label will be used. Default: None
-            baseline (str, optional): The baseline input. If None, all zeros will be used. If 'random', random Guassian initialization will be used.
-            setps (int, optional): number of steps in the Riemman approximation of the integral. Default: 50
+            data (str or numpy.ndarray): The image filepath or processed images.
+            label (list or numpy.ndarray, optional): The target label to analyze. If None, the most likely label will be used. Default: None
+            baseline (str or numpy.ndarray, optional): The baseline input. If None, all zeros will be used. If 'random', random Guassian initialization will be used.
+            steps (int, optional): number of steps in the Riemman approximation of the integral. Default: 50
             num_random_trials (int, optional): number of random initializations to take average in the end. Default: 10
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
@@ -70,23 +68,55 @@ class IntGradCVInterpreter(Interpreter):
 
         Example::
 
-            def paddle_model(data, alpha, baseline):
-                import paddle.fluid as fluid
-                class_num = 1000
-                image_input = baseline + alpha * data
-                model = ResNet50()
-                logits = model.net(input=image_input, class_dim=class_num)
-                probs = fluid.layers.softmax(logits, axis=-1)
-                return image_input, probs
-            ig = IntGradInterpreter(paddle_model, "assets/ResNet50_pretrained", True)
-            gradients = ig.interpret(
-                    'assets/catdog.png',
-                    label=None,
-                    baseline='random',
-                    steps=50,
-                    num_random_trials=1,
-                    visual=True,
-                    save_path='ig_test.jpg')
+            import interpretdl as it
+            import io
+
+            def load_vocab(file_path):
+                vocab = {}
+                with io.open(file_path, 'r', encoding='utf8') as f:
+                    wid = 0
+                    for line in f:
+                        if line.strip() not in vocab:
+                            vocab[line.strip()] = wid
+                            wid += 1
+                vocab["<unk>"] = len(vocab)
+                return vocab
+
+            def paddle_model(data, alpha):
+                dict_dim = 1256606
+                emb_dim = 128
+                # embedding layer
+                emb = fluid.embedding(input=data, size=[dict_dim, emb_dim])
+                emb *= alpha
+                probs = bilstm_net_emb(emb, None, None, dict_dim, is_prediction=True)
+                return emb, probs
+
+            ig = it.IntGradNLPInterpreter(
+                paddle_model, "assets/senta_model/bilstm_model/params", True)
+
+            word_dict = load_vocab("assets/senta_model/bilstm_model/word_dict.txt")
+            unk_id = word_dict["<unk>"]
+            reviews = [[
+                '交通', '方便', '；', '环境', '很好', '；', '服务态度', '很好', '', '', '房间', '较小'
+            ]]
+
+            lod = []
+            for c in reviews:
+                lod.append([word_dict.get(words, unk_id) for words in c])
+            base_shape = [[len(c) for c in lod]]
+            lod = np.array(sum(lod, []), dtype=np.int64)
+            data = fluid.create_lod_tensor(lod, base_shape, fluid.CPUPlace())
+
+            avg_gradients = ig.interpret(
+                data, label=None, steps=50, visual=True, save_path='ig_test.jpg')
+
+            sum_gradients = np.sum(avg_gradients, axis=1).tolist()
+            lod = data.lod()
+
+            new_array = []
+            for i in range(len(lod[0]) - 1):
+                new_array.append(
+                    dict(zip(reviews[i], sum_gradients[lod[0][i]:lod[0][i + 1]])))
         """
 
         self.label = label
@@ -231,10 +261,10 @@ class IntGradCVInterpreter(Interpreter):
 
 class IntGradNLPInterpreter(Interpreter):
     """
-    Integrated Gradients Interpreter.
+    Integrated Gradients Interpreter for NLP tasks.
 
     More details regarding the Integrated Gradients method can be found in the original paper:
-    http://proceedings.mlr.press/v70/sundararajan17a/sundararajan17a.pdf
+    https://arxiv.org/abs/1703.01365
     """
 
     def __init__(self, paddle_model, trained_model_path,
@@ -268,6 +298,40 @@ class IntGradNLPInterpreter(Interpreter):
                   steps=50,
                   visual=True,
                   save_path=None):
+        """
+        Main function of the interpreter.
+
+        Args:
+            data (fluid.LoDTensor): The word ids input.
+            label (list, optional): The target label to analyze. If None, the most likely label will be used. Default: None
+            baseline (str or numpy.ndarray, optional): The baseline input. If None, all zeros will be used. If 'random', random Guassian initialization will be used.
+            steps (int, optional): number of steps in the Riemman approximation of the integral. Default: 50
+            num_random_trials (int, optional): number of random initializations to take average in the end. Default: 10
+            visual (bool, optional): Whether or not to visualize the processed image. Default: True
+            save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
+
+        Returns:
+            numpy.ndarray: avg_gradients
+
+        Example::
+
+            import interpretdl as it
+            def paddle_model(data):
+                class_num = 1000
+                model = ResNet50()
+                logits = model.net(input=data, class_dim=class_num)
+                probs = fluid.layers.softmax(logits, axis=-1)
+                return probs
+            ig = it.IntGradCVInterpreter(paddle_model, "assets/ResNet50_pretrained", True)
+            gradients = ig.interpret(
+                    'assets/catdog.png',
+                    label=None,
+                    baseline='random',
+                    steps=50,
+                    num_random_trials=1,
+                    visual=True,
+                    save_path='ig_test.jpg')
+        """
 
         self.label = label
 

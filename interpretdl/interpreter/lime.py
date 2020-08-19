@@ -24,6 +24,7 @@ class LIMECVInterpreter(Interpreter):
                  model_input_shape=[3, 224, 224],
                  use_cuda=True) -> None:
         """
+        Initialize the LIMECVInterpreter.
 
         Args:
             paddle_model (callable): A user-defined function that gives access to model predictions.
@@ -71,6 +72,7 @@ class LIMECVInterpreter(Interpreter):
 
         Example::
 
+            import interpretdl as it
             def paddle_model(data):
                 import paddle.fluid as fluid
                 class_num = 1000
@@ -78,7 +80,7 @@ class LIMECVInterpreter(Interpreter):
                 logits = model.net(input=image_input, class_dim=class_num)
                 probs = fluid.layers.softmax(logits, axis=-1)
                 return probs
-            lime = LIMEInterpreter(paddle_model, "assets/ResNet101_pretrained")
+            lime = it.LIMECVInterpreter(paddle_model, "assets/ResNet50_pretrained")
             lime_weights = lime.interpret(
                     'assets/catdog.png',
                     num_samples=1000,
@@ -183,6 +185,7 @@ class LIMENLPInterpreter(Interpreter):
                  trained_model_path: str,
                  use_cuda=True) -> None:
         """
+        Initialize the LIMENLPInterpreter.
 
         Args:
             paddle_model (callable): A user-defined function that gives access to model predictions.
@@ -214,6 +217,80 @@ class LIMENLPInterpreter(Interpreter):
                   unk_id=None,
                   visual=True,
                   save_path=None):
+        """
+        Main function of the interpreter.
+
+        Args:
+            data (numpy.ndarray or fluid.LoDTensor): The word ids model_input_shape.
+            interpret_class (list or numpuy.ndarray, optional): The index of class to interpret. If None, the most likely label will be used. Default: None
+            num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate interpretation. Default: 1000
+            batch_size (int, optional): Number of samples to forward each time. Default: 50
+            unk_id (int, optional): The word id to replace occluded words. Typical choices include "", <unk>, and <pad>.
+            visual (bool, optional): Whether or not to visualize the processed image. Default: True
+            save_path (str, optional): The path to save the processed image. If None, the image will not be saved. Default: None
+
+        Returns:
+            ``dict``: LIME Prior weights: {interpret_label_i: weights on words}
+
+        Example::
+
+            import interpretdl as it
+            def convolution_net(data, input_dim, class_dim, emb_dim, hid_dim):
+                emb = fluid.embedding(
+                    input=data, size=[len(word_dict), EMB_DIM], is_sparse=True)
+                conv_3 = fluid.nets.sequence_conv_pool(
+                    input=emb,
+                    num_filters=hid_dim,
+                    filter_size=3,
+                    act="tanh",
+                    pool_type="sqrt")
+                conv_4 = fluid.nets.sequence_conv_pool(
+                    input=emb,
+                    num_filters=hid_dim,
+                    filter_size=4,
+                    act="tanh",
+                    pool_type="sqrt")
+                prediction = fluid.layers.fc(input=[conv_3, conv_4],
+                                             size=class_dim,
+                                             act="softmax")
+                return prediction
+
+            CLASS_DIM = 2
+            EMB_DIM = 128
+            HID_DIM = 512
+            BATCH_SIZE = 128
+            print('preparing word_dict...')
+            word_dict = paddle.dataset.imdb.word_dict()
+
+            def paddle_model(data):
+                probs = convolution_net(data,
+                                        len(word_dict), CLASS_DIM, EMB_DIM, HID_DIM)
+                return probs
+
+            lime = it.LIMENLPInterpreter(paddle_model, "assets/sent_persistables")
+
+            reviews_str = [b'read the book forget the movie']
+
+            reviews = [c.split() for c in reviews_str]
+
+            UNK = word_dict['<unk>']
+            lod = []
+            for c in reviews:
+                lod.append([word_dict.get(words, UNK) for words in c])
+
+            base_shape = [[len(c) for c in lod]]
+            lod = np.array(sum(lod, []), dtype=np.int64)
+
+            data = fluid.create_lod_tensor(lod, base_shape, fluid.CUDAPlace(0))
+            print('Begin intepretation...')
+            lime_weights = lime.interpret(
+                data, num_samples=2000, batch_size=20, unk_id=UNK)
+
+            id2word = dict(zip(word_dict.values(), word_dict.keys()))
+            for y in lime_weights:
+                print([(id2word[t[0]], t[1]) for t in lime_weights[y]])
+
+        """
 
         if isinstance(data, np.ndarray) and len(data.shape) == 1:
             data_instance = np.array([data])
