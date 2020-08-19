@@ -10,9 +10,12 @@ Grad-CAM
 Integrated Gradients
 --------------------
 
-.. autoclass:: interpretdl.IntGradInterpreter
+.. autoclass:: interpretdl.IntGradCVInterpreter
    :members:
 
+.. autoclass:: interpretdl.IntGradNLPInterpreter
+   :members:
+   
 Smooth Gradients
 ----------------
 
@@ -22,7 +25,16 @@ Smooth Gradients
 Gradient Shap
 -------------
 
-.. autoclass:: interpretdl.GradShapInterpreter
+.. autoclass:: interpretdl.GradShapCVInterpreter
+   :members:
+
+.. autoclass:: interpretdl.GradShapNLPInterpreter
+   :members:
+
+Score CAM
+---------
+
+.. autoclass:: interpretdl.ScoreCAMInterpreter
    :members:
 
 Features
@@ -31,7 +43,10 @@ Features
 LIME
 ----
 
-.. autoclass:: interpretdl.LIMEInterpreter
+.. autoclass:: interpretdl.LIMECVInterpreter
+   :members:
+
+.. autoclass:: interpretdl.LIMENLPInterpreter
    :members:
 
 LIME With Global Prior
@@ -46,8 +61,17 @@ Occlusion
 .. autoclass:: interpretdl.OcclusionInterpreter
    :members:
 
+NormLIME
+--------
+
+.. autoclass:: interpretdl.NormLIMECVInterpreter
+   :members:
+
+.. autoclass:: interpretdl.NormLIMENLPInterpreter
+  :members:
+
 Training
-=====
+========
 
 Forgetting Events
 -----------------

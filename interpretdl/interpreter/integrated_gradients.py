@@ -34,7 +34,6 @@ class IntGradCVInterpreter(Interpreter):
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
             model_input_shape (list, optional): The input shape of the model. Default: [3, 244, 244]
 
-        Returns:
         """
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
@@ -63,8 +62,8 @@ class IntGradCVInterpreter(Interpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
 
-        Returns:
-            numpy.ndarray: avg_gradients
+        :return: avg_gradients
+        :rtype: numpy.ndarray
 
         Example::
 
@@ -284,7 +283,6 @@ class IntGradNLPInterpreter(Interpreter):
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
             model_input_shape (list, optional): The input shape of the model. Default: [3, 244, 244]
 
-        Returns:
         """
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
@@ -310,8 +308,8 @@ class IntGradNLPInterpreter(Interpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
 
-        Returns:
-            numpy.ndarray: avg_gradients
+        :return: avg_gradients
+        :rtype: numpy.ndarray
 
         Example::
 

@@ -12,7 +12,7 @@ from .abc_interpreter import Interpreter
 
 class LIMECVInterpreter(Interpreter):
     """
-    LIME Interpreter.
+    LIME Interpreter for CV tasks.
 
     More details regarding the LIME method can be found in the original paper:
     https://arxiv.org/abs/1602.04938
@@ -67,8 +67,8 @@ class LIMECVInterpreter(Interpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str, optional): The path to save the processed image. If None, the image will not be saved. Default: None
 
-        Returns:
-            ``dict``: LIME Prior weights: {interpret_label_i: weights on features}
+        :return: LIME Prior weights: {interpret_label_i: weights on features}
+        :rtype: dict
 
         Example::
 
@@ -174,7 +174,7 @@ class LIMECVInterpreter(Interpreter):
 
 class LIMENLPInterpreter(Interpreter):
     """
-    LIME Interpreter.
+    LIME Interpreter for NLP tasks.
 
     More details regarding the LIME method can be found in the original paper:
     https://arxiv.org/abs/1602.04938
@@ -229,8 +229,8 @@ class LIMENLPInterpreter(Interpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str, optional): The path to save the processed image. If None, the image will not be saved. Default: None
 
-        Returns:
-            ``dict``: LIME Prior weights: {interpret_label_i: weights on words}
+        :return: LIME Prior weights: {interpret_label_i: weights on features}
+        :rtype: dict
 
         Example::
 

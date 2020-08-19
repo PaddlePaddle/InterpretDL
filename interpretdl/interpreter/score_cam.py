@@ -61,8 +61,8 @@ class ScoreCAMInterpreter(Interpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
 
-        Returns:
-            None
+        :return: interpretations
+        :rtype: numpy.ndarray
 
         Example::
 

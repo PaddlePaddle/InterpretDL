@@ -8,12 +8,38 @@ from .lime import LIMECVInterpreter, LIMENLPInterpreter
 
 
 class NormLIMECVInterpreter(LIMECVInterpreter):
+    """
+    NormLIME Interpreter for CV tasks.
+
+    More details regarding the NormLIME method can be found in the original paper:
+    https://arxiv.org/abs/1909.04200
+    """
+
     def __init__(self,
                  paddle_model,
                  trained_model_path,
                  model_input_shape=[3, 224, 224],
                  use_cuda=True,
                  temp_data_file='all_lime_weights.npz'):
+        """
+        Initialize the NormLIMECVInterpreter.
+
+
+        :param paddle_model: A user-defined function that gives access to model predictions.
+                    It takes the following arguments:
+
+                    - data: Data inputs.
+                    and outputs predictions. See the example at the end of ``interpret()``.
+        :type paddle_model: callable
+        :param trained_model_path: The pretrained model directory.
+        :type trained_model_path: str
+        :param model_input_shape: The input shape of the model. Default: [3, 224, 224]
+        :type model_input_shape: list, optional
+        :param use_cuda: Whether or not to use cuda. Default: True
+        :type use_cuda: bool, optional
+        :param temp_data_file: The .npz file to save/load the dictionary where key is image path and value is another dictionary with lime weights, segmentation and input. Default: 'all_lime_weights.npz'
+        :type temp_data_file: str, optional
+        """
         LIMECVInterpreter.__init__(self, paddle_model, trained_model_path,
                                    model_input_shape, use_cuda)
         self.lime_interpret = super().interpret
@@ -53,12 +79,49 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
 
     def interpret(self,
                   image_paths,
-                  num_samples=2000,
+                  num_samples=1000,
                   batch_size=50,
                   save_path='normlime_weights.npy'):
-        #self.lime_interpreter = limecvinterpreter(none, none)
-        #self.lime_interpreter._paddle_prepare(self.predict_fn)
+        """
+        Main function of the interpreter.
 
+        Args:
+            image_paths (list of strs): A list of image filepaths.
+            num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate interpretation. Default: 1000
+            batch_size (int, optional): Number of samples to forward each time. Default: 50
+            save_path (str, optional): The .npy path to save the normlime weights. It is a dictionary where the key is label and value is segmentation ids with their importance. Default: 'normlime_weights.npy'
+
+        :return: NormLIME weights: {label_i: weights on features}
+        :rtype: dict
+
+        Example::
+
+            def paddle_model(image_input):
+                import paddle.fluid as fluid
+                class_num = 1000
+                model = ResNet50()
+                logits = model.net(input=image_input, class_dim=class_num)
+                probs = fluid.layers.softmax(logits, axis=-1)
+                return probs
+
+            # The model can be downloaded from
+            # http://paddle-imagenet-models-name.bj.bcebos.com/ResNet101_pretrained.tar
+            # More pretrained models can be found in
+            # https://github.com/PaddlePaddle/models/tree/release/1.8/PaddleCV/image_classification
+
+            # 10 images are used here for example, but more images should be used.
+            dataset_dir = "assets"
+            image_paths = sorted(glob.glob(dataset_dir + "/*.png"))
+            image_paths = image_paths[:10]
+
+            normlime = it.NormLIMECVInterpreter(paddle_model,
+                                                "assets/ResNet50_pretrained")
+
+            # this can be very slow.
+            normlime.interpret(image_paths, num_samples=2000, batch_size=50)
+
+
+        """
         _, h_pre_models_kmeans = get_pre_models()
         kmeans_model = load_pickle_file(h_pre_models_kmeans)
 
@@ -140,11 +203,32 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
 
 
 class NormLIMENLPInterpreter(LIMENLPInterpreter):
+    """
+    NormLIME Interpreter for NLP tasks.
+
+    More details regarding the NormLIME method can be found in the original paper:
+    https://arxiv.org/abs/1909.04200
+    """
+
     def __init__(self,
                  paddle_model,
                  trained_model_path,
                  use_cuda=True,
                  temp_data_file='all_lime_weights.npz'):
+        """
+        Initialize the NormLIMENLPInterpreter.
+
+        Args:
+            paddle_model (callable): A user-defined function that gives access to model predictions.
+                    It takes the following arguments:
+
+                    - data: Data inputs.
+                    and outputs predictions. See the example at the end of ``interpret()``.
+            trained_model_path (str): The pretrained model directory.
+            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
+            use_cuda (bool, optional): Whether or not to use cuda. Default: True
+            temp_data_file (str, optinal): The .npz file to save/load the dictionary where key is word ids joined by '-' and value is another dictionary with lime weights. Default: 'all_lime_weights.npz'
+        """
         LIMENLPInterpreter.__init__(self, paddle_model, trained_model_path,
                                     use_cuda)
         self.lime_interpret = super().interpret
@@ -193,6 +277,77 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
                   num_samples,
                   batch_size,
                   save_path='normlime_weights.npy'):
+        """
+        Main function of the interpreter.
+
+        Args:
+            image_paths (list of strs): A list of image filepaths.
+            num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate interpretation. Default: 1000
+            batch_size (int, optional): Number of samples to forward each time. Default: 50
+            save_path (str, optional): The .npy path to save the normlime weights. It is a dictionary where the key is label and value is segmentation ids with their importance. Default: 'normlime_weights.npy'
+
+        :return: NormLIME weights: {label_i: weights on words}
+        :rtype: dict
+
+        Example::
+
+            import interpretdl as it
+
+            def load_vocab(file_path):
+                vocab = {}
+                with io.open(file_path, 'r', encoding='utf8') as f:
+                    wid = 0
+                    for line in f:
+                        if line.strip() not in vocab:
+                            vocab[line.strip()] = wid
+                            wid += 1
+                vocab["<unk>"] = len(vocab)
+                return vocab
+
+            DICT_DIM = 1256606
+
+            def paddle_model(data):
+                probs = bilstm_net(data, None, None, DICT_DIM, is_prediction=True)
+                return probs
+
+            word_dict = load_vocab("assets/senta_model/bilstm_model/word_dict.txt")
+            # the word id that replace occluded word, typical choices include "", <unk>, and <pad>
+            unk_id = word_dict[""]
+
+            reviews = [[
+                '交通', '方便', '；', '环境', '很好', '；', '服务态度', '很好', '', '', '房间', '较小'
+            ], ['交通', '一般', '；', '环境', '很差', '；', '服务态度', '很差', '房间', '较小']]
+
+            lod = []
+            for c in reviews:
+                lod.append([word_dict.get(words, unk_id) for words in c])
+
+            # create LoDTensor so that sentences of different lengths can be fed into the model at the same time
+            base_shape = [[len(c) for c in lod]]
+            lod = np.array(sum(lod, []), dtype=np.int64)
+            data = fluid.create_lod_tensor(lod, base_shape, fluid.CPUPlace())
+
+            normlime = it.NormLIMENLPInterpreter(
+                paddle_model,
+                "assets/senta_model/bilstm_model/params",
+                temp_data_file='all_lime_weights_nlp.npz')
+
+            normlime_weights = normlime.interpret(
+                data, unk_id, num_samples=2000, batch_size=50)
+
+            id2word = dict(zip(word_dict.values(), word_dict.keys()))
+            for label in normlime_weights:
+                print(label)
+                temp = {
+                    id2word[wid]: normlime_weights[label][wid]
+                    for wid in normlime_weights[label]
+                }
+                W = [(word, weight[0], weight[1]) for word, weight in temp.items()]
+                print(sorted(W, key=lambda x: -x[1])[:15])
+
+
+        """
+
         if isinstance(word_ids, list) or isinstance(word_ids, np.ndarray):
             data = word_ids
         else:

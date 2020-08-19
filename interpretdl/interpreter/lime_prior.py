@@ -101,8 +101,8 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str, optional): The path to save the processed image. If None, the image will not be saved. Default: None
 
-        Returns:
-            ``dict``: LIME Prior weights: {interpret_label_i: weights on features}
+        :return: LIME Prior weights: {interpret_label_i: weights on features}
+        :rtype: dict
 
         Example::
 

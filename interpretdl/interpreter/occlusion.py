@@ -67,8 +67,8 @@ class OcclusionInterpreter(Interpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str, optional): The path to save the processed image. If None, the image will not be saved. Default: None
 
-        Returns:
-            numpy.ndarray: total_attrib
+        :return: total_attrib
+        :rtype: numpy.ndarray
 
         Example::
 

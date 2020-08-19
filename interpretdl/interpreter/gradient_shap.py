@@ -15,7 +15,7 @@ from PIL import Image
 
 class GradShapCVInterpreter(Interpreter):
     """
-    Gradient SHAP Interpreter.
+    Gradient SHAP Interpreter for CV tasks.
 
     More details regarding the GradShap method can be found in the original paper:
     http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions
@@ -68,8 +68,8 @@ class GradShapCVInterpreter(Interpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True.
             save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
 
-        Returns:
-            numpy.ndarray: avg_attributions
+        :return: avg_attributions
+        :rtype: numpy.ndarray
 
         Example::
 
@@ -193,7 +193,15 @@ class GradShapCVInterpreter(Interpreter):
 
 
 class GradShapNLPInterpreter(Interpreter):
-    def __init__(self, paddle_model, trained_model_path, use_cuda) -> None:
+    """
+    Gradient SHAP Interpreter for NLP tasks.
+
+    More details regarding the GradShap method can be found in the original paper:
+    http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions
+    """
+
+    def __init__(self, paddle_model, trained_model_path,
+                 use_cuda=True) -> None:
         """
         Initialize the GradShapNLPInterpreter.
 
@@ -227,7 +235,7 @@ class GradShapNLPInterpreter(Interpreter):
         Main function of the interpreter.
 
         Args:
-            data (str or numpy.ndarray or fluid.LoDTensor): The image filepath or processed image for cv; fluid.LoDTensor of word ids if nlp.
+            data (fluid.LoDTensor): The word ids inputs.
             label (list or numpy.ndarray, optional): The target label to analyze. If None, the most likely label will be used. Default: None.
             n_samples (int, optional): The number of randomly generated samples. Default: 5.
             noise_amount (float, optional): Noise level of added noise to the image.
@@ -235,8 +243,8 @@ class GradShapNLPInterpreter(Interpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True.
             save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
 
-        Returns:
-            numpy.ndarray: avg_attributions
+        :return: avg_attributions
+        :rtype: numpy.ndarray
 
         Example::
 
