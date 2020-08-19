@@ -1,33 +1,9 @@
-from assets.resnet import ResNet50
 from assets.bilstm import bilstm_net_emb
 import paddle.fluid as fluid
 import numpy as np
 import sys
 sys.path.append('..')
-
 import interpretdl as it
-
-
-def grad_shap_example():
-    def paddle_model(data):
-
-        class_num = 1000
-        model = ResNet50()
-        logits = model.net(input=data, class_dim=class_num)
-
-        probs = fluid.layers.softmax(logits, axis=-1)
-        return probs
-
-    img_path = 'assets/catdog.png'
-    gs = it.GradShapCVInterpreter(
-        paddle_model, "assets/ResNet50_pretrained", use_cuda=True)
-    gradients = gs.interpret(
-        img_path,
-        label=None,
-        noise_amount=0.1,
-        n_samples=5,
-        visual=True,
-        save_path=None)
 
 
 def nlp_example():
@@ -97,8 +73,4 @@ def nlp_example():
 
 
 if __name__ == '__main__':
-    target = sys.argv[1:]
-    if 'nlp' in target:
-        nlp_example()
-    else:
-        grad_shap_example()
+    nlp_example()
