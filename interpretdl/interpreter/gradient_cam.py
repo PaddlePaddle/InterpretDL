@@ -1,8 +1,6 @@
 import typing
 from typing import Any, Callable, List, Tuple, Union
 
-import IPython.display as display
-import cv2
 import numpy as np
 import os, sys
 from PIL import Image

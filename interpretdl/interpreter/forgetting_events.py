@@ -1,4 +1,8 @@
 from __future__ import print_function
+
+import numpy as np
+import os, sys
+import pickle
 import paddle
 import paddle.fluid as fluid
 
@@ -6,14 +10,6 @@ import typing
 from typing import Any, Callable, List, Tuple, Union
 
 from .abc_interpreter import Interpreter
-
-import IPython.display as display
-import cv2
-import numpy as np
-import paddle.fluid as fluid
-import os, sys
-from PIL import Image
-import pickle
 
 
 class ForgettingEventsInterpreter(Interpreter):

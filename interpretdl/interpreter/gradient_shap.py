@@ -5,12 +5,9 @@ from .abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_image, read_image, restore_image
 from ..data_processor.visualizer import visualize_grayscale
 
-import IPython.display as display
-import cv2
 import numpy as np
 import paddle.fluid as fluid
 import os, sys
-from PIL import Image
 
 
 class GradShapCVInterpreter(Interpreter):
