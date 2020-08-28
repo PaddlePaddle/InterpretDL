@@ -89,7 +89,7 @@ class LIMECVInterpreter(Interpreter):
 
         """
         if isinstance(data, str):
-            data_instance = read_image(data)
+            _, data_instance = read_image(data)
         else:
             data_instance = data
 

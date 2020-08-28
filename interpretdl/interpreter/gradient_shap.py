@@ -65,7 +65,7 @@ class GradShapCVInterpreter(Interpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True.
             save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
 
-        :return: avg_attributions
+        :return: avg_interpretations
         :rtype: numpy.ndarray
 
         Example::
@@ -78,7 +78,7 @@ class GradShapCVInterpreter(Interpreter):
                 probs = fluid.layers.softmax(logits, axis=-1)
                 return probs
             gs = GradShapInterpreter(predict_fn, "assets/ResNet50_pretrained", 1000, True)
-            avg_attributions = gs.interpret(
+            avg_interpretations = gs.interpret(
                                 img_path,
                                 label=None,
                                 noise_amount=0.1,
@@ -96,7 +96,7 @@ class GradShapCVInterpreter(Interpreter):
 
         # Read in image
         if isinstance(data, str):
-            img = read_image(data, crop_size=self.model_input_shape[1])
+            _, img = read_image(data, crop_size=self.model_input_shape[1])
             data = preprocess_image(img)
         else:
             img = restore_image(data.copy())
@@ -240,7 +240,7 @@ class GradShapNLPInterpreter(Interpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True.
             save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
 
-        :return: avg_attributions
+        :return: avg_interpretations
         :rtype: numpy.ndarray
 
         Example::

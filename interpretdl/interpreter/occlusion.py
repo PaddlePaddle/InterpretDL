@@ -66,7 +66,7 @@ class OcclusionInterpreter(Interpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str, optional): The path to save the processed image. If None, the image will not be saved. Default: None
 
-        :return: total_attrib
+        :return: total_interp
         :rtype: numpy.ndarray
 
         Example::
@@ -79,7 +79,7 @@ class OcclusionInterpreter(Interpreter):
                 probs = fluid.layers.softmax(logits, axis=-1)
                 return probs
             oc = OcclusionInterpreter(paddle_model, "assets/ResNet50_pretrained")
-            attributions = oc.interpret(
+            interpretations = oc.interpret(
                     'assets/catdog.png',
                     sliding_window_shapes=(1, 30, 30),
                     interpret_class=None,
@@ -93,7 +93,7 @@ class OcclusionInterpreter(Interpreter):
             self._paddle_prepare()
 
         if isinstance(data, str):
-            data = read_image(data)
+            _, data = read_image(data)
             data = preprocess_image(data)
 
         if baseline is None:
@@ -111,7 +111,7 @@ class OcclusionInterpreter(Interpreter):
         shift_counts = tuple(
             np.add(np.ceil(np.divide(current_shape, strides)).astype(int), 1))
         initial_eval = probability[interpret_class]
-        total_attrib = np.zeros(self.model_input_shape)
+        total_interp = np.zeros(self.model_input_shape)
 
         for (ablated_features, current_mask) in self._ablation_generator(
                 data, sliding_window, strides, baseline, shift_counts,
@@ -121,12 +121,12 @@ class OcclusionInterpreter(Interpreter):
                 ablated_features))[:, interpret_class]
             eval_diff = initial_eval - modified_eval
             for i in range(eval_diff.shape[0]):
-                total_attrib += (eval_diff[i] * current_mask[i])
+                total_interp += (eval_diff[i] * current_mask[i])
 
         visualize_grayscale(
-            np.array([total_attrib]), visual=visual, save_path=save_path)
+            np.array([total_interp]), visual=visual, save_path=save_path)
 
-        return total_attrib
+        return total_interp
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:

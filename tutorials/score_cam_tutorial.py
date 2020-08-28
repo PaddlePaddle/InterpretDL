@@ -24,7 +24,7 @@ def grad_cam_example():
         'res5c.add.output.5.tmp_0',
         label=None,
         visual=True,
-        save_path='assets/scorecam_test.jpg')
+        save_path='scorecam_test.jpg')
 
 
 if __name__ == '__main__':

@@ -84,7 +84,7 @@ class SmoothGradInterpreter(Interpreter):
 
         # Read in image
         if isinstance(data, str):
-            img = read_image(data, crop_size=self.model_input_shape[1])
+            _, img = read_image(data, crop_size=self.model_input_shape[1])
             data = preprocess_image(img)
 
         data_type = np.array(data).dtype

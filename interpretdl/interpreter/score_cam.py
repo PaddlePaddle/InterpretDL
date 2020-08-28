@@ -87,10 +87,8 @@ class ScoreCAMInterpreter(Interpreter):
 
         if isinstance(data, str):
             with open(data, 'rb') as f:
-                org = Image.open(f)
-                org = org.convert('RGB')
-                org = np.array(org)
-                img = read_image(data, crop_size=self.model_input_shape[1])
+                org, img = read_image(
+                    data, crop_size=self.model_input_shape[1])
                 data = preprocess_image(img)
         else:
             org = data.copy
@@ -108,7 +106,7 @@ class ScoreCAMInterpreter(Interpreter):
             self.label = np.argmax(probs, axis=1)
 
         feature_map, _ = self.predict_fn(data)
-        attributions = np.zeros((1, 1, h, w))
+        interpretations = np.zeros((1, 1, h, w))
 
         for i in range(feature_map.shape[1]):
             feature_channel = np.expand_dims(feature_map[:, i, :, :], 1)[0][0]
@@ -118,17 +116,17 @@ class ScoreCAMInterpreter(Interpreter):
                     feature_channel.max() - feature_channel.min())
             _, probs = self.predict_fn(data * norm_feature_channel)
             score = probs[0][self.label]
-            attributions += score * feature_channel
+            interpretations += score * feature_channel
 
-        attributions = np.maximum(attributions, 0)
-        attributions_min, attributions_max = attributions.min(
-        ), attributions.max()
+        interpretations = np.maximum(interpretations, 0)
+        interpretations_min, interpretations_max = interpretations.min(
+        ), interpretations.max()
 
-        if attributions_min == attributions_max:
+        if interpretations_min == interpretations_max:
             return None
 
-        interpretations = (attributions - attributions_min) / (
-            attributions_max - attributions_min)
+        interpretations = (interpretations - interpretations_min) / (
+            interpretations_max - interpretations_min)
 
         visualize_heatmap(interpretations[0][0], org, visual, save_path)
 

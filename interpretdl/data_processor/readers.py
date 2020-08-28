@@ -120,12 +120,12 @@ def read_image(img_path, target_size=256, crop_size=224):
             img = img.convert('RGB')
             img = np.array(img)
             # img = cv2.imread(img_path)
-
+            org = img.copy()
             img = resize_short(img, target_size, interpolation=None)
             img = crop_image(img, target_size=crop_size, center=True)
             # img = img[:, :, ::-1]
             img = np.expand_dims(img, axis=0)
-            return img
+            return org, img
     elif isinstance(img_path, np.ndarray):
         assert len(img_path.shape) == 4
         return img_path

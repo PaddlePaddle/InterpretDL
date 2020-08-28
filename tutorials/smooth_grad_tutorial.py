@@ -1,6 +1,4 @@
 from assets.resnet import ResNet50
-from assets.resnet_vc import ResNet50_vc
-from assets.efficientnet import EfficientNetB0_Small
 from assets.bilstm import bilstm_net
 import paddle.fluid as fluid
 import numpy as np
