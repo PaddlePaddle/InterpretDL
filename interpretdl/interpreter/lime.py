@@ -91,7 +91,12 @@ class LIMECVInterpreter(Interpreter):
         if isinstance(data, str):
             data_instance = read_image(data)
         else:
-            data_instance = data
+            if len(data.shape) == 3:
+                data = np.expand_dims(data, axis=0)
+            if data.dtype == int:
+                data_instance = data
+            else:
+                data_instance = restore_image(data.copy())
 
         self.input_type = type(data_instance)
         self.data_type = np.array(data_instance).dtype

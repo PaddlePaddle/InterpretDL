@@ -91,7 +91,13 @@ class ScoreCAMInterpreter(Interpreter):
                     data, crop_size=self.model_input_shape[1])
                 data = preprocess_image(img)
         else:
-            org = data.copy
+            if len(data.shape) == 3:
+                data = np.expand_dims(data, axis=0)
+            if data.dtype == int:
+                org = data.copy()
+                data = preprocess_image(data)
+            else:
+                org = restore_image(data.copy())
 
         b, c, h, w = data.shape
 

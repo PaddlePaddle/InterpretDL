@@ -97,6 +97,11 @@ class OcclusionInterpreter(Interpreter):
         if isinstance(data, str):
             _, data = read_image(data)
             data = preprocess_image(data)
+        else:
+            if len(data.shape) == 3:
+                data = np.expand_dims(data, axis=0)
+            if data.dtype == int:
+                data = preprocess_image(data)
 
         if baseline is None:
             baseline = np.zeros_like(data)

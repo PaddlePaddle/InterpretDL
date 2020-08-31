@@ -99,7 +99,13 @@ class GradShapCVInterpreter(Interpreter):
             _, img = read_image(data, crop_size=self.model_input_shape[1])
             data = preprocess_image(img)
         else:
-            img = restore_image(data.copy())
+            if len(data.shape) == 3:
+                data = np.expand_dims(data, axis=0)
+            if data.dtype == int:
+                img = data.copy()
+                data = preprocess_image(data)
+            else:
+                img = restore_image(data.copy())
 
         self.data_type = np.array(data).dtype
 
