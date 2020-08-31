@@ -101,8 +101,9 @@ class GradCAMInterpreter(Interpreter):
         mean_g = np.mean(g, (1, 2))
         heatmap = f.transpose([1, 2, 0])
 
-        for i in range(len(mean_g)):
-            heatmap[:, :, i] *= mean_g[i]
+        dim_array = np.ones((1, heatmap.ndim), int).ravel()
+        dim_array[heatmap.ndim - 1] = -1
+        heatmap = heatmap * mean_g.reshape(dim_array)
 
         heatmap = np.mean(heatmap, axis=-1)
         heatmap = np.maximum(heatmap, 0)

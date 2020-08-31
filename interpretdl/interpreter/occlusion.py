@@ -15,6 +15,8 @@ class OcclusionInterpreter(Interpreter):
 
     More details regarding the Occlusion method can be found in the original paper:
     https://arxiv.org/abs/1311.2901
+
+    Part of the code is modified from https://github.com/pytorch/captum/blob/master/captum/attr/_core/occlusion.py
     """
 
     def __init__(self,
