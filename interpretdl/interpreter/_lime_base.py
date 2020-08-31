@@ -292,12 +292,13 @@ class LimeBase(object):
         return lime_weights, prediction_scores
 
     def interpret_instance_text(self,
-                                word_ids,
+                                model_inputs,
                                 classifier_fn,
-                                interpret_labels=(1, ),
-                                num_samples=1000,
-                                batch_size=10,
-                                unk_id=0,
+                                interpret_labels,
+                                num_samples,
+                                batch_size,
+                                unk_id,
+                                pad_id=0,
                                 distance_metric='cosine',
                                 model_regressor=None,
                                 prior=None,
@@ -305,12 +306,9 @@ class LimeBase(object):
         """
         Generates interpretations for a prediction.
         """
-        word_ids = np.array(word_ids)
-        if len(word_ids.shape) > 1:
-            word_ids = word_ids[0]
         data, labels, distances = self._data_labels_text(
-            word_ids, unk_id, classifier_fn, num_samples, batch_size,
-            distance_metric)
+            model_inputs, classifier_fn, num_samples, batch_size,
+            distance_metric, unk_id, pad_id)
         lime_weights = {}
         prediction_scores = {}
         for l in interpret_labels:
@@ -325,10 +323,21 @@ class LimeBase(object):
 
         return lime_weights, prediction_scores
 
-    def _data_labels_text(self, word_ids, unk_id, classifier_fn, num_samples,
-                          batch_size, distance_metric):
+    def _data_labels_text(self,
+                          model_inputs,
+                          classifier_fn,
+                          num_samples,
+                          batch_size,
+                          distance_metric,
+                          unk_id,
+                          pad_id=0):
         from paddle import fluid
-        n_features = len(word_ids)
+        word_ids = model_inputs[0]
+        ori_shape = word_ids.shape
+        word_ids = word_ids.reshape((np.prod(ori_shape), ))
+        pad_locs = np.where(word_ids == pad_id)[0]
+        n_features = word_ids.shape[-1] if len(pad_locs) == 0 else min(
+            pad_locs)
         data = self.random_state.randint(0, 2, num_samples * n_features) \
             .reshape((num_samples, n_features))
         labels = []
@@ -339,13 +348,21 @@ class LimeBase(object):
             zeros = np.where(row == 0)[0]
             for z in zeros:
                 temp[z] = unk_id
-            samples.append(temp.tolist())
+            samples.append(temp.reshape(ori_shape).tolist()[0])
             if len(samples) == batch_size:
-                preds = classifier_fn(np.array(samples)).tolist()
+                pred_inputs = (np.array(samples), ) + tuple([
+                    np.repeat(
+                        inp, batch_size, axis=0) for inp in model_inputs[1:]
+                ])
+                preds = classifier_fn(*pred_inputs).tolist()
                 labels.extend(preds)
                 samples = []
         if len(samples) > 0:
-            preds = classifier_fn(np.array(samples)).tolist()
+            pred_inputs = (np.array(samples), ) + tuple([
+                np.repeat(
+                    inp, len(samples), axis=0) for inp in model_inputs[1:]
+            ])
+            preds = classifier_fn(*pred_inputs).tolist()
             labels.extend(preds)
 
         distances = sklearn.metrics.pairwise_distances(

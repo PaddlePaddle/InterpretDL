@@ -5,38 +5,37 @@ sys.path.append('..')
 
 import interpretdl as it
 
+#from interpretdl.interpreter._normlime_base import NormLIMEBase
+#from interpretdl import LIMENLPInterpreter
+
 
 def nlp_example(dataset=True):
-    from assets.bilstm import bilstm_net
+    from assets.bilstm import bilstm
     import io
     import paddle.fluid as fluid
 
-    def load_dataset(fp):
-        pad_id = 0
-        all_data = []
-        max_len = 512
-        # prepare the dataset as a list of lists
-        with io.open(fp, "r", encoding='utf8') as fin:
-            for line in fin:
-                if line.startswith('text_a'):
-                    continue
-                cols = line.strip().split("\t")
-                if len(cols) != 2:
-                    sys.stderr.write("[NOTICE] Error Format Line!")
-                    continue
-                wids = [
-                    word_dict[x] if x in word_dict else unk_id
-                    for x in cols[0][:200].split(" ")
-                ]
-                seq_len = len(wids)
-                if seq_len < max_len:
-                    wids = wids[:max_len]
-                all_data.append(wids)
-        print('total of %d sentences' % len(all_data))
-        return all_data
+    def paddle_model(data, seq_len):
+        probs = bilstm(data, seq_len, None, DICT_DIM, is_prediction=True)
+        return probs
+
+    MAX_SEQ_LEN = 256
+    MODEL_PATH = "assets/senta_model/bilstm_model/"
+    VOCAB_PATH = os.path.join(MODEL_PATH, "word_dict.txt")
+    PARAMS_PATH = os.path.join(MODEL_PATH, "params")
+    DATA_PATH = "assets/senta_data/test.tsv"
+
+    def preprocess_fn(data):
+        word_ids = []
+        sub_word_ids = [
+            word_dict.get(d, word_dict['<unk>']) for d in data.split()
+        ]
+        seq_lens = [len(sub_word_ids)]
+        if len(sub_word_ids) < MAX_SEQ_LEN:
+            sub_word_ids += [0] * (MAX_SEQ_LEN - len(sub_word_ids))
+        word_ids.append(sub_word_ids[:MAX_SEQ_LEN])
+        return word_ids, seq_lens
 
     def load_vocab(file_path):
-        # construct a word to word id mapping
         vocab = {}
         with io.open(file_path, 'r', encoding='utf8') as f:
             wid = 0
@@ -48,43 +47,39 @@ def nlp_example(dataset=True):
         return vocab
 
     DICT_DIM = 1256606
-    DATA_PATH = "assets/senta_data/test.tsv"
-    MODEL_PATH = "assets/senta_model/bilstm_model"
 
-    def paddle_model(data):
-        probs = bilstm_net(data, None, None, DICT_DIM, is_prediction=True)
-        return probs
-
-    word_dict = load_vocab(os.path.join(MODEL_PATH, "word_dict.txt"))
-    # the word id that replace occluded word, typical choices include "", <unk>, and <pad>
+    word_dict = load_vocab(VOCAB_PATH)
     unk_id = word_dict[""]  #["<unk>"]
 
     if dataset:
-        # use the senta_data dataset, which can be downloaded from https://baidu-nlp.bj.bcebos.com/sentiment_classification-dataset-1.0.0.tar.gz
-        # it contains 1200 reviews
-        all_data = load_dataset(DATA_PATH)
+        pad_id = 0
+        data = []
+        max_len = 512
+        with io.open(DATA_PATH, "r", encoding='utf8') as fin:
+            for line in fin:
+                if line.startswith('text_a'):
+                    continue
+                cols = line.strip().split("\t")
+                if len(cols) != 2:
+                    sys.stderr.write("[NOTICE] Error Format Line!")
+                    continue
+                data.append(cols[0])
+        print('total of %d sentences' % len(data))
     else:
-        # if not using the senta_data dataset, make some reviews on our own
-        reviews = [[
-            '交通', '方便', '；', '环境', '很好', '；', '服务态度', '很好', '', '', '房间', '较小'
-        ], ['交通', '一般', '；', '环境', '很差', '；', '服务态度', '很差', '房间', '较小']]
+        reviews = [
+            '交通 方便 ；环境 很好 ；服务态度 很好 房间 较小', '交通 一般 ；环境 很差 ；服务态度 很差 房间 较小'
+        ]
+        data = reviews
 
-        all_data = []
-        for c in reviews:
-            all_data.append([word_dict.get(words, unk_id) for words in c])
-    # initialize the interpreter
     normlime = it.NormLIMENLPInterpreter(
-        paddle_model,
-        os.path.join(MODEL_PATH, "params"),
-        temp_data_file='all_lime_weights_nlp.npz')
-    # begin interpretation
-    normlime_weights = normlime.interpret(
-        all_data, unk_id, num_samples=500, batch_size=50)
+        paddle_model, PARAMS_PATH, temp_data_file='all_lime_weights_nlp.npz')
 
-    # construct a word id to word mapping
+    normlime_weights = normlime.interpret(
+        data, preprocess_fn, unk_id=unk_id, num_samples=500, batch_size=50)
+
+    #print(normlime_weights)
     id2word = dict(zip(word_dict.values(), word_dict.keys()))
     for label in normlime_weights:
-        # print out the label and word importances
         print(label)
         temp = {
             id2word[wid]: normlime_weights[label][wid]

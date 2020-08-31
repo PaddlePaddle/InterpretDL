@@ -89,7 +89,7 @@ class LIMECVInterpreter(Interpreter):
 
         """
         if isinstance(data, str):
-            _, data_instance = read_image(data)
+            data_instance = read_image(data)
         else:
             data_instance = data
 
@@ -211,10 +211,12 @@ class LIMENLPInterpreter(Interpreter):
 
     def interpret(self,
                   data,
+                  preprocess_fn,
+                  unk_id,
+                  pad_id=0,
                   interpret_class=None,
                   num_samples=1000,
                   batch_size=50,
-                  unk_id=None,
                   visual=True,
                   save_path=None):
         """
@@ -292,18 +294,13 @@ class LIMENLPInterpreter(Interpreter):
 
         """
 
-        if isinstance(data, np.ndarray) and len(data.shape) == 1:
-            data_instance = np.array([data])
-        else:
-            data_instance = data
-
-        self.input_type = type(data_instance)
-        self.data_type = np.array(data_instance).dtype
+        model_inputs = preprocess_fn(data)
+        self.model_inputs = tuple(np.array(inp) for inp in tuple(model_inputs))
 
         if not self.paddle_prepared:
             self._paddle_prepare()
         # only one example here
-        probability = self.predict_fn(data_instance)[0]
+        probability = self.predict_fn(*self.model_inputs)[0]
 
         # only interpret top 1
         if interpret_class is None:
@@ -311,15 +308,16 @@ class LIMENLPInterpreter(Interpreter):
             interpret_class = pred_label[-1:]
 
         lime_weights, r2_scores = self.lime_base.interpret_instance_text(
-            data_instance,
-            self.predict_fn,
-            interpret_class,
+            self.model_inputs,
+            classifier_fn=self.predict_fn,
+            interpret_labels=interpret_class,
             unk_id=unk_id,
+            pad_id=pad_id,
             num_samples=num_samples,
             batch_size=batch_size)
 
-        data_array = data_instance[0] if isinstance(
-            data_instance, np.ndarray) else np.array(data_instance)
+        data_array = self.model_inputs[0]
+        data_array = data_array.reshape((np.prod(data_array.shape), ))
         for c in lime_weights:
             weights_c = lime_weights[c]
             weights_new = [(data_array[tup[0]], tup[1]) for tup in weights_c]
@@ -334,10 +332,15 @@ class LIMENLPInterpreter(Interpreter):
             main_program = fluid.Program()
             with fluid.program_guard(main_program, startup_prog):
                 with fluid.unique_name.guard():
-                    data_op = fluid.data(
-                        name='data', shape=[None], dtype='int64', lod_level=1)
+                    data_ops = ()
+                    for i, inp in enumerate(self.model_inputs):
+                        op_ = fluid.data(
+                            name='op_%d' % i,
+                            shape=(None, ) + inp.shape[1:],
+                            dtype=inp.dtype)
+                        data_ops += (op_, )
 
-                    probs = self.paddle_model(data_op)
+                    probs = self.paddle_model(*data_ops)  #data_op, seq_op)
                     if isinstance(probs, tuple):
                         probs = probs[0]
                     main_program = main_program.clone(for_test=True)
@@ -348,24 +351,18 @@ class LIMENLPInterpreter(Interpreter):
             else:
                 place = fluid.CPUPlace()
             self.place = place
-            exe = fluid.Executor(place)
-
+            exe = fluid.Executor(self.place)
+            #exe.run(startup_prog)
             fluid.io.load_persistables(exe, self.trained_model_path,
                                        main_program)
 
-            def predict_fn(data_instance):
-                if isinstance(data_instance, fluid.LoDTensor):
-                    data = data_instance
-                else:
-                    batch_size, n_features = data_instance.shape
-                    samples = np.array(
-                        sum(data_instance.tolist(), []), dtype=np.int64)
-                    data = fluid.create_lod_tensor(
-                        samples, [[n_features] * batch_size], self.place)
-
-                [result] = exe.run(main_program,
-                                   fetch_list=[probs],
-                                   feed={'data': data})
+            #fluid.load(main_program, self.trained_model_path, exe)
+            def predict_fn(*params):
+                [result] = exe.run(
+                    main_program,
+                    fetch_list=[probs],
+                    feed={'op_%d' % i: d
+                          for i, d in enumerate(params)})
 
                 return result
 

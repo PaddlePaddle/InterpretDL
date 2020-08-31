@@ -247,19 +247,22 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
 
     def _get_lime_weights(self,
                           data,
-                          unk_id,
+                          dict_key,
+                          preprocess_fn,
                           num_samples,
                           batch_size,
+                          unk_id,
+                          pad_id,
                           auto_save=True):
-
-        dict_key = '_'.join(str(i) for i in data)
 
         if dict_key in self.all_lime_weights:
             return
 
         lime_weights = self.lime_interpret(
             data,
+            preprocess_fn=preprocess_fn,
             unk_id=unk_id,
+            pad_id=pad_id,
             num_samples=num_samples,
             batch_size=batch_size)
 
@@ -267,15 +270,15 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
 
         if auto_save:
             np.savez(self.filepath_to_save, **self.all_lime_weights)
-            # load: dict(np.load(filepath_to_load, allow_pickle=True))
-
         return
 
     def interpret(self,
-                  word_ids,
-                  unk_id,
+                  data,
+                  preprocess_fn,
                   num_samples,
                   batch_size,
+                  unk_id,
+                  pad_id=0,
                   save_path='normlime_weights.npy'):
         """
         Main function of the interpreter.
@@ -348,24 +351,16 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
 
         """
 
-        if isinstance(word_ids, list) or isinstance(word_ids, np.ndarray):
-            data = word_ids
-        else:
-            seq_lens = word_ids.recursive_sequence_lengths()[0]
-            word_ids = np.array(word_ids)
-            data = []
-            start = 0
-            for l in seq_lens:
-                data.append(word_ids[start:start + l])
-                start += l
-
         # compute lime weights and put in self.all_lime_weights
         for i in tqdm(range(len(data))):
             self._get_lime_weights(
-                np.array(data[i]),
-                unk_id,
-                num_samples,
-                batch_size,
+                data[i],
+                preprocess_fn=preprocess_fn,
+                dict_key=str(i),
+                unk_id=unk_id,
+                pad_id=pad_id,
+                num_samples=num_samples,
+                batch_size=batch_size,
                 auto_save=(i % 10) == 0)
 
         np.savez(self.filepath_to_save, **self.all_lime_weights)
@@ -373,8 +368,7 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
         normlime_weights_all_labels = {}
         for i in range(len(data)):
             data_instance = data[i]
-            temp = self.all_lime_weights['_'.join(
-                str(i) for i in data_instance)]
+            temp = self.all_lime_weights[str(i)]
             if isinstance(temp, np.ndarray):
                 temp = temp.item()
             lime_weights = temp['lime_weights']
