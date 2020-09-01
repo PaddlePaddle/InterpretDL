@@ -95,12 +95,12 @@ class OcclusionInterpreter(Interpreter):
             self._paddle_prepare()
 
         if isinstance(data, str):
-            _, data = read_image(data)
+            data = read_image(data)
             data = preprocess_image(data)
         else:
             if len(data.shape) == 3:
                 data = np.expand_dims(data, axis=0)
-            if data.dtype == int:
+            if np.issubdtype(data.dtype, np.integer):
                 data = preprocess_image(data)
 
         if baseline is None:

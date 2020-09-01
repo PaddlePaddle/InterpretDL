@@ -2,7 +2,8 @@ from assets.resnet import ResNet50
 
 import sys
 sys.path.append('..')
-from interpretdl.interpreter.gradient_cam import GradCAMInterpreter
+import interpretdl as it
+from data_processor.readers import read_image
 
 
 def grad_cam_example():
@@ -16,8 +17,8 @@ def grad_cam_example():
         probs = fluid.layers.softmax(logits, axis=-1)
         return probs
 
-    gradcam = GradCAMInterpreter(paddle_model, "assets/ResNet50_pretrained",
-                                 True)
+    gradcam = it.GradCAMInterpreter(paddle_model, "assets/ResNet50_pretrained",
+                                    True)
     gradcam.interpret(
         'assets/catdog.png',
         'res5c.add.output.5.tmp_0',

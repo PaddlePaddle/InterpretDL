@@ -131,22 +131,21 @@ class IntGradCVInterpreter(Interpreter):
                 imgs = []
                 img_paths, img_names = extract_img_paths(data)
                 for fp in img_paths:
-                    _, img = read_image(
-                        fp, crop_size=self.model_input_shape[1])
+                    img = read_image(fp, crop_size=self.model_input_shape[1])
                     imgs.append(img)
                 data = np.stack(
                     [preprocess_image(img) for img in imgs], axis=1)[0]
             else:
-                _, imgs = read_image(data, crop_size=self.model_input_shape[1])
+                imgs = read_image(data, crop_size=self.model_input_shape[1])
                 data = preprocess_image(imgs)
         else:
             if len(data.shape) == 3:
                 data = np.expand_dims(data, axis=0)
-            if data.dtype == int:
-                img = data.copy()
+            if np.issubdtype(data.dtype, np.integer):
+                imgs = data.copy()
                 data = preprocess_image(data)
             else:
-                img = restore_image(data.copy())
+                imgs = restore_image(data.copy())
 
         self.data_type = np.array(data).dtype
         self.input_type = type(data)

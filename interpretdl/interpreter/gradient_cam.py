@@ -82,16 +82,17 @@ class GradCAMInterpreter(Interpreter):
 
         # Read in image
         if isinstance(data, str):
-            org, img = read_image(data, crop_size=self.model_input_shape[1])
+            img = read_image(data, crop_size=self.model_input_shape[1])
+            org = img.copy()[0]
             data = preprocess_image(img)
         else:
             if len(data.shape) == 3:
                 data = np.expand_dims(data, axis=0)
-            if data.dtype == int:
-                org = data.copy()
+            if np.issubdtype(data.dtype, np.integer):
+                org = data.copy()[0]
                 data = preprocess_image(data)
             else:
-                org = restore_image(data.copy())
+                org = restore_image(data.copy())[0]
 
         self.target_layer_name = target_layer_name
         self.label = label

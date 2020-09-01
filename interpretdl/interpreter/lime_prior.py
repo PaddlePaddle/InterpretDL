@@ -131,7 +131,7 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
                 "The interpreter is not prepared. Call prepare() before interpretation."
             )
 
-        _, data_instance = read_image(data_path)
+        data_instance = read_image(data_path)
 
         # only one example here
         probability = self.predict_fn(data_instance)[0]
