@@ -3,8 +3,9 @@ import typing
 from typing import Any, Callable, List, Tuple, Union
 import numpy as np
 
-from ..data_processor.readers import preprocess_image, read_image
+from ..data_processor.readers import preprocess_image, read_image, restore_image
 from ..data_processor.visualizer import show_important_parts, visualize_image, save_image
+from ..common.paddle_utils import init_checkpoint
 
 from ._lime_base import LimeBase
 from .abc_interpreter import Interpreter
@@ -89,7 +90,8 @@ class LIMECVInterpreter(Interpreter):
 
         """
         if isinstance(data, str):
-            data_instance = read_image(data)
+            data_instance = read_image(
+                data, crop_size=self.model_inputs_shape[1])
         else:
             if len(data.shape) == 3:
                 data = np.expand_dims(data, axis=0)
@@ -239,64 +241,6 @@ class LIMENLPInterpreter(Interpreter):
         :return: LIME Prior weights: {interpret_label_i: weights on features}
         :rtype: dict
 
-        Example::
-
-            import interpretdl as it
-            def convolution_net(data, input_dim, class_dim, emb_dim, hid_dim):
-                emb = fluid.embedding(
-                    input=data, size=[len(word_dict), EMB_DIM], is_sparse=True)
-                conv_3 = fluid.nets.sequence_conv_pool(
-                    input=emb,
-                    num_filters=hid_dim,
-                    filter_size=3,
-                    act="tanh",
-                    pool_type="sqrt")
-                conv_4 = fluid.nets.sequence_conv_pool(
-                    input=emb,
-                    num_filters=hid_dim,
-                    filter_size=4,
-                    act="tanh",
-                    pool_type="sqrt")
-                prediction = fluid.layers.fc(input=[conv_3, conv_4],
-                                             size=class_dim,
-                                             act="softmax")
-                return prediction
-
-            CLASS_DIM = 2
-            EMB_DIM = 128
-            HID_DIM = 512
-            BATCH_SIZE = 128
-            print('preparing word_dict...')
-            word_dict = paddle.dataset.imdb.word_dict()
-
-            def paddle_model(data):
-                probs = convolution_net(data,
-                                        len(word_dict), CLASS_DIM, EMB_DIM, HID_DIM)
-                return probs
-
-            lime = it.LIMENLPInterpreter(paddle_model, "assets/sent_persistables")
-
-            reviews_str = [b'read the book forget the movie']
-
-            reviews = [c.split() for c in reviews_str]
-
-            UNK = word_dict['<unk>']
-            lod = []
-            for c in reviews:
-                lod.append([word_dict.get(words, UNK) for words in c])
-
-            base_shape = [[len(c) for c in lod]]
-            lod = np.array(sum(lod, []), dtype=np.int64)
-
-            data = fluid.create_lod_tensor(lod, base_shape, fluid.CUDAPlace(0))
-            print('Begin intepretation...')
-            lime_weights = lime.interpret(
-                data, num_samples=2000, batch_size=20, unk_id=UNK)
-
-            id2word = dict(zip(word_dict.values(), word_dict.keys()))
-            for y in lime_weights:
-                print([(id2word[t[0]], t[1]) for t in lime_weights[y]])
-
         """
 
         model_inputs = preprocess_fn(data)
@@ -345,7 +289,7 @@ class LIMENLPInterpreter(Interpreter):
                             dtype=inp.dtype)
                         data_ops += (op_, )
 
-                    probs = self.paddle_model(*data_ops)  #data_op, seq_op)
+                    probs = self.paddle_model(*data_ops)
                     if isinstance(probs, tuple):
                         probs = probs[0]
                     main_program = main_program.clone(for_test=True)
@@ -357,11 +301,12 @@ class LIMENLPInterpreter(Interpreter):
                 place = fluid.CPUPlace()
             self.place = place
             exe = fluid.Executor(self.place)
-            #exe.run(startup_prog)
-            fluid.io.load_persistables(exe, self.trained_model_path,
-                                       main_program)
+            #fluid.io.load_persistables(exe, self.trained_model_path,
+            #                           main_program)
+            init_checkpoint(exe, self.trained_model_path, main_program)
 
             #fluid.load(main_program, self.trained_model_path, exe)
+
             def predict_fn(*params):
                 [result] = exe.run(
                     main_program,
