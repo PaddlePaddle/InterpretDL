@@ -119,3 +119,83 @@ def visualize_heatmap(heatmap, org, visual=True, save_path=None):
 
     if save_path is not None:
         cv2.imwrite(save_path, x)
+
+
+class VisualizationTextRecord:
+    """
+    A record for text visulization.
+    Part of the code is modified from https://github.com/pytorch/captum/blob/master/captum/attr/_utils/visualization.py
+    """
+
+    def __init__(
+            self,
+            words,
+            word_importances,
+            true_label,
+            pred_class,
+            pred_prob,
+            interp_class, ):
+        self.word_importances = word_importances
+        self.pred_prob = pred_prob
+        self.pred_class = pred_class
+        self.true_label = true_label
+        self.interp_class = interp_class
+        self.words = words
+
+    def record_html(self):
+        return "".join([
+            "<tr>",
+            self._format_class(self.true_label),
+            self._format_class(self.pred_class, self.pred_prob),
+            self._format_class(self.interp_class),
+            self._format_word_importances(),
+            "<tr>",
+        ])
+
+    def _format_class(self, label, prob=None):
+        if prob is None:
+            return '<td><text style="padding-right:2em"><b>{label}</b></text></td>'.format(
+                label=label)
+        else:
+            return '<td><text style="padding-right:2em"><b>{label} ({prob:.2f})</b></text></td>'\
+        .format(label=label, prob=prob)
+
+    def _format_word_importances(self):
+        tags = ["<td>"]
+        for word, importance in zip(self.words,
+                                    self.word_importances[:len(self.words)]):
+            color = self._background_color(importance)
+            unwrapped_tag = '<mark style="background-color: {color}; opacity:1.0; \
+                        line-height:1.75"><font color="black"> {word}\
+                        </font></mark>'.format(
+                color=color, word=word)
+            tags.append(unwrapped_tag)
+        tags.append("</td>")
+        return "".join(tags)
+
+    def _background_color(self, importance):
+        importance = max(-1, min(1, importance))
+        if importance > 0:
+            hue = 120
+            sat = 75
+            lig = 100 - int(50 * importance)
+        else:
+            hue = 0
+            sat = 75
+            lig = 100 - int(-40 * importance)
+        return "hsl({}, {}%, {}%)".format(hue, sat, lig)
+
+
+def visualize_text(text_records):
+    html = ["<table width: 100%>"]
+    rows = [
+        "<tr><th>True Label</th>"
+        "<th>Predicted Label (Prob)</th>"
+        "<th>Target Label</th>"
+        "<th>Word Importance</th>"
+    ]
+    for record in text_records:
+        rows.append(record.record_html())
+    html.append("".join(rows))
+    html.append("</table>")
+    display(HTML("".join(html)))
