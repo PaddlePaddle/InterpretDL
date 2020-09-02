@@ -5,7 +5,7 @@ import numpy as np
 
 from ..data_processor.readers import preprocess_image, read_image, restore_image
 from ..data_processor.visualizer import show_important_parts, visualize_image, save_image
-from ..common.paddle_utils import init_checkpoint
+from ..common.paddle_utils import init_checkpoint, to_lodtensor
 
 from ._lime_base import LimeBase
 from .abc_interpreter import Interpreter
@@ -220,10 +220,11 @@ class LIMENLPInterpreter(Interpreter):
                   data,
                   preprocess_fn,
                   unk_id,
-                  pad_id=0,
+                  pad_id=None,
                   interpret_class=None,
                   num_samples=1000,
                   batch_size=50,
+                  lod_levels=None,
                   visual=True,
                   save_path=None):
         """
@@ -244,13 +245,19 @@ class LIMENLPInterpreter(Interpreter):
         """
 
         model_inputs = preprocess_fn(data)
-        self.model_inputs = tuple(np.array(inp) for inp in tuple(model_inputs))
+        if not isinstance(model_inputs, tuple):
+            self.model_inputs = (np.array(model_inputs), )
+        else:
+            self.model_inputs = tuple(np.array(inp) for inp in model_inputs)
+
+        if lod_levels is None:
+            lod_levels = [0] * len(self.model_inputs)
+        self.lod_levels = lod_levels
 
         if not self.paddle_prepared:
             self._paddle_prepare()
         # only one example here
         probability = self.predict_fn(*self.model_inputs)[0]
-
         # only interpret top 1
         if interpret_class is None:
             pred_label = np.argsort(probability)
@@ -283,10 +290,17 @@ class LIMENLPInterpreter(Interpreter):
                 with fluid.unique_name.guard():
                     data_ops = ()
                     for i, inp in enumerate(self.model_inputs):
-                        op_ = fluid.data(
-                            name='op_%d' % i,
-                            shape=(None, ) + inp.shape[1:],
-                            dtype=inp.dtype)
+                        if self.lod_levels[i] > 0:
+                            op_ = fluid.data(
+                                name='op_%d' % i,
+                                shape=[None],
+                                dtype=inp.dtype,
+                                lod_level=self.lod_levels[i])
+                        else:
+                            op_ = fluid.data(
+                                name='op_%d' % i,
+                                shape=(None, ) + inp.shape[1:],
+                                dtype=inp.dtype)
                         data_ops += (op_, )
 
                     probs = self.paddle_model(*data_ops)
@@ -301,6 +315,7 @@ class LIMENLPInterpreter(Interpreter):
                 place = fluid.CPUPlace()
             self.place = place
             exe = fluid.Executor(self.place)
+            #exe.run(startup_prog)
             #fluid.io.load_persistables(exe, self.trained_model_path,
             #                           main_program)
             init_checkpoint(exe, self.trained_model_path, main_program)
@@ -308,6 +323,7 @@ class LIMENLPInterpreter(Interpreter):
             #fluid.load(main_program, self.trained_model_path, exe)
 
             def predict_fn(*params):
+                params = self._format_model_inputs(params)
                 [result] = exe.run(
                     main_program,
                     fetch_list=[probs],
@@ -318,3 +334,12 @@ class LIMENLPInterpreter(Interpreter):
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True
+
+    def _format_model_inputs(self, model_inputs):
+        out = ()
+        for i, inp in enumerate(model_inputs):
+            if self.lod_levels[i] == 0:
+                out += (inp, )
+            else:
+                out += (to_lodtensor(inp, self.place), )
+        return out

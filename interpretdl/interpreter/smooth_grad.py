@@ -5,7 +5,7 @@ import numpy as np
 import os, sys
 
 from .abc_interpreter import Interpreter
-from ..data_processor.readers import preprocess_image, read_image
+from ..data_processor.readers import preprocess_image, read_image, restore_image
 from ..data_processor.visualizer import visualize_overlay
 
 

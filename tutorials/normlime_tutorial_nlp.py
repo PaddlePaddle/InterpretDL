@@ -5,9 +5,6 @@ sys.path.append('..')
 
 import interpretdl as it
 
-#from interpretdl.interpreter._normlime_base import NormLIMEBase
-#from interpretdl import LIMENLPInterpreter
-
 
 def nlp_example(dataset=True):
     from assets.bilstm import bilstm
@@ -75,7 +72,12 @@ def nlp_example(dataset=True):
         paddle_model, PARAMS_PATH, temp_data_file='all_lime_weights_nlp.npz')
 
     normlime_weights = normlime.interpret(
-        data, preprocess_fn, unk_id=unk_id, num_samples=500, batch_size=50)
+        data,
+        preprocess_fn,
+        unk_id=unk_id,
+        pad_id=0,
+        num_samples=500,
+        batch_size=50)
 
     #print(normlime_weights)
     id2word = dict(zip(word_dict.values(), word_dict.keys()))

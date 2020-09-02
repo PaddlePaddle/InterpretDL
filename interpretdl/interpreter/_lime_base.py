@@ -298,7 +298,7 @@ class LimeBase(object):
                                 num_samples,
                                 batch_size,
                                 unk_id,
-                                pad_id=0,
+                                pad_id,
                                 distance_metric='cosine',
                                 model_regressor=None,
                                 prior=None,
@@ -306,6 +306,9 @@ class LimeBase(object):
         """
         Generates interpretations for a prediction.
         """
+        #word_ids = np.array(model_inputs[0])
+        #if len(word_ids.shape) > 1:
+        #    word_ids = word_ids[0]
         data, labels, distances = self._data_labels_text(
             model_inputs, classifier_fn, num_samples, batch_size,
             distance_metric, unk_id, pad_id)
@@ -323,21 +326,18 @@ class LimeBase(object):
 
         return lime_weights, prediction_scores
 
-    def _data_labels_text(self,
-                          model_inputs,
-                          classifier_fn,
-                          num_samples,
-                          batch_size,
-                          distance_metric,
-                          unk_id,
-                          pad_id=0):
+    def _data_labels_text(self, model_inputs, classifier_fn, num_samples,
+                          batch_size, distance_metric, unk_id, pad_id):
         from paddle import fluid
         word_ids = model_inputs[0]
         ori_shape = word_ids.shape
         word_ids = word_ids.reshape((np.prod(ori_shape), ))
-        pad_locs = np.where(word_ids == pad_id)[0]
-        n_features = word_ids.shape[-1] if len(pad_locs) == 0 else min(
-            pad_locs)
+        if pad_id is None:
+            n_features = len(word_ids)
+        else:
+            pad_locs = np.where(word_ids == pad_id)[0]
+            n_features = word_ids.shape[-1] if len(pad_locs) == 0 else min(
+                pad_locs)
         data = self.random_state.randint(0, 2, num_samples * n_features) \
             .reshape((num_samples, n_features))
         labels = []
@@ -367,7 +367,6 @@ class LimeBase(object):
 
         distances = sklearn.metrics.pairwise_distances(
             data, data[0].reshape(1, -1), metric=distance_metric).ravel()
-
         return data, np.array(labels), distances
 
 

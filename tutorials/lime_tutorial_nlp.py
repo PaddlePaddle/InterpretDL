@@ -54,8 +54,74 @@ def nlp_example_bilstm():
     review = '交通 方便 ；环境 很好 ；服务态度 很好 房间 较小'
 
     lime_weights = lime.interpret(
-        review, preprocess_fn, num_samples=200, batch_size=10, unk_id=unk_id)
+        review,
+        preprocess_fn,
+        num_samples=200,
+        batch_size=10,
+        unk_id=unk_id,
+        pad_id=0)
 
+    id2word = dict(zip(word_dict.values(), word_dict.keys()))
+    for y in lime_weights:
+        print([(id2word[t[0]], t[1]) for t in lime_weights[y]])
+    print(lime_weights)
+
+
+def nlp_example_conv():
+    import paddle
+
+    def convolution_net(data, input_dim, class_dim, emb_dim, hid_dim):
+        emb = fluid.embedding(
+            input=data, size=[len(word_dict), EMB_DIM], is_sparse=True)
+        conv_3 = fluid.nets.sequence_conv_pool(
+            input=emb,
+            num_filters=hid_dim,
+            filter_size=3,
+            act="tanh",
+            pool_type="sqrt")
+        conv_4 = fluid.nets.sequence_conv_pool(
+            input=emb,
+            num_filters=hid_dim,
+            filter_size=4,
+            act="tanh",
+            pool_type="sqrt")
+        prediction = fluid.layers.fc(input=[conv_3, conv_4],
+                                     size=class_dim,
+                                     act="softmax")
+        return prediction
+
+    CLASS_DIM = 2
+    EMB_DIM = 128
+    HID_DIM = 512
+    PARAMS_PATH = "assets/InterpretDL/tutorials/assets/sent_persistables"
+    print('preparing word_dict...')
+    word_dict = paddle.dataset.imdb.word_dict()
+
+    def paddle_model(data):
+        probs = convolution_net(data,
+                                len(word_dict), CLASS_DIM, EMB_DIM, HID_DIM)
+        return probs
+
+    lime = it.LIMENLPInterpreter(paddle_model, PARAMS_PATH)
+
+    data = b'read the book forget the movie'
+
+    def preprocess_fn(data):
+        reviews = [[
+            word_dict.get(w, word_dict['<unk>']) for w in data.split()
+        ]]
+        return reviews
+
+    UNK = word_dict['<unk>']
+
+    lime_weights = lime.interpret(
+        data,
+        preprocess_fn,
+        num_samples=200,
+        batch_size=20,
+        unk_id=UNK,
+        pad_id=None,
+        lod_levels=[1])
     id2word = dict(zip(word_dict.values(), word_dict.keys()))
     for y in lime_weights:
         print([(id2word[t[0]], t[1]) for t in lime_weights[y]])
@@ -65,7 +131,7 @@ def nlp_example_bilstm():
 def nlp_example_ernie():
     from assets.bilstm import bilstm
     import io
-    sys.path.append("assets/models/PaddleNLP/shared_modules/")
+    sys.path.append("../../../models/PaddleNLP/shared_modules/")
     from preprocess.ernie import task_reader, tokenization
     from collections import namedtuple
     from models.classification.nets import ernie_base_net
@@ -73,7 +139,7 @@ def nlp_example_ernie():
 
     MODEL_PATH = 'assets/senta_model/ernie_pretrain_model'
     VOCAB_PATH = os.path.join(MODEL_PATH, 'vocab.txt')
-    PARAMS_PATH = 'assets/senta_model/ernie_trained/step_1000/'
+    PARAMS_PATH = 'assets/senta_model/ernie_trained/step_1000'
     ERNIE_CONFIG_PATH = os.path.join(MODEL_PATH, 'ernie_config.json')
     MAX_SEQ_LEN = 256
 
@@ -101,7 +167,7 @@ def nlp_example_ernie():
         Example = namedtuple('Example', ['text_a', 'label'])
         example = Example(data.replace(' ', ''), 0)
         for return_list in reader._prepare_batch_data([example], 1):
-            return return_list
+            return tuple(return_list)
 
     #print(preprocess_fn('交通 方便 ；环境 很好 ；服务态度 很好 房间 较小'))
     word_dict = tokenization.load_vocab(VOCAB_PATH)
@@ -110,7 +176,12 @@ def nlp_example_ernie():
     review = '交通 方便 ；环境 很好 ；服务态度 很好 房间 较小'
 
     lime_weights = lime.interpret(
-        review, preprocess_fn, num_samples=2000, batch_size=50, unk_id=unk_id)
+        review,
+        preprocess_fn,
+        num_samples=500,
+        batch_size=50,
+        unk_id=unk_id,
+        pad_id=0)
     print(lime_weights)
     id2word = dict(zip(word_dict.values(), word_dict.keys()))
     for y in lime_weights:
@@ -122,5 +193,7 @@ if __name__ == '__main__':
     targets = sys.argv[1:]
     if 'ernie' in targets:
         nlp_example_ernie()
-    else:
+    elif 'bilstm' in targets:
         nlp_example_bilstm()
+    elif 'conv' in targets:
+        nlp_example_conv()

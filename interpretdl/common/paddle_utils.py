@@ -71,7 +71,23 @@ def init_checkpoint(exe, init_checkpoint_path, main_program):
         fluid.load(main_program, checkpoint_path, exe)
     except:
         fluid.load(main_program, init_checkpoint_path, exe)
+
     print("Load model from {}".format(init_checkpoint_path))
+
+
+def to_lodtensor(data, place):
+    seq_lens = [len(seq) for seq in data]
+    cur_len = 0
+    lod = [cur_len]
+    for l in seq_lens:
+        cur_len += l
+        lod.append(cur_len)
+    flattened_data = np.concatenate(data, axis=0)
+    flattened_data = flattened_data.reshape([len(flattened_data), ])
+    res = fluid.LoDTensor()
+    res.set(flattened_data, place)
+    res.set_lod([lod])
+    return res
 
 
 class FeatureExtractor(object):

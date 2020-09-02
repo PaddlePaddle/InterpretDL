@@ -253,8 +253,11 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
                           batch_size,
                           unk_id,
                           pad_id,
+                          lod_levels,
                           auto_save=True):
 
+        #dict_key = '_'.join(str(i) for i in data)
+        #dict_key = data
         if dict_key in self.all_lime_weights:
             return
 
@@ -264,12 +267,15 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
             unk_id=unk_id,
             pad_id=pad_id,
             num_samples=num_samples,
+            lod_levels=lod_levels,
             batch_size=batch_size)
 
         self.all_lime_weights[dict_key] = {'lime_weights': lime_weights, }
 
         if auto_save:
             np.savez(self.filepath_to_save, **self.all_lime_weights)
+            # load: dict(np.load(filepath_to_load, allow_pickle=True))
+
         return
 
     def interpret(self,
@@ -278,7 +284,8 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
                   num_samples,
                   batch_size,
                   unk_id,
-                  pad_id=0,
+                  pad_id=None,
+                  lod_levels=None,
                   save_path='normlime_weights.npy'):
         """
         Main function of the interpreter.
@@ -361,6 +368,7 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
                 pad_id=pad_id,
                 num_samples=num_samples,
                 batch_size=batch_size,
+                lod_levels=lod_levels,
                 auto_save=(i % 10) == 0)
 
         np.savez(self.filepath_to_save, **self.all_lime_weights)

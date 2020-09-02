@@ -6,7 +6,7 @@ import os, sys
 from PIL import Image
 
 from .abc_interpreter import Interpreter
-from ..data_processor.readers import preprocess_image, read_image
+from ..data_processor.readers import preprocess_image, read_image, restore_image
 from ..data_processor.visualizer import visualize_heatmap
 
 
