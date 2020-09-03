@@ -225,8 +225,8 @@ class LIMENLPInterpreter(Interpreter):
                   num_samples=1000,
                   batch_size=50,
                   lod_levels=None,
-                  visual=True,
-                  save_path=None):
+                  return_pred=False,
+                  visual=True):
         """
         Main function of the interpreter.
 
@@ -258,6 +258,7 @@ class LIMENLPInterpreter(Interpreter):
             self._paddle_prepare()
         # only one example here
         probability = self.predict_fn(*self.model_inputs)[0]
+
         # only interpret top 1
         if interpret_class is None:
             pred_label = np.argsort(probability)
@@ -279,6 +280,9 @@ class LIMENLPInterpreter(Interpreter):
             weights_new = [(data_array[tup[0]], tup[1]) for tup in weights_c]
             lime_weights[c] = weights_new
 
+        if return_pred:
+            return (interpret_class, probability[interpret_class],
+                    lime_weights)
         return lime_weights
 
     def _paddle_prepare(self, predict_fn=None):

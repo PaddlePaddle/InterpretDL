@@ -1,7 +1,7 @@
 from skimage.segmentation import quickshift, mark_boundaries
 import numpy as np
 import matplotlib.pyplot as plt
-import IPython.display as display
+from IPython.core.display import display, HTML
 from PIL import Image
 import cv2
 

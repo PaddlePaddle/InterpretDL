@@ -1,9 +1,11 @@
+from assets.resnet import ResNet50
 from assets.bilstm import bilstm_net_emb
 import paddle.fluid as fluid
 import numpy as np
-import sys
+import sys, os
 sys.path.append('..')
 import interpretdl as it
+from interpretdl.data_processor.visualizer import VisualizationTextRecord, visualize_text
 
 
 def nlp_example():
@@ -36,10 +38,13 @@ def nlp_example():
         probs = bilstm_net_emb(emb, None, None, dict_dim, is_prediction=True)
         return emb, probs
 
-    gs = it.GradShapNLPInterpreter(
-        paddle_model, "assets/senta_model/bilstm_model/params", True)
+    MODEL_PATH = "assets/senta_model/bilstm_model/"
+    PARAMS_PATH = os.path.join(MODEL_PATH, "params")
+    VOCAB_PATH = os.path.join(MODEL_PATH, "word_dict.txt")
 
-    word_dict = load_vocab("assets/senta_model/bilstm_model/word_dict.txt")
+    gs = it.GradShapNLPInterpreter(paddle_model, PARAMS_PATH, True)
+
+    word_dict = load_vocab(VOCAB_PATH)
     unk_id = word_dict["<unk>"]
     reviews = [
         ['交通', '方便', '；', '环境', '很好', '；', '服务态度', '很好', '', '', '房间', '较小'],
@@ -49,17 +54,18 @@ def nlp_example():
     lod = []
     for c in reviews:
         lod.append([word_dict.get(words, unk_id) for words in c])
+    print(lod)
     base_shape = [[len(c) for c in lod]]
     lod = np.array(sum(lod, []), dtype=np.int64)
     data = fluid.create_lod_tensor(lod, base_shape, fluid.CPUPlace())
 
-    avg_gradients = gs.interpret(
+    pred_labels, pred_probs, avg_gradients = gs.interpret(
         data,
         label=None,
         noise_amount=0.1,
         n_samples=20,
-        visual=True,
-        save_path=None)
+        return_pred=True,
+        visual=True)
 
     sum_gradients = np.sum(avg_gradients, axis=1).tolist()
     lod = data.lod()
@@ -67,9 +73,27 @@ def nlp_example():
     new_array = []
     for i in range(len(lod[0]) - 1):
         new_array.append(
-            dict(zip(reviews[i], sum_gradients[lod[0][i]:lod[0][i + 1]])))
+            list(zip(reviews[i], sum_gradients[lod[0][i]:lod[0][i + 1]])))
 
     print(new_array)
+    true_labels = [1, 0]
+    recs = []
+    for i, l in enumerate(new_array):
+        words = [t[0] for t in l]
+        word_importances = [t[1] for t in l]
+        word_importances = np.array(word_importances) / np.linalg.norm(
+            word_importances)
+        pred_label = pred_labels[i]
+        pred_prob = pred_probs[i]
+        true_label = true_labels[0]
+        interp_class = pred_label
+        if interp_class == 0:
+            word_importances = -word_importances
+        recs.append(
+            VisualizationTextRecord(words, word_importances, true_label,
+                                    pred_label, pred_prob, interp_class))
+
+    visualize_text(recs)
 
 
 if __name__ == '__main__':

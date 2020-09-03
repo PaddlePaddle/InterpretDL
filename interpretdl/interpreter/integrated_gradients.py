@@ -300,6 +300,7 @@ class IntGradNLPInterpreter(Interpreter):
                   data,
                   label=None,
                   steps=50,
+                  return_pred=True,
                   visual=True,
                   save_path=None):
         """
@@ -349,6 +350,7 @@ class IntGradNLPInterpreter(Interpreter):
         gradients, out, data_out = self.predict_fn(data,
                                                    np.array([[0]] * n),
                                                    np.array([[float(1)]]))
+
         if self.label is None:
             self.label = np.argmax(out, axis=1)
         else:
@@ -364,6 +366,10 @@ class IntGradNLPInterpreter(Interpreter):
         ig_gradients = total_gradients * data_out / steps
 
         #avg_gradients = np.average(np.array(gradients_list), axis=0)
+
+        if return_pred:
+            out = np.array(out)[0]
+            return self.label, out[self.label], ig_gradients
 
         return ig_gradients
 

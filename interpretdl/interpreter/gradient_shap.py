@@ -232,6 +232,7 @@ class GradShapNLPInterpreter(Interpreter):
                   label=None,
                   n_samples=5,
                   noise_amount=0.1,
+                  return_pred=False,
                   visual=True,
                   save_path=None):
         """
@@ -335,6 +336,13 @@ class GradShapNLPInterpreter(Interpreter):
 
         avg_gradients = total_gradients / n_samples
         interpretations = avg_gradients * embedding
+
+        if return_pred:
+            pred_labels = label.reshape((n, ))
+            pred_probs = [
+                p[pred_labels[i]] for i, p in enumerate(np.array(out))
+            ]
+            return (pred_labels, pred_probs, interpretations)
 
         return interpretations
 

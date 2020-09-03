@@ -98,10 +98,15 @@ class LimeBase(object):
                 'Prediction_local',
                 local_pred, )
             print('Right:', neighborhood_labels[0, label])
-        return (easy_model.intercept_, sorted(
-            zip(used_features, easy_model.coef_),
-            key=lambda x: np.abs(x[1]),
-            reverse=True), prediction_score, local_pred)
+
+        #return (easy_model.intercept_, sorted(
+        #    zip(used_features, easy_model.coef_),
+        #    key=lambda x: np.abs(x[1]),
+        #    reverse=True), prediction_score, local_pred)
+
+        return (easy_model.intercept_,
+                list(zip(used_features, easy_model.coef_)), prediction_score,
+                local_pred)
 
     def _data_labels(self, image, segments, classifier_fn, num_samples,
                      batch_size, hide_color, distance_metric):
@@ -323,7 +328,7 @@ class LimeBase(object):
                 (_, lime_weights[l], prediction_scores[l],
                  _) = self._fitting_data_with_prior(
                      data, labels, distances, l, prior, reg_force=reg_force)
-
+        print('_lime base', lime_weights)
         return lime_weights, prediction_scores
 
     def _data_labels_text(self, model_inputs, classifier_fn, num_samples,
