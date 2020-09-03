@@ -328,7 +328,7 @@ class LimeBase(object):
                 (_, lime_weights[l], prediction_scores[l],
                  _) = self._fitting_data_with_prior(
                      data, labels, distances, l, prior, reg_force=reg_force)
-        print('_lime base', lime_weights)
+
         return lime_weights, prediction_scores
 
     def _data_labels_text(self, model_inputs, classifier_fn, num_samples,
