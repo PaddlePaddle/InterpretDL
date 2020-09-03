@@ -3,7 +3,7 @@ import typing
 from typing import Any, Callable, List, Tuple, Union
 
 from .abc_interpreter import Interpreter
-from ..data_processor.readers import preprocess_image, read_image
+from ..data_processor.readers import preprocess_image, read_image, preprocess_inputs
 from ..data_processor.visualizer import visualize_grayscale
 
 import numpy as np
@@ -46,11 +46,11 @@ class OcclusionInterpreter(Interpreter):
         self.paddle_prepared = False
 
     def interpret(self,
-                  data,
+                  inputs,
                   sliding_window_shapes,
-                  interpret_class=None,
+                  labels=None,
                   strides=1,
-                  baseline=None,
+                  baselines=None,
                   perturbations_per_eval=1,
                   visual=True,
                   save_path=None):
@@ -91,47 +91,41 @@ class OcclusionInterpreter(Interpreter):
                     visual=True,
                     save_path='occlusion_gray.jpg')
         """
+
+        imgs, data, save_path = preprocess_inputs(inputs, save_path,
+                                                  self.model_input_shape)
+
         if not self.paddle_prepared:
             self._paddle_prepare()
 
-        if isinstance(data, str):
-            data = read_image(data)
-            data = preprocess_image(data)
-        else:
-            if len(data.shape) == 3:
-                data = np.expand_dims(data, axis=0)
-            if np.issubdtype(data.dtype, np.integer):
-                data = preprocess_image(data)
+        if baselines is None:
+            baselines = np.zeros_like(data)
 
-        if baseline is None:
-            baseline = np.zeros_like(data)
-
-        probability = self.predict_fn(data)[0]
+        probs = self.predict_fn(data)[0]
         sliding_window = np.ones(sliding_window_shapes)
 
-        if interpret_class is None:
-            pred_label = np.argsort(probability)
-            interpret_class = pred_label[-1:]
-
+        if labels is None:
+            labels = np.argmax(probs)
         current_shape = np.subtract(self.model_input_shape,
                                     sliding_window_shapes)
         shift_counts = tuple(
             np.add(np.ceil(np.divide(current_shape, strides)).astype(int), 1))
-        initial_eval = probability[interpret_class]
+        initial_eval = probs[labels]
         total_interp = np.zeros(self.model_input_shape)
 
         for (ablated_features, current_mask) in self._ablation_generator(
-                data, sliding_window, strides, baseline, shift_counts,
+                data, sliding_window, strides, baselines, shift_counts,
                 perturbations_per_eval):
 
             modified_eval = self.predict_fn(np.float32(
-                ablated_features))[:, interpret_class]
+                ablated_features))[:, labels]
             eval_diff = initial_eval - modified_eval
             for i in range(eval_diff.shape[0]):
                 total_interp += (eval_diff[i] * current_mask[i])
 
-        visualize_grayscale(
-            np.array([total_interp]), visual=visual, save_path=save_path)
+        for i in range(len(data)):
+            visualize_grayscale(
+                total_interp, visual=visual, save_path=save_path[0])
 
         return total_interp
 

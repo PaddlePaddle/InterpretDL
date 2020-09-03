@@ -28,13 +28,13 @@ def occlusion_example():
     oc = OcclusionInterpreter(paddle_model, "assets/ResNet50_pretrained")
     attributions = oc.interpret(
         img_path,
-        sliding_window_shapes=(1, 30, 30),
-        interpret_class=None,
-        strides=(1, 10, 10),
-        baseline=None,
+        sliding_window_shapes=(1, 50, 50),
+        labels=None,
+        strides=(1, 30, 30),
+        baselines=None,
         perturbations_per_eval=5,
         visual=True,
-        save_path='occlusion_gray.jpg')
+        save_path='assets/occlusion_gray.jpg')
 
 
 if __name__ == '__main__':

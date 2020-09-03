@@ -219,3 +219,33 @@ def extract_img_paths(directory):
             img_paths.append(os.path.join(directory, file))
             img_names.append(file)
     return img_paths, img_names
+
+
+def preprocess_inputs(inputs, save_path, model_input_shape):
+    if isinstance(inputs, str):
+        imgs = read_image(inputs, crop_size=model_input_shape[1])
+        data = preprocess_image(imgs)
+        if save_path is None or isinstance(save_path, str):
+            save_path = [save_path]
+    elif bool(list) and isinstance(inputs, list) and all(
+            isinstance(elem, str) for elem in inputs):
+        imgs = []
+        for fp in inputs:
+            img = read_image(fp, crop_size=model_input_shape[1])
+            imgs.append(img)
+        imgs = np.concatenate(imgs)
+        data = preprocess_image(imgs)
+        if save_path is None:
+            save_path = [None] * len(imgs)
+    else:
+        if len(inputs.shape) == 3:
+            inputs = np.expand_dims(inputs, axis=0)
+        if np.issubdtype(inputs.dtype, np.integer):
+            imgs = inputs.copy()
+            data = preprocess_image(inputs)
+        else:
+            imgs = restore_image(inputs.copy())
+            data = inputs
+        if save_path is None:
+            save_path = [None] * len(imgs)
+    return imgs, data, save_path

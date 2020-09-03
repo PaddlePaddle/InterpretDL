@@ -21,15 +21,16 @@ def grad_shap_example():
         return probs
 
     img_path = 'assets/catdog.png'
+
     gs = it.GradShapCVInterpreter(predict_fn, "assets/ResNet50_pretrained",
                                   True)
     gradients = gs.interpret(
         img_path,
-        label=None,
+        labels=None,
         noise_amount=0.1,
-        n_samples=5,
+        n_samples=20,
         visual=True,
-        save_path='grad_shap_test.jpg')
+        save_path='assets/gs_test.jpg')
 
 
 if __name__ == '__main__':

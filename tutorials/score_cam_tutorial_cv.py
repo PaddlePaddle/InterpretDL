@@ -4,6 +4,7 @@ import sys
 sys.path.append('..')
 #from interpretdl.interpreter.score_cam import ScoreCAMInterpreter
 import interpretdl as it
+from interpretdl.data_processor.readers import preprocess_image, read_image
 
 
 def grad_cam_example():
@@ -17,14 +18,15 @@ def grad_cam_example():
         probs = fluid.layers.softmax(logits, axis=-1)
         return probs
 
+    img_path = 'assets/catdog.png'
     scorecam = it.ScoreCAMInterpreter(paddle_model,
                                       "assets/ResNet50_pretrained", True)
     scorecam.interpret(
-        'assets/catdog.png',
+        img_path,
         'res5c.add.output.5.tmp_0',
-        label=None,
+        labels=None,
         visual=True,
-        save_path='scorecam_test.jpg')
+        save_path='assets/sc_test.jpg')
 
 
 if __name__ == '__main__':

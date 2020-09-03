@@ -21,11 +21,12 @@ def smooth_grad_example():
         return probs
 
     img_path = 'assets/deer.png'
-    sg = SmoothGradInterpreter(paddle_model, "assets/ResNet50_pretrained")
-    gradients = sg.interpret(img_path, visual=True, save_path='sg_test.jpg')
+    sg = SmoothGradInterpreter(paddle_model, "../../../ResNet50_pretrained")
+    gradients = sg.interpret(
+        img_path, visual=True, labels=None, save_path='assets/sg_test.jpg')
 
     # optional
-    visualize_grayscale(gradients, save_path='sg_gray.jpg')
+    #visualize_grayscale(gradients[0], save_path='sg_gray.jpg')
 
 
 if __name__ == '__main__':

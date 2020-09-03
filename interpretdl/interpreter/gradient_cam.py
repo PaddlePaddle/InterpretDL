@@ -6,7 +6,7 @@ import os, sys
 from PIL import Image
 
 from .abc_interpreter import Interpreter
-from ..data_processor.readers import preprocess_image, read_image, restore_image
+from ..data_processor.readers import preprocess_image, read_image, restore_image, preprocess_inputs
 from ..data_processor.visualizer import visualize_heatmap
 
 
@@ -44,9 +44,9 @@ class GradCAMInterpreter(Interpreter):
         self.paddle_prepared = False
 
     def interpret(self,
-                  data,
+                  inputs,
                   target_layer_name,
-                  label=None,
+                  labels=None,
                   visual=True,
                   save_path=None):
         """
@@ -80,43 +80,41 @@ class GradCAMInterpreter(Interpreter):
                     save_path='gradcam_test.jpg')
         """
 
-        # Read in image
-        if isinstance(data, str):
-            img = read_image(data, crop_size=self.model_input_shape[1])
-            org = img.copy()[0]
-            data = preprocess_image(img)
-        else:
-            if len(data.shape) == 3:
-                data = np.expand_dims(data, axis=0)
-            if np.issubdtype(data.dtype, np.integer):
-                org = data.copy()[0]
-                data = preprocess_image(data)
-            else:
-                org = restore_image(data.copy())[0]
+        imgs, data, save_path = preprocess_inputs(inputs, save_path,
+                                                  self.model_input_shape)
 
         self.target_layer_name = target_layer_name
-        self.label = label
 
         if not self.paddle_prepared:
             self._paddle_prepare()
 
-        feature_map, gradients = self.predict_fn(data)
+        bsz = len(data)
+        if labels is None:
+            _, _, out = self.predict_fn(
+                data, np.zeros(
+                    (bsz, 1), dtype='int64'))
+            labels = np.argmax(out, axis=1)
+        labels = np.array(labels).reshape((bsz, 1))
 
-        f = np.array(feature_map)[0]
-        g = np.array(gradients)[0]
+        print(labels)
 
-        mean_g = np.mean(g, (1, 2))
-        heatmap = f.transpose([1, 2, 0])
+        feature_map, gradients, _ = self.predict_fn(data, labels)
 
+        f = np.array(feature_map)
+        g = np.array(gradients)
+        mean_g = np.mean(g, (2, 3))
+        heatmap = f.transpose([0, 2, 3, 1])
         dim_array = np.ones((1, heatmap.ndim), int).ravel()
         dim_array[heatmap.ndim - 1] = -1
+        dim_array[0] = bsz
         heatmap = heatmap * mean_g.reshape(dim_array)
 
         heatmap = np.mean(heatmap, axis=-1)
         heatmap = np.maximum(heatmap, 0)
-        heatmap /= np.max(heatmap)
-
-        visualize_heatmap(heatmap, org, visual, save_path)
+        heatmap_max = np.max(heatmap, axis=tuple(np.arange(1, heatmap.ndim)))
+        heatmap /= heatmap_max.reshape((bsz, ) + (1, ) * (heatmap.ndim - 1))
+        for i in range(bsz):
+            visualize_heatmap(heatmap[i], imgs[i], visual, save_path[i])
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
@@ -128,10 +126,10 @@ class GradCAMInterpreter(Interpreter):
 
                     image_op = fluid.data(
                         name='image',
-                        shape=[1] + self.model_input_shape,
+                        shape=[None] + self.model_input_shape,
                         dtype='float32')
                     label_op = fluid.layers.data(
-                        name='label', shape=[1], dtype='int64')
+                        name='label', shape=[None, 1], dtype='int64')
 
                     probs = self.paddle_model(image_op)
                     if isinstance(probs, tuple):
@@ -153,7 +151,8 @@ class GradCAMInterpreter(Interpreter):
                     class_num = probs.shape[-1]
                     one_hot = fluid.layers.one_hot(label_op, class_num)
                     one_hot = fluid.layers.elementwise_mul(probs, one_hot)
-                    target_category_loss = fluid.layers.reduce_sum(one_hot)
+                    target_category_loss = fluid.layers.reduce_sum(
+                        one_hot, dim=1)
                     # target_category_loss = - fluid.layers.cross_entropy(probs, label_op)[0]
 
                     # add back-propagration
@@ -173,23 +172,23 @@ class GradCAMInterpreter(Interpreter):
             fluid.io.load_persistables(exe, self.trained_model_path,
                                        main_program)
 
-            def predict_fn(data):
+            def predict_fn(data, labels):
                 # if label is None, let it be the most likely label
-                if self.label is None:
-                    out = exe.run(
-                        main_program,
-                        feed={'image': data,
-                              'label': np.array([[0]])},
-                        fetch_list=[probs])
+                #if self.label is None:
+                #    out = exe.run(
+                #        main_program,
+                #        feed={'image': data,
+                #              'label': np.array([[0]])},
+                #        fetch_list=[probs])
 
-                    self.label = np.argmax(out[0][0])
+                #    self.label = np.argmax(out[0][0])
 
-                feature_map, gradients = exe.run(
+                feature_map, gradients, out = exe.run(
                     main_program,
                     feed={'image': data,
-                          'label': np.array([[self.label]])},
-                    fetch_list=[conv, gradients_map])
-                return feature_map, gradients
+                          'label': labels},
+                    fetch_list=[conv, gradients_map, probs])
+                return feature_map, gradients, out
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True

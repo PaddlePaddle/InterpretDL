@@ -4,7 +4,7 @@ import numpy as np
 import os, sys
 
 from .abc_interpreter import Interpreter
-from ..data_processor.readers import preprocess_image, read_image, restore_image, extract_img_paths
+from ..data_processor.readers import preprocess_image, read_image, restore_image, preprocess_inputs
 from ..data_processor.visualizer import visualize_overlay
 
 
@@ -29,7 +29,7 @@ class IntGradCVInterpreter(Interpreter):
                 It takes the following arguments:
 
                 - data: Data input.
-                and outputs predictions. See the example at the end of ``interpret()``.
+                and outputs predictions. See the example at the end of ``interpret()``.22222
             trained_model_path (str): The pretrained model directory.
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
             model_input_shape (list, optional): The input shape of the model. Default: [3, 244, 244]
@@ -43,9 +43,9 @@ class IntGradCVInterpreter(Interpreter):
         self.paddle_prepared = False
 
     def interpret(self,
-                  data,
-                  label=None,
-                  baseline=None,
+                  inputs,
+                  labels=None,
+                  baselines=None,
                   steps=50,
                   num_random_trials=10,
                   visual=True,
@@ -55,7 +55,7 @@ class IntGradCVInterpreter(Interpreter):
 
         Args:
             data (str or numpy.ndarray): The image filepath or processed images.
-            label (list or numpy.ndarray, optional): The target label to analyze. If None, the most likely label will be used. Default: None
+            labels (list or numpy.ndarray, optional): The target label to analyze. If None, the most likely label will be used. Default: None
             baseline (str or numpy.ndarray, optional): The baseline input. If None, all zeros will be used. If 'random', random Guassian initialization will be used.
             steps (int, optional): number of steps in the Riemman approximation of the integral. Default: 50
             num_random_trials (int, optional): number of random initializations to take average in the end. Default: 10
@@ -107,7 +107,7 @@ class IntGradCVInterpreter(Interpreter):
             data = fluid.create_lod_tensor(lod, base_shape, fluid.CPUPlace())
 
             avg_gradients = ig.interpret(
-                data, label=None, steps=50, visual=True, save_path='ig_test.jpg')
+                data, labels=None, steps=50, visual=True, save_path='ig_test.jpg')
 
             sum_gradients = np.sum(avg_gradients, axis=1).tolist()
             lod = data.lod()
@@ -118,46 +118,49 @@ class IntGradCVInterpreter(Interpreter):
                     dict(zip(reviews[i], sum_gradients[lod[0][i]:lod[0][i + 1]])))
         """
 
-        self.label = label
+        self.labels = labels
 
-        if baseline is None:
+        if baselines is None:
             num_random_trials = 1
-        is_dir = False
+        #is_dir = False
 
         # Process images
-        if isinstance(data, str):
-            if os.path.isdir(data):
-                is_dir = True
-                imgs = []
-                img_paths, img_names = extract_img_paths(data)
-                for fp in img_paths:
-                    img = read_image(fp, crop_size=self.model_input_shape[1])
-                    imgs.append(img)
-                data = np.stack(
-                    [preprocess_image(img) for img in imgs], axis=1)[0]
-            else:
-                imgs = read_image(data, crop_size=self.model_input_shape[1])
-                data = preprocess_image(imgs)
-        else:
-            if len(data.shape) == 3:
-                data = np.expand_dims(data, axis=0)
-            if np.issubdtype(data.dtype, np.integer):
-                imgs = data.copy()
-                data = preprocess_image(data)
-            else:
-                imgs = restore_image(data.copy())
+        #if isinstance(data, str):
+        #    if os.path.isdir(data):
+        #        is_dir = True
+        #        imgs = []
+        #        img_paths, img_names = extract_img_paths(data)
+        #        for fp in img_paths:
+        #            img = read_image(fp, crop_size=self.model_input_shape[1])
+        #            imgs.append(img)
+        #        data = np.stack(
+        #            [preprocess_image(img) for img in imgs], axis=1)[0]
+        #    else:
+        #        imgs = read_image(data, crop_size=self.model_input_shape[1])
+        #        data = preprocess_image(imgs)
+        #else:
+        #    if len(data.shape) == 3:
+        #        data = np.expand_dims(data, axis=0)
+        #    if np.issubdtype(data.dtype, np.integer):
+        #        imgs = data.copy()
+        #        data = preprocess_image(data)
+        #    else:
+        #        imgs = restore_image(data.copy())
+
+        imgs, data, save_path = preprocess_inputs(inputs, save_path,
+                                                  self.model_input_shape)
 
         self.data_type = np.array(data).dtype
         self.input_type = type(data)
 
-        if baseline is None:
-            self.baseline = np.zeros(
+        if baselines is None:
+            self.baselines = np.zeros(
                 (num_random_trials, ) + data.shape, dtype=self.data_type)
-        elif baseline == 'random':
-            self.baseline = np.random.normal(
+        elif baselines == 'random':
+            self.baselines = np.random.normal(
                 size=(num_random_trials, ) + data.shape).astype(self.data_type)
         else:
-            self.baseline = baseline
+            self.baselines = baselines
 
         if not self.paddle_prepared:
             self._paddle_prepare()
@@ -166,40 +169,44 @@ class IntGradCVInterpreter(Interpreter):
 
         gradients, out = self.predict_fn(data, np.array([[0]] * n))
 
-        if self.label is None:
-            self.label = np.argmax(out, axis=1)
+        if self.labels is None:
+            self.labels = np.argmax(out, axis=1)
         else:
-            self.label = np.array(self.label)
+            self.labels = np.array(self.labels)
+        print(self.labels)
         gradients_list = []
         for i in range(num_random_trials):
             total_gradients = np.zeros_like(gradients)
             for alpha in np.linspace(0, 1, steps):
-                data_scaled = data * alpha + self.baseline[i] * (1 - alpha)
+                data_scaled = data * alpha + self.baselines[i] * (1 - alpha)
                 gradients, _ = self.predict_fn(data_scaled,
-                                               self.label.reshape((n, 1)))
+                                               self.labels.reshape((n, 1)))
                 total_gradients += np.array(gradients)
-            ig_gradients = total_gradients * (data - self.baseline[i]) / steps
+            ig_gradients = total_gradients * (data - self.baselines[i]) / steps
             gradients_list.append(ig_gradients)
         avg_gradients = np.average(np.array(gradients_list), axis=0)
 
         # visualize and save the gradients
-        if is_dir:
-            for i, name in enumerate(img_names):
-                if save_path is None:
-                    visualize_overlay([avg_gradients[i]], imgs[i], visual,
-                                      save_path)
-                elif os.path.isdir(save_path):
-                    visualize_overlay([avg_gradients[i]], imgs[i], visual,
-                                      os.path.join(save_path,
-                                                   'ig_' + img_names[i]))
-        else:
-            for i in range(avg_gradients.shape[0]):
-                if os.path.isdir(save_path):
-                    visualize_overlay([avg_gradients[i]], [imgs[i]], visual,
-                                      os.path.join(save_path, 'ig_%d.jpg' % i))
-                elif save_path is None or isinstance(save_path, str):
-                    visualize_overlay([avg_gradients[i]], [imgs[i]], visual,
-                                      save_path)
+        #if is_dir:
+        #    for i, name in enumerate(img_names):
+        #        if save_path is None:
+        #            visualize_overlay([avg_gradients[i]], imgs[i], visual,
+        #                              save_path)
+        #        elif os.path.isdir(save_path):
+        #            visualize_overlay([avg_gradients[i]], imgs[i], visual,
+        #                              os.path.join(save_path,
+        #                                           'ig_' + img_names[i]))
+        #else:
+        #    for i in range(avg_gradients.shape[0]):
+        #        if os.path.isdir(save_path):
+        #            visualize_overlay([avg_gradients[i]], [imgs[i]], visual,
+        #                              os.path.join(save_path, 'ig_%d.jpg' % i))
+        #        elif save_path is None or isinstance(save_path, str):
+        #            visualize_overlay([avg_gradients[i]], [imgs[i]], visual,
+        #                              save_path)
+
+        for i in range(len(imgs)):
+            visualize_overlay(avg_gradients[i], imgs[i], visual, save_path[i])
 
         return avg_gradients
 

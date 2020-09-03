@@ -2,7 +2,7 @@ import typing
 from typing import Any, Callable, List, Tuple, Union
 
 from .abc_interpreter import Interpreter
-from ..data_processor.readers import preprocess_image, read_image, restore_image
+from ..data_processor.readers import preprocess_image, read_image, restore_image, preprocess_inputs
 from ..data_processor.visualizer import visualize_grayscale
 
 import numpy as np
@@ -45,9 +45,9 @@ class GradShapCVInterpreter(Interpreter):
         self.paddle_prepared = False
 
     def interpret(self,
-                  data,
-                  label=None,
-                  baseline=None,
+                  inputs,
+                  labels=None,
+                  baselines=None,
                   n_samples=5,
                   noise_amount=0.1,
                   visual=True,
@@ -87,59 +87,62 @@ class GradShapCVInterpreter(Interpreter):
                                 save_path='grad_shap_test.jpg')
         """
 
-        def add_noise_to_inputs():
-            std = noise_amount * (np.max(data) - np.min(data))
-            noise = np.random.normal(
-                0.0, std,
-                (n_samples, ) + data.shape[1:]).astype(self.data_type)
-            return data.repeat(n_samples, axis=0) + noise
+        def add_noise_to_inputs(data):
+            max_axis = tuple(np.arange(1, data.ndim))
+            stds = noise_amount * (
+                np.max(data, axis=max_axis) - np.min(data, axis=max_axis))
+            noise = np.concatenate([
+                np.random.normal(0.0, stds[j], (n_samples, ) + tuple(d.shape))
+                for j, d in enumerate(data)
+            ]).astype(self.data_type)
+            repeated_data = np.repeat(data, (n_samples, ) * len(data), axis=0)
+            return repeated_data + noise
 
-        # Read in image
-        if isinstance(data, str):
-            img = read_image(data, crop_size=self.model_input_shape[1])
-            data = preprocess_image(img)
-        else:
-            if len(data.shape) == 3:
-                data = np.expand_dims(data, axis=0)
-            if np.issubdtype(data.dtype, np.integer):
-                img = data.copy()
-                data = preprocess_image(data)
-            else:
-                img = restore_image(data.copy())
+        _, data, save_path = preprocess_inputs(inputs, save_path,
+                                               self.model_input_shape)
 
         self.data_type = np.array(data).dtype
 
-        data_with_noise = add_noise_to_inputs()
-
-        if baseline is None:
-            baseline = np.zeros_like(data)
-        baseline = baseline.repeat(n_samples, axis=0)
+        data_with_noise = add_noise_to_inputs(data)
+        bsz = len(data)
+        if baselines is None:
+            baselines = np.zeros_like(data)
+        baselines = np.repeat(baselines, (n_samples, ) * bsz, axis=0)
 
         if not self.paddle_prepared:
             self._paddle_prepare()
 
-        if label is None:
-            _, out = self.predict_fn(data, np.array([[0]]))
-            label = np.argmax(out[0])
-        label = np.array(label).reshape((1, 1)).repeat(n_samples, axis=0)
+        if labels is None:
+            _, out = self.predict_fn(data, np.zeros((bsz, 1), dtype='int64'))
+            labels = np.argmax(out, axis=1)
+        labels = np.array(labels).reshape(
+            (bsz, 1))  #.repeat(n_samples, axis=0)
+        labels = np.repeat(labels, (n_samples, ) * bsz, axis=0)
 
-        rand_scales = np.random.uniform(0.0, 1.0,
-                                        (n_samples, 1)).astype(self.data_type)
+        rand_scales = np.random.uniform(
+            0.0, 1.0, (bsz * n_samples, 1)).astype(self.data_type)
 
         input_baseline_points = np.array([
             d * r + b * (1 - r)
-            for d, r, b in zip(data_with_noise, rand_scales, baseline)
+            for d, r, b in zip(data_with_noise, rand_scales, baselines)
         ])
 
-        gradients, _ = self.predict_fn(input_baseline_points, label)
+        gradients, _ = self.predict_fn(input_baseline_points, labels)
 
-        input_baseline_diff = data_with_noise - baseline
+        input_baseline_diff = data_with_noise - baselines
 
         interpretations = gradients * input_baseline_diff
-        interpretations = np.mean(interpretations, axis=0, keepdims=True)
 
-        visualize_grayscale(
-            interpretations, visual=visual, save_path=save_path)
+        interpretations = np.concatenate([
+            np.mean(
+                interpretations[i * n_samples:(i + 1) * n_samples],
+                axis=0,
+                keepdims=True) for i in range(bsz)
+        ])
+
+        for i in range(bsz):
+            visualize_grayscale(
+                interpretations[i], visual=visual, save_path=save_path[i])
 
         return interpretations
 

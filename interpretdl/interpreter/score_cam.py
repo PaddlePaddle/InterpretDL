@@ -8,7 +8,7 @@ import os, sys
 from PIL import Image
 
 from .abc_interpreter import Interpreter
-from ..data_processor.readers import preprocess_image, read_image, restore_image
+from ..data_processor.readers import preprocess_image, read_image, restore_image, preprocess_inputs
 from ..data_processor.visualizer import visualize_heatmap
 
 
@@ -46,9 +46,9 @@ class ScoreCAMInterpreter(Interpreter):
         self.paddle_prepared = False
 
     def interpret(self,
-                  data,
+                  inputs,
                   target_layer_name,
-                  label=None,
+                  labels=None,
                   visual=True,
                   save_path=None):
         """
@@ -85,44 +85,36 @@ class ScoreCAMInterpreter(Interpreter):
                 save_path='assets/scorecam_test.jpg')
         """
 
-        if isinstance(data, str):
-            with open(data, 'rb') as f:
-                img = read_image(data, crop_size=self.model_input_shape[1])
-                org = img.copy()[0]
-                data = preprocess_image(img)
-        else:
-            if len(data.shape) == 3:
-                data = np.expand_dims(data, axis=0)
-            if np.issubdtype(data.dtype, np.integer):
-                org = data.copy()[0]
-                data = preprocess_image(data)
-            else:
-                org = restore_image(data.copy())[0]
+        imgs, data, save_path = preprocess_inputs(inputs, save_path,
+                                                  self.model_input_shape)
 
         b, c, h, w = data.shape
 
         self.target_layer_name = target_layer_name
-        self.label = label
 
         if not self.paddle_prepared:
             self._paddle_prepare()
 
-        if self.label is None:
+        if labels is None:
             _, probs = self.predict_fn(data)
-            self.label = np.argmax(probs, axis=1)
+            labels = np.argmax(probs, axis=1)
 
         feature_map, _ = self.predict_fn(data)
-        interpretations = np.zeros((1, 1, h, w))
-
+        interpretations = np.zeros((b, h, w))
+        print(feature_map.shape)
         for i in range(feature_map.shape[1]):
-            feature_channel = np.expand_dims(feature_map[:, i, :, :], 1)[0][0]
-            feature_channel = cv2.resize(feature_channel, (h, w))
-            norm_feature_channel = (
-                feature_channel - feature_channel.min()) / (
-                    feature_channel.max() - feature_channel.min())
+            feature_channel = feature_map[:, i, :, :]
+            feature_channel = np.concatenate([
+                np.expand_dims(cv2.resize(f, (h, w)), 0)
+                for f in feature_channel
+            ])
+            norm_feature_channel = np.array(
+                [(f - f.min()) / (f.max() - f.min())
+                 for f in feature_channel]).reshape((b, 1, h, w))
             _, probs = self.predict_fn(data * norm_feature_channel)
-            score = probs[0][self.label]
-            interpretations += score * feature_channel
+            scores = [p[labels[i]] for i, p in enumerate(probs)]
+            interpretations += feature_channel * np.array(scores).reshape((
+                b, ) + (1, ) * (interpretations.ndim - 1))
 
         interpretations = np.maximum(interpretations, 0)
         interpretations_min, interpretations_max = interpretations.min(
@@ -134,7 +126,15 @@ class ScoreCAMInterpreter(Interpreter):
         interpretations = (interpretations - interpretations_min) / (
             interpretations_max - interpretations_min)
 
-        visualize_heatmap(interpretations[0][0], org, visual, save_path)
+        interpretations = np.array([(interp - interp.min()) /
+                                    (interp.max() - interp.min())
+                                    for interp in interpretations])
+
+        print(interpretations.shape)
+
+        for i in range(b):
+            visualize_heatmap(interpretations[i], imgs[i], visual,
+                              save_path[i])
 
         return interpretations
 
@@ -147,8 +147,9 @@ class ScoreCAMInterpreter(Interpreter):
                 with fluid.unique_name.guard():
                     data_op = fluid.data(
                         name='data',
-                        shape=[1] + self.model_input_shape,
+                        shape=[None] + self.model_input_shape,
                         dtype='float32')
+
                     probs = self.paddle_model(data_op)
                     if isinstance(probs, tuple):
                         probs = probs[0]

@@ -5,7 +5,7 @@ import numpy as np
 import os, sys
 
 from .abc_interpreter import Interpreter
-from ..data_processor.readers import preprocess_image, read_image, restore_image
+from ..data_processor.readers import preprocess_image, read_image, restore_image, preprocess_inputs
 from ..data_processor.visualizer import visualize_overlay
 
 
@@ -48,8 +48,8 @@ class SmoothGradInterpreter(Interpreter):
         self.paddle_prepared = False
 
     def interpret(self,
-                  data,
-                  label=None,
+                  inputs,
+                  labels=None,
                   noise_amout=0.1,
                   n_samples=50,
                   visual=True,
@@ -82,18 +82,8 @@ class SmoothGradInterpreter(Interpreter):
             gradients = sg.interpret(img_path, visual=True, save_path='sg_test.jpg')
         """
 
-        # Read in image
-        if isinstance(data, str):
-            img = read_image(data, crop_size=self.model_input_shape[1])
-            data = preprocess_image(img)
-        else:
-            if len(data.shape) == 3:
-                data = np.expand_dims(data, axis=0)
-            if np.issubdtype(data.dtype, np.integer):
-                img = data.copy()
-                data = preprocess_image(data)
-            else:
-                img = restore_image(data.copy())
+        imgs, data, save_path = preprocess_inputs(inputs, save_path,
+                                                  self.model_input_shape)
 
         data_type = np.array(data).dtype
         self.data_type = data_type
@@ -101,21 +91,32 @@ class SmoothGradInterpreter(Interpreter):
         if not self.paddle_prepared:
             self._paddle_prepare()
 
-        if label is None:
-            _, out = self.predict_fn(data, 0)
-            label = np.argmax(out[0])
+        if labels is None:
+            _, out = self.predict_fn(
+                data, np.zeros(
+                    (len(imgs), 1), dtype='int64'))
+            labels = np.argmax(out, axis=1)
 
-        std = noise_amout * (np.max(data) - np.min(data))
+        labels = np.array(labels).reshape((len(imgs), 1))
+
+        max_axis = tuple(np.arange(1, data.ndim))
+        stds = noise_amout * (
+            np.max(data, axis=max_axis) - np.min(data, axis=max_axis))
+
         total_gradients = np.zeros_like(data)
         for i in range(n_samples):
-            noise = np.float32(np.random.normal(0.0, std, data.shape))
-            gradients, out = self.predict_fn(data, label, noise)
+            noise = np.concatenate([
+                np.float32(
+                    np.random.normal(0.0, stds[j], (1, ) + tuple(d.shape)))
+                for j, d in enumerate(data)
+            ])
+            gradients, out = self.predict_fn(data, labels, noise)
             total_gradients += np.array(gradients)
 
         avg_gradients = total_gradients / n_samples
 
-        if visual:
-            visualize_overlay(avg_gradients, img, visual, save_path)
+        for i in range(len(imgs)):
+            visualize_overlay(avg_gradients[i], imgs[i], visual, save_path[i])
 
         return avg_gradients
 
@@ -128,13 +129,13 @@ class SmoothGradInterpreter(Interpreter):
                 with fluid.unique_name.guard():
                     data_op = fluid.data(
                         name='data',
-                        shape=[1] + self.model_input_shape,
+                        shape=[None] + self.model_input_shape,
                         dtype=self.data_type)
                     label_op = fluid.data(
-                        name='label', shape=[1, 1], dtype='int64')
+                        name='label', shape=[None, 1], dtype='int64')
                     x_noise = fluid.data(
                         name='noise',
-                        shape=[1] + self.model_input_shape,
+                        shape=[None] + self.model_input_shape,
                         dtype='float32')
 
                     x_plus_noise = data_op + x_noise
@@ -149,7 +150,8 @@ class SmoothGradInterpreter(Interpreter):
                     class_num = probs.shape[-1]
                     one_hot = fluid.layers.one_hot(label_op, class_num)
                     one_hot = fluid.layers.elementwise_mul(probs, one_hot)
-                    target_category_loss = fluid.layers.reduce_sum(one_hot)
+                    target_category_loss = fluid.layers.reduce_sum(
+                        one_hot, dim=1)
 
                     p_g_list = fluid.backward.append_backward(
                         target_category_loss)
@@ -164,17 +166,15 @@ class SmoothGradInterpreter(Interpreter):
             fluid.io.load_persistables(exe, self.trained_model_path,
                                        main_program)
 
-            def predict_fn(data, label_index, noise=0.0):
+            def predict_fn(data, labels, noise=0.0):
                 if isinstance(noise, (float, int)):
                     noise = np.ones_like(data) * noise
-                gradients, out = exe.run(main_program,
-                                         feed={
-                                             'data': data,
-                                             'label':
-                                             np.array([[label_index]]),
-                                             'noise': noise
-                                         },
-                                         fetch_list=[gradients_map, probs])
+                gradients, out = exe.run(
+                    main_program,
+                    feed={'data': data,
+                          'label': labels,
+                          'noise': noise},
+                    fetch_list=[gradients_map, probs])
                 return gradients, out
 
         self.predict_fn = predict_fn

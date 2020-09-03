@@ -61,7 +61,7 @@ def save_image(file_path, image):
 
 
 def visualize_overlay(gradients, img, visual=True, save_path=None):
-    gradients = gradients[0].transpose((1, 2, 0))
+    gradients = gradients.transpose((1, 2, 0))
     interpretation = np.clip(gradients, 0, 1)
     channel = [0, 255, 0]
     interpretation = np.average(interpretation, axis=2)
@@ -77,7 +77,7 @@ def visualize_overlay(gradients, img, visual=True, save_path=None):
     transformed = np.clip(transformed, 0.0, 1.0)
 
     interpretation = np.expand_dims(transformed, 2) * channel
-    interpretation = np.clip(0.7 * img[0] + 0.5 * interpretation, 0, 255)
+    interpretation = np.clip(0.7 * img + 0.5 * interpretation, 0, 255)
 
     x = np.uint8(interpretation)
     x = Image.fromarray(x)
@@ -90,7 +90,7 @@ def visualize_overlay(gradients, img, visual=True, save_path=None):
 
 
 def visualize_grayscale(gradients, percentile=99, visual=True, save_path=None):
-    image_2d = np.sum(np.abs(gradients[0]), axis=0)
+    image_2d = np.sum(np.abs(gradients), axis=0)
 
     vmax = np.percentile(image_2d, percentile)
     vmin = np.min(image_2d)
@@ -113,11 +113,16 @@ def visualize_heatmap(heatmap, org, visual=True, save_path=None):
     heatmap = np.uint8(255 * heatmap)
     heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
 
-    x = heatmap * 0.8 + org
+    x = heatmap * 0.5 + org * 0.7
+    x = np.clip(x, 0, 255)
+    x = np.uint8(x)
+    #x = Image.fromarray(x)
+
     if visual:
-        display.display(display.Image(x))
+        visualize_image(x)
 
     if save_path is not None:
+        #x.save(save_path)
         cv2.imwrite(save_path, x)
 
 
