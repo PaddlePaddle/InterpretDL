@@ -58,21 +58,23 @@ class OcclusionInterpreter(Interpreter):
         Main function of the interpreter.
 
         Args:
-            data (str or numpy.ndarray): The image filepath or processed image.
+            inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy array of read images.
             sliding_window_shapes (tuple): Shape of sliding windows to occlude data.
-            interpret_class (int, optional): The index of class to interpret. If None, the most likely label will be used.
+            labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels should be equal to the number of images. If None, the most likely label for each image will be used. Default: None            baseline (numpy.ndarray, optional): The baseline input. If None, all zeros will be used. Default: None
             strides (int or tuple): The step by which the occlusion should be shifted by in each direction for each iteration.
                                     If int, the step size in each direction will be the same. Default: 1
-            baseline (numpy.ndarray, optional): The reference values that replace occlusioned features. Default: None
+            baselines (numpy.ndarray or None, optional): The baseline images to compare with. It should have the same shape as images.
+                                                        If None, the baselines of all zeros will be used. Default: None.
             perturbations_per_eval (int, optional): number of occlusions in each batch. Default: 1
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
-            save_path (str, optional): The path to save the processed image. If None, the image will not be saved. Default: None
+            save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None, the image will not be saved. Default: None
 
-        :return: total_interp
+        :return: interpretations for images
         :rtype: numpy.ndarray
 
         Example::
 
+            import interpretdl as it
             def paddle_model(data):
                 import paddle.fluid as fluid
                 class_num = 1000
@@ -80,13 +82,13 @@ class OcclusionInterpreter(Interpreter):
                 logits = model.net(input=image_input, class_dim=class_num)
                 probs = fluid.layers.softmax(logits, axis=-1)
                 return probs
-            oc = OcclusionInterpreter(paddle_model, "assets/ResNet50_pretrained")
+            oc = it.OcclusionInterpreter(paddle_model, "assets/ResNet50_pretrained")
             interpretations = oc.interpret(
                     'assets/catdog.png',
                     sliding_window_shapes=(1, 30, 30),
                     interpret_class=None,
                     strides=(1, 10, 10),
-                    baseline=None,
+                    baselines=None,
                     perturbations_per_eval=5,
                     visual=True,
                     save_path='occlusion_gray.jpg')
@@ -108,28 +110,16 @@ class OcclusionInterpreter(Interpreter):
         probs = self.predict_fn(data)
 
         bsz = len(data)
-        #if strides is None:
-        #    strides = (1,)*bsz
-        #elif isinstance(strides, tuple) and isinstance(strides[0], int):
-        #    strides = (strides,)*bsz
 
-        #if isinstance(sliding_window_shapes[0], int):
-        #    sliding_window_shapes = (sliding_window_shapes,)
-
-        sliding_windows = np.ones(
-            sliding_window_shapes
-        )  #tuple(np.ones(sws) for sws in sliding_window_shapes)
+        sliding_windows = np.ones(sliding_window_shapes)
 
         if labels is None:
             labels = np.argmax(probs, axis=1)
 
-        #shift_counts = []
-        #for i in range(bsz):
         current_shape = np.subtract(self.model_input_shape,
                                     sliding_window_shapes)
         shift_counts = tuple(
             np.add(np.ceil(np.divide(current_shape, strides)).astype(int), 1))
-        #shift_counts.append(shift_count)
 
         initial_eval = np.array(
             [probs[i][labels[i]] for i in range(bsz)]).reshape((1, bsz))

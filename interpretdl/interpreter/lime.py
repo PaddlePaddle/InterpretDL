@@ -231,17 +231,99 @@ class LIMENLPInterpreter(Interpreter):
         Main function of the interpreter.
 
         Args:
-            data (numpy.ndarray or fluid.LoDTensor): The word ids model_input_shape.
-            interpret_class (list or numpuy.ndarray, optional): The index of class to interpret. If None, the most likely label will be used. Default: None
+            data (str): The raw string for analysis.
+            preprocess_fn (Callable): A user-defined function that input raw string and outputs the a tuple of inputs to feed into the NLP model.
+            unk_id (int): The word id to replace occluded words. Typical choices include "", <unk>, and <pad>.
+            pad_id (int or None): The word id used to pad the sequences. If None, it means there is no padding. Default: None.
+            interpret_class (list or numpy.ndarray, optional): The index of class to interpret. If None, the most likely label will be used. Default: None
             num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate interpretation. Default: 1000
             batch_size (int, optional): Number of samples to forward each time. Default: 50
-            unk_id (int, optional): The word id to replace occluded words. Typical choices include "", <unk>, and <pad>.
-            visual (bool, optional): Whether or not to visualize the processed image. Default: True
-            save_path (str, optional): The path to save the processed image. If None, the image will not be saved. Default: None
+            lod_levels (list or tuple or numpy.ndarray or None, optional): The lod levels for model inputs. It should have the length equal to number of outputs given by preprocess_fn.
+                                            If None, lod levels are all zeros. Default: None.
+            visual (bool, optional): Whether or not to visualize. Default: True
 
         :return: LIME Prior weights: {interpret_label_i: weights on features}
         :rtype: dict
 
+        Example::
+
+            from assets.bilstm import bilstm
+            import io
+
+            from interpretdl.data_processor.visualizer import VisualizationTextRecord, visualize_text
+
+            def load_vocab(file_path):
+                vocab = {}
+                with io.open(file_path, 'r', encoding='utf8') as f:
+                    wid = 0
+                    for line in f:
+                        if line.strip() not in vocab:
+                            vocab[line.strip()] = wid
+                            wid += 1
+                vocab["<unk>"] = len(vocab)
+                return vocab
+
+            MODEL_PATH = "assets/senta_model/bilstm_model"
+            VOCAB_PATH = os.path.join(MODEL_PATH, "word_dict.txt")
+            PARAMS_PATH = os.path.join(MODEL_PATH, "params")
+            DICT_DIM = 1256606
+
+            def paddle_model(data, seq_len):
+                probs = bilstm(data, seq_len, None, DICT_DIM, is_prediction=True)
+                return probs
+
+            MAX_SEQ_LEN = 256
+
+            def preprocess_fn(data):
+                word_ids = []
+                sub_word_ids = [word_dict.get(d, unk_id) for d in data.split()]
+                seq_lens = [len(sub_word_ids)]
+                if len(sub_word_ids) < MAX_SEQ_LEN:
+                    sub_word_ids += [0] * (MAX_SEQ_LEN - len(sub_word_ids))
+                word_ids.append(sub_word_ids[:MAX_SEQ_LEN])
+                return word_ids, seq_lens
+
+            #https://baidu-nlp.bj.bcebos.com/sentiment_classification-dataset-1.0.0.tar.gz
+            word_dict = load_vocab(VOCAB_PATH)
+            unk_id = word_dict[""]  #word_dict["<unk>"]
+            lime = it.LIMENLPInterpreter(paddle_model, PARAMS_PATH)
+
+            reviews = [
+                '交通 方便 ；环境 很好 ；服务态度 很好 房间 较小',
+                '这本书 实在 太烂 了 , 什么 朗读 手册 , 一点 朗读 的 内容 都 没有 . 看 了 几页 就 不 想 看 下去 了 .'
+            ]
+
+            true_labels = [1, 0]
+            recs = []
+            for i, review in enumerate(reviews):
+
+                pred_class, pred_prob, lime_weights = lime.interpret(
+                    review,
+                    preprocess_fn,
+                    num_samples=200,
+                    batch_size=10,
+                    unk_id=unk_id,
+                    pad_id=0,
+                    return_pred=True)
+
+                id2word = dict(zip(word_dict.values(), word_dict.keys()))
+                for y in lime_weights:
+                    print([(id2word[t[0]], t[1]) for t in lime_weights[y]])
+
+                words = review.split()
+                interp_class = list(lime_weights.keys())[0]
+                word_importances = [t[1] for t in lime_weights[interp_class]]
+                word_importances = np.array(word_importances) / np.linalg.norm(
+                    word_importances)
+                true_label = true_labels[i]
+                if interp_class == 0:
+                    word_importances = -word_importances
+                rec = VisualizationTextRecord(words, word_importances, true_label,
+                                              pred_class[0], pred_prob[0],
+                                              interp_class)
+                recs.append(rec)
+
+            visualize_text(recs)
         """
 
         model_inputs = preprocess_fn(data)

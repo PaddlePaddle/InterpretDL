@@ -56,16 +56,17 @@ class GradShapCVInterpreter(Interpreter):
         Main function of the interpreter.
 
         Args:
-            data (str or numpy.ndarray or fluid.LoDTensor): The image filepath or processed image for cv; fluid.LoDTensor of word ids if nlp.
-            label (int, optional): The target label to analyze. If None, the most likely label will be used. Default: None.
-            baseline (numpy.ndarray, optional): The baseline input. If None, all zeros will be used. Default: None
+            inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy array of read images.
+            labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels should be equal to the number of images. If None, the most likely label for each image will be used. Default: None            baseline (numpy.ndarray, optional): The baseline input. If None, all zeros will be used. Default: None
+            baselines (numpy.ndarray or None, optional): The baseline images to compare with. It should have the same shape as images and same length as the number of images.
+                                                        If None, the baselines of all zeros will be used. Default: None.
             n_samples (int, optional): The number of randomly generated samples. Default: 5.
-            noise_amount (float, optional): Noise level of added noise to the image.
+            noise_amount (float, optional): Noise level of added noise to each image.
                                             The std of Guassian random noise is noise_amount * (x_max - x_min). Default: 0.1
             visual (bool, optional): Whether or not to visualize the processed image. Default: True.
-            save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
+            save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None, the image will not be saved. Default: None
 
-        :return: avg_interpretations
+        :return: interpretations for images
         :rtype: numpy.ndarray
 
         Example::
@@ -236,8 +237,7 @@ class GradShapNLPInterpreter(Interpreter):
                   n_samples=5,
                   noise_amount=0.1,
                   return_pred=False,
-                  visual=True,
-                  save_path=None):
+                  visual=True):
         """
         Main function of the interpreter.
 
@@ -245,17 +245,20 @@ class GradShapNLPInterpreter(Interpreter):
             data (fluid.LoDTensor): The word ids inputs.
             label (list or numpy.ndarray, optional): The target label to analyze. If None, the most likely label will be used. Default: None.
             n_samples (int, optional): The number of randomly generated samples. Default: 5.
-            noise_amount (float, optional): Noise level of added noise to the image.
+            noise_amount (float, optional): Noise level of added noise to the embeddings.
                                             The std of Guassian random noise is noise_amount * (x_max - x_min). Default: 0.1
-            visual (bool, optional): Whether or not to visualize the processed image. Default: True.
-            save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
+            return_pred (bool, optional): Whether or not to return predicted labels and probabilities. If True, a tuple of predicted labels, probabilities, and interpretations will be returned.
+                                        There are useful for visualization. Else, only interpretations will be returned. Default: False.
+            visual (bool, optional): Whether or not to visualize. Default: True.
 
-        :return: avg_interpretations
-        :rtype: numpy.ndarray
+        :return: interpretations for each word or a tuple of predicted labels, probabilities, and interpretations
+        :rtype: numpy.ndarray or tuple
 
         Example::
 
             import interpretdl as it
+            import io
+
             def load_vocab(file_path):
                 vocab = {}
                 with io.open(file_path, 'r', encoding='utf8') as f:
@@ -272,15 +275,19 @@ class GradShapNLPInterpreter(Interpreter):
                 emb_dim = 128
                 # embedding layer
                 emb = fluid.embedding(input=data, size=[dict_dim, emb_dim])
+                #emb += noise
                 emb += fluid.layers.gaussian_random(fluid.layers.shape(emb), std=std)
                 emb *= alpha
                 probs = bilstm_net_emb(emb, None, None, dict_dim, is_prediction=True)
                 return emb, probs
 
-            gs = it.GradShapNLPInterpreter(
-                paddle_model, "assets/senta_model/bilstm_model/params", True)
+            MODEL_PATH = "assets/senta_model/bilstm_model/"
+            PARAMS_PATH = os.path.join(MODEL_PATH, "params")
+            VOCAB_PATH = os.path.join(MODEL_PATH, "word_dict.txt")
 
-            word_dict = load_vocab("assets/senta_model/bilstm_model/word_dict.txt")
+            gs = it.GradShapNLPInterpreter(paddle_model, PARAMS_PATH, True)
+
+            word_dict = load_vocab(VOCAB_PATH)
             unk_id = word_dict["<unk>"]
             reviews = [
                 ['交通', '方便', '；', '环境', '很好', '；', '服务态度', '很好', '', '', '房间', '较小'],
@@ -290,17 +297,18 @@ class GradShapNLPInterpreter(Interpreter):
             lod = []
             for c in reviews:
                 lod.append([word_dict.get(words, unk_id) for words in c])
+            print(lod)
             base_shape = [[len(c) for c in lod]]
             lod = np.array(sum(lod, []), dtype=np.int64)
             data = fluid.create_lod_tensor(lod, base_shape, fluid.CPUPlace())
 
-            avg_gradients = gs.interpret(
+            pred_labels, pred_probs, avg_gradients = gs.interpret(
                 data,
                 label=None,
                 noise_amount=0.1,
                 n_samples=20,
-                visual=True,
-                save_path=None)
+                return_pred=True,
+                visual=True)
 
             sum_gradients = np.sum(avg_gradients, axis=1).tolist()
             lod = data.lod()
@@ -308,9 +316,27 @@ class GradShapNLPInterpreter(Interpreter):
             new_array = []
             for i in range(len(lod[0]) - 1):
                 new_array.append(
-                    dict(zip(reviews[i], sum_gradients[lod[0][i]:lod[0][i + 1]])))
+                    list(zip(reviews[i], sum_gradients[lod[0][i]:lod[0][i + 1]])))
 
             print(new_array)
+            true_labels = [1, 0]
+            recs = []
+            for i, l in enumerate(new_array):
+                words = [t[0] for t in l]
+                word_importances = [t[1] for t in l]
+                word_importances = np.array(word_importances) / np.linalg.norm(
+                    word_importances)
+                pred_label = pred_labels[i]
+                pred_prob = pred_probs[i]
+                true_label = true_labels[0]
+                interp_class = pred_label
+                if interp_class == 0:
+                    word_importances = -word_importances
+                recs.append(
+                    VisualizationTextRecord(words, word_importances, true_label,
+                                            pred_label, pred_prob, interp_class))
+
+            visualize_text(recs)
         """
 
         self.noise_amount = noise_amount
@@ -361,9 +387,7 @@ class GradShapNLPInterpreter(Interpreter):
                         name='label', shape=[None, 1], dtype='int64')
                     alpha_op = fluid.layers.data(
                         name='alpha', shape=[None, 1], dtype='double')
-                    #count_op = fluid.
-                    #noise = fluid.layers.gaussian_random(fluid.layers.shape(data_op[]))
-                    #data_plus = data_op + fluid.layers.zeros_like(data_op)
+
                     emb, probs = self.paddle_model(data_op, alpha_op,
                                                    self.noise_amount)
 

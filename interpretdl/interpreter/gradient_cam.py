@@ -53,17 +53,18 @@ class GradCAMInterpreter(Interpreter):
         Main function of the interpreter.
 
         Args:
-            data (str or numpy.ndarray): The input image filepath or numpy array.
+            inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy array of read images.
             target_layer_name (str): The target layer to calculate gradients.
-            label (int, optional): The target label to analyze. If None, the most likely label will be used. Default: None
+            labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels should be equal to the number of images. If None, the most likely label for each image will be used. Default: None
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
-            save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
+            save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None, the image will not be saved. Default: None
 
-        Returns:
-            None
+        :return: interpretations/heatmap for each image
+        :rtype: numpy.ndarray
 
         Example::
 
+            import interpretdl as it
             def paddle_model(data):
                 import paddle.fluid as fluid
                 class_num = 1000
@@ -71,13 +72,13 @@ class GradCAMInterpreter(Interpreter):
                 logits = model.net(input=image_input, class_dim=class_num)
                 probs = fluid.layers.softmax(logits, axis=-1)
                 return probs
-            gradcam = GradCAMInterpreter(paddle_model, "assets/ResNet50_pretrained",True)
+            gradcam = it.GradCAMInterpreter(paddle_model, "assets/ResNet50_pretrained",True)
             gradcam.interpret(
                     'assets/catdog.png',
                     'res5c.add.output.5.tmp_0',
                     label=None,
                     visual=True,
-                    save_path='gradcam_test.jpg')
+                    save_path='assets/gradcam_test.jpg')
         """
 
         imgs, data, save_path = preprocess_inputs(inputs, save_path,
@@ -96,8 +97,6 @@ class GradCAMInterpreter(Interpreter):
             labels = np.argmax(out, axis=1)
         labels = np.array(labels).reshape((bsz, 1))
 
-        print(labels)
-
         feature_map, gradients, _ = self.predict_fn(data, labels)
 
         f = np.array(feature_map)
@@ -115,6 +114,8 @@ class GradCAMInterpreter(Interpreter):
         heatmap /= heatmap_max.reshape((bsz, ) + (1, ) * (heatmap.ndim - 1))
         for i in range(bsz):
             visualize_heatmap(heatmap[i], imgs[i], visual, save_path[i])
+
+        return heatmap
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
@@ -173,15 +174,6 @@ class GradCAMInterpreter(Interpreter):
                                        main_program)
 
             def predict_fn(data, labels):
-                # if label is None, let it be the most likely label
-                #if self.label is None:
-                #    out = exe.run(
-                #        main_program,
-                #        feed={'image': data,
-                #              'label': np.array([[0]])},
-                #        fetch_list=[probs])
-
-                #    self.label = np.argmax(out[0][0])
 
                 feature_map, gradients, out = exe.run(
                     main_program,

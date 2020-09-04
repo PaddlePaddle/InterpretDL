@@ -291,9 +291,14 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
         Main function of the interpreter.
 
         Args:
-            image_paths (list of strs): A list of image filepaths.
+            data (str): The raw string for analysis.
+            preprocess_fn (Callable): A user-defined function that input raw string and outputs the a tuple of inputs to feed into the NLP model.
             num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate interpretation. Default: 1000
             batch_size (int, optional): Number of samples to forward each time. Default: 50
+            unk_id (int): The word id to replace occluded words. Typical choices include "", <unk>, and <pad>.
+            pad_id (int or None): The word id used to pad the sequences. If None, it means there is no padding. Default: None.
+            lod_levels (list or tuple or numpy.ndarray or None, optional): The lod levels for model inputs. It should have the length equal to number of outputs given by preprocess_fn.
+                                                        If None, lod levels are all zeros. Default: None.
             save_path (str, optional): The .npy path to save the normlime weights. It is a dictionary where the key is label and value is segmentation ids with their importance. Default: 'normlime_weights.npy'
 
         :return: NormLIME weights: {label_i: weights on words}
@@ -302,6 +307,30 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
         Example::
 
             import interpretdl as it
+            from assets.bilstm import bilstm
+            import io
+            import paddle.fluid as fluid
+
+            def paddle_model(data, seq_len):
+                probs = bilstm(data, seq_len, None, DICT_DIM, is_prediction=True)
+                return probs
+
+            MAX_SEQ_LEN = 256
+            MODEL_PATH = "assets/senta_model/bilstm_model/"
+            VOCAB_PATH = os.path.join(MODEL_PATH, "word_dict.txt")
+            PARAMS_PATH = os.path.join(MODEL_PATH, "params")
+            DATA_PATH = "assets/senta_data/test.tsv"
+
+            def preprocess_fn(data):
+                word_ids = []
+                sub_word_ids = [
+                    word_dict.get(d, word_dict['<unk>']) for d in data.split()
+                ]
+                seq_lens = [len(sub_word_ids)]
+                if len(sub_word_ids) < MAX_SEQ_LEN:
+                    sub_word_ids += [0] * (MAX_SEQ_LEN - len(sub_word_ids))
+                word_ids.append(sub_word_ids[:MAX_SEQ_LEN])
+                return word_ids, seq_lens
 
             def load_vocab(file_path):
                 vocab = {}
@@ -316,34 +345,33 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
 
             DICT_DIM = 1256606
 
-            def paddle_model(data):
-                probs = bilstm_net(data, None, None, DICT_DIM, is_prediction=True)
-                return probs
+            word_dict = load_vocab(VOCAB_PATH)
+            unk_id = word_dict[""]  #["<unk>"]
 
-            word_dict = load_vocab("assets/senta_model/bilstm_model/word_dict.txt")
-            # the word id that replace occluded word, typical choices include "", <unk>, and <pad>
-            unk_id = word_dict[""]
-
-            reviews = [[
-                '交通', '方便', '；', '环境', '很好', '；', '服务态度', '很好', '', '', '房间', '较小'
-            ], ['交通', '一般', '；', '环境', '很差', '；', '服务态度', '很差', '房间', '较小']]
-
-            lod = []
-            for c in reviews:
-                lod.append([word_dict.get(words, unk_id) for words in c])
-
-            # create LoDTensor so that sentences of different lengths can be fed into the model at the same time
-            base_shape = [[len(c) for c in lod]]
-            lod = np.array(sum(lod, []), dtype=np.int64)
-            data = fluid.create_lod_tensor(lod, base_shape, fluid.CPUPlace())
+            pad_id = 0
+            data = []
+            max_len = 512
+            with io.open(DATA_PATH, "r", encoding='utf8') as fin:
+                for line in fin:
+                    if line.startswith('text_a'):
+                        continue
+                    cols = line.strip().split("\t")
+                    if len(cols) != 2:
+                        sys.stderr.write("[NOTICE] Error Format Line!")
+                        continue
+                    data.append(cols[0])
+            print('total of %d sentences' % len(data))
 
             normlime = it.NormLIMENLPInterpreter(
-                paddle_model,
-                "assets/senta_model/bilstm_model/params",
-                temp_data_file='all_lime_weights_nlp.npz')
+                paddle_model, PARAMS_PATH, temp_data_file='all_lime_weights_nlp.npz')
 
             normlime_weights = normlime.interpret(
-                data, unk_id, num_samples=2000, batch_size=50)
+                data,
+                preprocess_fn,
+                unk_id=unk_id,
+                pad_id=0,
+                num_samples=500,
+                batch_size=50)
 
             id2word = dict(zip(word_dict.values(), word_dict.keys()))
             for label in normlime_weights:
