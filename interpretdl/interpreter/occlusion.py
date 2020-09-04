@@ -100,32 +100,63 @@ class OcclusionInterpreter(Interpreter):
 
         if baselines is None:
             baselines = np.zeros_like(data)
+        elif np.array(baselines).ndim == len(self.model_input_shape):
+            baselines = np.repeat(np.expand_dims(baselines, 0), len(data), 0)
+        if len(baselines) == 1:
+            baselines = np.repeat(baselines, len(data), 0)
 
-        probs = self.predict_fn(data)[0]
-        sliding_window = np.ones(sliding_window_shapes)
+        probs = self.predict_fn(data)
+
+        bsz = len(data)
+        #if strides is None:
+        #    strides = (1,)*bsz
+        #elif isinstance(strides, tuple) and isinstance(strides[0], int):
+        #    strides = (strides,)*bsz
+
+        #if isinstance(sliding_window_shapes[0], int):
+        #    sliding_window_shapes = (sliding_window_shapes,)
+
+        sliding_windows = np.ones(
+            sliding_window_shapes
+        )  #tuple(np.ones(sws) for sws in sliding_window_shapes)
 
         if labels is None:
-            labels = np.argmax(probs)
+            labels = np.argmax(probs, axis=1)
+
+        #shift_counts = []
+        #for i in range(bsz):
         current_shape = np.subtract(self.model_input_shape,
                                     sliding_window_shapes)
         shift_counts = tuple(
             np.add(np.ceil(np.divide(current_shape, strides)).astype(int), 1))
-        initial_eval = probs[labels]
-        total_interp = np.zeros(self.model_input_shape)
+        #shift_counts.append(shift_count)
+
+        initial_eval = np.array(
+            [probs[i][labels[i]] for i in range(bsz)]).reshape((1, bsz))
+        total_interp = np.zeros_like(data)
 
         for (ablated_features, current_mask) in self._ablation_generator(
-                data, sliding_window, strides, baselines, shift_counts,
+                data, sliding_windows, strides, baselines, shift_counts,
                 perturbations_per_eval):
-
-            modified_eval = self.predict_fn(np.float32(
-                ablated_features))[:, labels]
-            eval_diff = initial_eval - modified_eval
-            for i in range(eval_diff.shape[0]):
-                total_interp += (eval_diff[i] * current_mask[i])
+            ablated_features = ablated_features.reshape((
+                -1, ) + ablated_features.shape[2:])
+            modified_probs = self.predict_fn(np.float32(ablated_features))
+            modified_eval = [
+                p[labels[i % bsz]] for i, p in enumerate(modified_probs)
+            ]
+            eval_diff = initial_eval - np.array(modified_eval).reshape(
+                (-1, bsz))
+            eval_diff = eval_diff.T
+            dim_tuple = (len(current_mask), ) + (1, ) * (current_mask.ndim - 1)
+            for i, diffs in enumerate(eval_diff):
+                #j = i % perturbations_per_eval
+                total_interp[i] += np.sum(diffs.reshape(dim_tuple) *
+                                          current_mask,
+                                          axis=0)[0]
 
         for i in range(len(data)):
             visualize_grayscale(
-                total_interp, visual=visual, save_path=save_path[0])
+                total_interp[i], visual=visual, save_path=save_path[i])
 
         return total_interp
 
@@ -166,17 +197,17 @@ class OcclusionInterpreter(Interpreter):
         self.predict_fn = predict_fn
         self.paddle_prepared = True
 
-    def _ablation_generator(self, inputs, sliding_window, strides, baseline,
+    def _ablation_generator(self, inputs, sliding_window, strides, baselines,
                             shift_counts, perturbations_per_eval):
         num_features = np.prod(shift_counts)
         perturbations_per_eval = min(perturbations_per_eval, num_features)
         num_features_processed = 0
-
+        num_examples = len(inputs)
         if perturbations_per_eval > 1:
             all_features_repeated = np.repeat(
-                inputs, perturbations_per_eval, axis=0)
+                np.expand_dims(inputs, 0), perturbations_per_eval, axis=0)
         else:
-            all_features_repeated = inputs
+            all_features_repeated = np.expand_dims(inputs, 0)
 
         while num_features_processed < num_features:
             current_num_ablated_features = min(
@@ -188,25 +219,24 @@ class OcclusionInterpreter(Interpreter):
                 current_features = all_features_repeated
 
             ablated_features, current_mask = self._construct_ablated_input(
-                current_features, baseline, num_features_processed,
+                current_features, baselines, num_features_processed,
                 num_features_processed + current_num_ablated_features,
                 sliding_window, strides, shift_counts)
 
             yield ablated_features, current_mask
             num_features_processed += current_num_ablated_features
 
-    def _construct_ablated_input(self, inputs, baseline, start_feature,
+    def _construct_ablated_input(self, inputs, baselines, start_feature,
                                  end_feature, sliding_window, strides,
                                  shift_counts):
-        input_mask = np.array([
+        input_masks = np.array([
             self._occlusion_mask(inputs, j, sliding_window, strides,
                                  shift_counts)
             for j in range(start_feature, end_feature)
         ])
-        ablated_tensor = inputs * (np.ones(input_mask.shape) - input_mask
-                                   ) + baseline * input_mask
+        ablated_tensor = inputs * (1 - input_masks) + baselines * input_masks
 
-        return ablated_tensor, input_mask
+        return ablated_tensor, input_masks
 
     def _occlusion_mask(self, inputs, ablated_feature_num, sliding_window,
                         strides, shift_counts):
@@ -219,7 +249,7 @@ class OcclusionInterpreter(Interpreter):
             remaining_total = remaining_total // shift_count
 
         remaining_padding = np.subtract(
-            inputs.shape[1:], np.add(current_index, sliding_window.shape))
+            inputs.shape[2:], np.add(current_index, sliding_window.shape))
 
         slicers = []
         for i, p in enumerate(remaining_padding):
@@ -237,4 +267,4 @@ class OcclusionInterpreter(Interpreter):
             sliding_window = sliding_window[tuple(slicer)]
         padded = np.pad(sliding_window, pad_values)
 
-        return padded
+        return padded.reshape((1, ) + padded.shape)
