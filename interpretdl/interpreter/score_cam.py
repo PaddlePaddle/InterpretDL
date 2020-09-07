@@ -101,7 +101,7 @@ class ScoreCAMInterpreter(Interpreter):
 
         feature_map, _ = self.predict_fn(data)
         interpretations = np.zeros((b, h, w))
-        print(feature_map.shape)
+        
         for i in range(feature_map.shape[1]):
             feature_channel = feature_map[:, i, :, :]
             feature_channel = np.concatenate([

@@ -122,7 +122,6 @@ class IntGradCVInterpreter(Interpreter):
             self.labels = np.argmax(out, axis=1)
         else:
             self.labels = np.array(self.labels)
-        print(self.labels)
         gradients_list = []
         for i in range(num_random_trials):
             total_gradients = np.zeros_like(gradients)
@@ -363,8 +362,8 @@ class IntGradNLPInterpreter(Interpreter):
         #avg_gradients = np.average(np.array(gradients_list), axis=0)
 
         if return_pred:
-            out = np.array(out)[0]
-            return self.label, out[self.label], ig_gradients
+            out = np.array(out)
+            return self.label, [o[self.label[i]] for i,o in enumerate(out)], ig_gradients
 
         return ig_gradients
 
