@@ -24,9 +24,7 @@ def show_important_parts(image,
                          lime_weights,
                          label=None,
                          segments=None,
-                         ratio_superpixels=0.2,
-                         visual=True,
-                         save_path=None):
+                         ratio_superpixels=0.2):
     if label is None:
         label = list(lime_weights.keys())[0]
 
@@ -46,18 +44,7 @@ def show_important_parts(image,
         temp[segments == f, 1] = 255
         mask[segments == f] = 1
 
-    interps = mark_boundaries(temp, mask)
-    x = np.clip(interps * 255, 0, 255)
-    x = np.uint8(x)
-    x = Image.fromarray(x)
-
-    if visual:
-        visualize_image(x)
-
-    if save_path is not None:
-        x.save(save_path)
-
-    return interps
+    return mark_boundaries(temp, mask)
 
 
 def visualize_image(image):

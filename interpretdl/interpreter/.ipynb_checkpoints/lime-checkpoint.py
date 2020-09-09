@@ -114,7 +114,7 @@ class LIMECVInterpreter(Interpreter):
             interpret_class = pred_label[-1:]
 
         interpret_class = np.array(interpret_class)
-
+        print(interpret_class)
         lime_weights, r2_scores = self.lime_base.interpret_instance(
             data_instance[0],
             self.predict_fn,
