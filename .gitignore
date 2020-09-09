@@ -23,3 +23,6 @@ tutorials/assets/ResNet101_pretrained
 *.png
 *.jpg
 *.jpeg
+
+# notebook checkpoints
+.ipynb_checkpoints

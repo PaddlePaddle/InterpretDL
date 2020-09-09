@@ -4,32 +4,35 @@
 
 # InterpretDL: Interpretation of Deep Learning Models based on PaddlePaddle
 
-InterpretDL is short for *interpretation of deep learning models*.
-
-It is a model interpretation toolkit for [PaddlePaddle](https://github.com/PaddlePaddle/Paddle) models.
-
-It provides many useful interpretation algorithms, like LIME, Grad-CAM, IntergratedGradients, etc.
-
-It also contains (and will contain) SOTA and new interpretation algorithms.
+InterpretDL, short for *interpretations of deep learning models*, is a model interpretation toolkit for [PaddlePaddle](https://github.com/PaddlePaddle/Paddle) models. This toolkit contains inplementations of many interpratation algorithms, including LIME, Grad-CAM, Integrated Gradients and more. Some SOTA and new interpretation algorithms are also implemented.
 
 *InterpretDL is under active construction and all contributions are welcome!*
 
+# Why InterpretDL
+
+The increasingly complicated deep learning models make it impossible for people to understand their internal workings. Interpretability of black-box models has become the research focus of many talented researchers. InterpretDL provides a collection of both classical and new algorithms for interpreting models.
+
+By utilizing these helpful methods, people can better understand why models work and why they don't, thus contributing to the model development process.
+
+For researchers working on designing new interpretation algorithms, InterpretDL gives an easy access to existing methods that they can compare their work with.
+
 # Demo
 
-Interpretation algorithms give a hint of why the black-box model makes this decision.
+Interpretation algorithms give a hint of why a black-box model makes its decision.
 
-The following table gives visualizations of several interpretation algorithms applied to the original image with respect to the label "bull_mastiff."
+The following table gives visualizations of several interpretation algorithms applied to the original image to tell us why the model predicts "bull_mastiff."
 Original Image | Integrated Gradients | SmoothGrad | LIME | Grad-CAM
 :--------------:|:-----------:|:-----------:|:-----------:|:-----------:
 ![](imgs/catdog.jpg)|![](imgs/catdog_ig.jpg)|![](imgs/catdog_sg.jpg)|![](imgs/catdog_lime.jpg)|![](imgs/catdog_gradcam.jpg)
 
-For NLP tasks, one can visualize the results of a sentiment classification model as follows.
+For sentiment classfication task, the reason why a model gives positive/negative predictions can be visualized as follows.
 
 ![](imgs/sentiment.jpg)
 
 
 # Contents
 
+* [Why InterpretDL](#Why-InterpretDL)
 * [Demo](#demo)
 * [Installation](#Installation)
     * [Pip installation](#pip-installation)
@@ -44,7 +47,7 @@ For NLP tasks, one can visualize the results of a sentiment classification model
 
 # Installation
 
-It requires the deep learning framework [paddlepaddle](https://www.paddlepaddle.org.cn/install/quick), recommendation with CUDA support.
+It requires the deep learning framework [paddlepaddle](https://www.paddlepaddle.org.cn/install/quick), versions with CUDA support are recommended.
 
 ## Pip installation
 
@@ -86,7 +89,7 @@ All interpreters inherit the abstract class [`Interpreter`](https://github.com/P
 ```python
 # an example of SmoothGradient Interpreter.
 
-# import ...
+import interpretdl as it
 
 def paddle_model(data):
     class_num = 1000
@@ -96,13 +99,11 @@ def paddle_model(data):
     return probs
 
 img_path = 'assets/deer.png'
-sg = SmoothGradInterpreter(paddle_model, "assets/ResNet50_pretrained")
+sg = it.SmoothGradInterpreter(paddle_model, "assets/ResNet50_pretrained")
 gradients = sg.interpret(img_path, visual=True, save_path='sg_test.jpg')
 ```
 
-
-
-More tutorials will be released.
+Details of the usage can be found under [tutorials](https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials) folder.
 
 # Roadmap
 
@@ -129,7 +130,9 @@ We are planning to implement the algorithms below (categorized into sensitivity 
 
 ## Tutorials
 
-We plan to provide at least one example for each interpretation algorithm, and hopefully on different applications, as in CV and NLP.
+We plan to provide at least one example for each interpretation algorithm, and hopefully cover applications for both CV and NLP.
+
+Current tutorials can be accessed under [tutorials](https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials) folder.
 
 ## References of Algorithms
 
