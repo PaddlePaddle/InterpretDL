@@ -1,8 +1,6 @@
 import typing
 from typing import Any, Callable, List, Tuple, Union
 
-import IPython.display as display
-import cv2
 import numpy as np
 import os, sys
 from PIL import Image
@@ -12,12 +10,12 @@ from ..data_processor.readers import preprocess_image, read_image, restore_image
 from ..data_processor.visualizer import visualize_heatmap
 
 
-class ScoreCAMInterpreter(Interpreter):
+class GradCAMInterpreter(Interpreter):
     """
-    Score CAM Interpreter.
+    Gradient CAM Interpreter.
 
-    More details regarding the Score CAM method can be found in the original paper:
-    https://arxiv.org/abs/1910.01279
+    More details regarding the GradCAM method can be found in the original paper:
+    https://arxiv.org/abs/1610.02391
     """
 
     def __init__(self,
@@ -67,75 +65,57 @@ class ScoreCAMInterpreter(Interpreter):
         Example::
 
             import interpretdl as it
-            def paddle_model(image_input):
+            def paddle_model(data):
                 import paddle.fluid as fluid
                 class_num = 1000
                 model = ResNet50()
                 logits = model.net(input=image_input, class_dim=class_num)
                 probs = fluid.layers.softmax(logits, axis=-1)
                 return probs
-
-            scorecam = it.ScoreCAMInterpreter(paddle_model,
-                                              "assets/ResNet50_pretrained", True)
-            scorecam.interpret(
-                'assets/catdog.png',
-                'res5c.add.output.5.tmp_0',
-                label=None,
-                visual=True,
-                save_path='assets/scorecam_test.jpg')
+            gradcam = it.GradCAMInterpreter(paddle_model, "assets/ResNet50_pretrained",True)
+            gradcam.interpret(
+                    'assets/catdog.png',
+                    'res5c.add.output.5.tmp_0',
+                    label=None,
+                    visual=True,
+                    save_path='assets/gradcam_test.jpg')
         """
 
         imgs, data, save_path = preprocess_inputs(inputs, save_path,
                                                   self.model_input_shape)
-
-        b, c, h, w = data.shape
 
         self.target_layer_name = target_layer_name
 
         if not self.paddle_prepared:
             self._paddle_prepare()
 
+        bsz = len(data)
         if labels is None:
-            _, probs = self.predict_fn(data)
-            labels = np.argmax(probs, axis=1)
-        bsz = len(imgs)
+            _, _, out = self.predict_fn(
+                data, np.zeros(
+                    (bsz, 1), dtype='int64'))
+            labels = np.argmax(out, axis=1)
         labels = np.array(labels).reshape((bsz, 1))
-        feature_map, _ = self.predict_fn(data)
-        interpretations = np.zeros((b, h, w))
 
-        for i in range(feature_map.shape[1]):
-            feature_channel = feature_map[:, i, :, :]
-            feature_channel = np.concatenate([
-                np.expand_dims(cv2.resize(f, (h, w)), 0)
-                for f in feature_channel
-            ])
-            norm_feature_channel = np.array(
-                [(f - f.min()) / (f.max() - f.min())
-                 for f in feature_channel]).reshape((b, 1, h, w))
-            _, probs = self.predict_fn(data * norm_feature_channel)
-            scores = [p[labels[i]] for i, p in enumerate(probs)]
-            interpretations += feature_channel * np.array(scores).reshape((
-                b, ) + (1, ) * (interpretations.ndim - 1))
+        feature_map, gradients, _ = self.predict_fn(data, labels)
 
-        interpretations = np.maximum(interpretations, 0)
-        interpretations_min, interpretations_max = interpretations.min(
-        ), interpretations.max()
+        f = np.array(feature_map)
+        g = np.array(gradients)
+        mean_g = np.mean(g, (2, 3))
+        heatmap = f.transpose([0, 2, 3, 1])
+        dim_array = np.ones((1, heatmap.ndim), int).ravel()
+        dim_array[heatmap.ndim - 1] = -1
+        dim_array[0] = bsz
+        heatmap = heatmap * mean_g.reshape(dim_array)
 
-        if interpretations_min == interpretations_max:
-            return None
+        heatmap = np.mean(heatmap, axis=-1)
+        heatmap = np.maximum(heatmap, 0)
+        heatmap_max = np.max(heatmap, axis=tuple(np.arange(1, heatmap.ndim)))
+        heatmap /= heatmap_max.reshape((bsz, ) + (1, ) * (heatmap.ndim - 1))
+        for i in range(bsz):
+            visualize_heatmap(heatmap[i], imgs[i], visual, save_path[i])
 
-        interpretations = (interpretations - interpretations_min) / (
-            interpretations_max - interpretations_min)
-
-        interpretations = np.array([(interp - interp.min()) /
-                                    (interp.max() - interp.min())
-                                    for interp in interpretations])
-
-        for i in range(b):
-            visualize_heatmap(interpretations[i], imgs[i], visual,
-                              save_path[i])
-
-        return interpretations
+        return heatmap
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
@@ -144,20 +124,44 @@ class ScoreCAMInterpreter(Interpreter):
             main_program = fluid.Program()
             with fluid.program_guard(main_program, startup_prog):
                 with fluid.unique_name.guard():
-                    data_op = fluid.data(
-                        name='data',
+
+                    image_op = fluid.data(
+                        name='image',
                         shape=[None] + self.model_input_shape,
                         dtype='float32')
+                    label_op = fluid.layers.data(
+                        name='label', shape=[None, 1], dtype='int64')
 
-                    probs = self.paddle_model(data_op)
+                    probs = self.paddle_model(image_op)
                     if isinstance(probs, tuple):
                         probs = probs[0]
+
+                    # manually switch the model to test mode
+                    for op in main_program.global_block().ops:
+                        if op.type == 'batch_norm':
+                            op._set_attr('use_global_stats', True)
+                        elif op.type == 'dropout':
+                            op._set_attr('dropout_prob', 0.0)
+
+                    # fetch the target layer
                     trainable_vars = list(main_program.list_vars())
                     for v in trainable_vars:
                         if v.name == self.target_layer_name:
                             conv = v
 
-                    main_program = main_program.clone(for_test=True)
+                    class_num = probs.shape[-1]
+                    one_hot = fluid.layers.one_hot(label_op, class_num)
+                    one_hot = fluid.layers.elementwise_mul(probs, one_hot)
+                    target_category_loss = fluid.layers.reduce_sum(
+                        one_hot, dim=1)
+                    # target_category_loss = - fluid.layers.cross_entropy(probs, label_op)[0]
+
+                    # add back-propagration
+                    p_g_list = fluid.backward.append_backward(
+                        target_category_loss)
+                    # calculate the gradients w.r.t. the target layer
+                    gradients_map = fluid.gradients(target_category_loss,
+                                                    conv)[0]
 
             if self.use_cuda:
                 gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
@@ -165,14 +169,18 @@ class ScoreCAMInterpreter(Interpreter):
             else:
                 place = fluid.CPUPlace()
             exe = fluid.Executor(place)
+
             fluid.io.load_persistables(exe, self.trained_model_path,
                                        main_program)
 
-            def predict_fn(data):
-                feature_map, probs_out = exe.run(main_program,
-                                                 feed={'data': data},
-                                                 fetch_list=[conv, probs])
-                return feature_map, probs_out
+            def predict_fn(data, labels):
+
+                feature_map, gradients, out = exe.run(
+                    main_program,
+                    feed={'image': data,
+                          'label': labels},
+                    fetch_list=[conv, gradients_map, probs])
+                return feature_map, gradients, out
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True
