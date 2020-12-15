@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 about = {
     '__title__': 'interpretdl',
     '__description__': 'interpretation of deep learning models',
-    '__version__': '0.1.6'
+    '__version__': '0.1.7'
 }  # type: ignore
 here = os.path.abspath(os.path.dirname(__file__))
 # with open(os.path.join(here, 'py_pkg', '__version__.py')) as f:
