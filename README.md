@@ -125,7 +125,7 @@ We are planning to implement the algorithms below (categorized into sensitivity 
 - [x] IntegratedGradients
 - [ ] InfluenceFunction
 - [x] ForgettingEvent
-- [ ] SGDNoise
+- [x] SGDNoise
 - [ ] More ...
 
 ## Tutorials
