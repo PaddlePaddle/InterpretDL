@@ -15,7 +15,6 @@ from .abc_interpreter import Interpreter
 class ForgettingEventsInterpreter(Interpreter):
     """
     Forgetting Events Interpreter.
-
     More details regarding the Forgetting Events method can be found in the original paper:
     https://arxiv.org/pdf/1812.05159.pdf
     """
@@ -26,7 +25,6 @@ class ForgettingEventsInterpreter(Interpreter):
                  model_input_shape=[3, 224, 224]):
         """
         Initialize the ForgettingEventsInterpreter.
-
         Args:
             paddle_model (callable): A user-defined function that gives access to model predictions. It takes in data inputs and output predictions.
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
@@ -43,22 +41,19 @@ class ForgettingEventsInterpreter(Interpreter):
                   optimizer,
                   batch_size,
                   epochs,
+                  noisy_labels=False,
                   save_path=None):
         """
         Main function of the interpreter.
-
         Args:
             train_reader (callable): A training data generator.
             optimizer (paddle.fluid.optimizer): The paddle optimizer.
             batch_size (int): Number of samples to forward each time.
             epochs (int): The number of epochs to train the model.
             save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
-
         :return: (count_forgotten, forgotten) where count_forgotten is {count of forgetting events: list of data indices with such count of forgetting events} and forgotten is {data index: numpy.ndarray of wrong predictions that follow true predictions in the training process}
         :rtype: (dict, dict)
-
         Example::
-
             def conv_bn_layer(input,
                               ch_out,
                               filter_size,
@@ -75,25 +70,21 @@ class ForgettingEventsInterpreter(Interpreter):
                     act=None,
                     bias_attr=bias_attr)
                 return fluid.layers.batch_norm(input=tmp, act=act)
-
             def shortcut(input, ch_in, ch_out, stride):
                 if ch_in != ch_out:
                     return conv_bn_layer(input, ch_out, 1, stride, 0, None)
                 else:
                     return input
-
             def basicblock(input, ch_in, ch_out, stride):
                 tmp = conv_bn_layer(input, ch_out, 3, stride, 1)
                 tmp = conv_bn_layer(tmp, ch_out, 3, 1, 1, act=None, bias_attr=True)
                 short = shortcut(input, ch_in, ch_out, stride)
                 return fluid.layers.elementwise_add(x=tmp, y=short, act='relu')
-
             def layer_warp(block_func, input, ch_in, ch_out, count, stride):
                 tmp = block_func(input, ch_in, ch_out, stride)
                 for i in range(1, count):
                     tmp = block_func(tmp, ch_out, ch_out, 1)
                 return tmp
-
             def resnet_cifar10(ipt, depth=32):
                 # depth should be one of 20, 32, 44, 56, 110, 1202
                 assert (depth - 2) % 6 == 0
@@ -107,21 +98,17 @@ class ForgettingEventsInterpreter(Interpreter):
                     input=res3, pool_size=8, pool_type='avg', pool_stride=1)
                 predict = fluid.layers.fc(input=pool, size=10, act='softmax')
                 return predict
-
             def reader_prepare(data, labels):
                 def reader():
                     counter_ = -1
                     for sample, label in zip(data, labels):
                         counter_ += 1
                         yield counter_, (sample / 255.0).astype(np.float32), int(label)
-
                 return reader
-
             CIFAR10_URL = 'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz'
             CIFAR10_MD5 = 'c58f30108f718f92721af3b95e74349a'
             filename = paddle.dataset.common.download(CIFAR10_URL, 'cifar',
                                                       CIFAR10_MD5)
-
             all_data = []
             all_labels = []
             with tarfile.open(filename, mode='r') as f:
@@ -133,19 +120,14 @@ class ForgettingEventsInterpreter(Interpreter):
                     labels = batch.get(b'labels', batch.get(b'fine_labels', None))
                     all_data.extend(data)
                     all_labels.extend(labels)
-
             with open("assets/samples.pkl", "wb") as f:
                 pickle.dump(np.array(all_data), f)
             with open("assets/sample_labels.pkl", "wb") as f:
                 pickle.dump(np.array(all_labels), f)
-
             fe = ForgettingEventsInterpreter(resnet_cifar10, True, [3, 32, 32])
-
             BATCH_SIZE = 128
-
             train_reader = paddle.batch(
                 reader_prepare(all_data, all_labels), batch_size=BATCH_SIZE)
-
             optimizer = fluid.optimizer.Adam(learning_rate=0.001)
             epochs = 100
             print('Training %d epochs. This may take some time.' % epochs)
@@ -155,15 +137,12 @@ class ForgettingEventsInterpreter(Interpreter):
                 batch_size=BATCH_SIZE,
                 epochs=epochs,
                 save_path='assets/test_')
-
             print([
                 '0 - airplance', '1 - automobile', '2 - bird', '3 - cat', '4 - deer',
                 '5 - dog', '6 - frog', '7 - horse', '8 - ship', '9 - truck'
             ])
-
             max_count = max(count_forgotten.keys())
             max_count_n = len(count_forgotten[max_count])
-
             show_n = 9
             count = 0
             fig = plt.figure(figsize=(12, 12))
@@ -182,7 +161,6 @@ class ForgettingEventsInterpreter(Interpreter):
                 if count >= show_n:
                     break
             plt.show()
-
             axes = []
             fig = plt.figure(figsize=(12, 12))
             zero_count_n = len(count_forgotten.get(0, []))
@@ -194,10 +172,12 @@ class ForgettingEventsInterpreter(Interpreter):
                 axes[-1].axis('off')
                 plt.imshow(x)
             plt.show()
-
         """
         stats = {}
-
+        if save_path is None:
+            save_path = 'assets'
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
         main_program = fluid.default_main_program()
         star_program = fluid.default_startup_program()
 
@@ -209,6 +189,8 @@ class ForgettingEventsInterpreter(Interpreter):
         exe = fluid.Executor(place)
 
         avg_cost, probs, label = self._forward()
+
+        test_program = main_program.clone(for_test=True)
 
         optimizer.minimize(avg_cost)
 
@@ -252,15 +234,16 @@ class ForgettingEventsInterpreter(Interpreter):
                      100. * correct / total))
                 sys.stdout.flush()
 
-        count_forgotten, forgotten = self._compute_and_order_forgetting_stats(
-            stats, epochs)
-        if save_path is not None:
-            with open(save_path + "count_forgotten.pkl", "wb") as f:
-                pickle.dump(count_forgotten, f)
-            with open(save_path + "forgotten.pkl", "wb") as f:
-                pickle.dump(forgotten, f)
+        with open(os.path.join(save_path, "stats.pkl"), "wb") as f:
+            pickle.dump(stats, f)
 
-        return count_forgotten, forgotten
+        if noisy_labels:
+            noisy_samples = self.find_noisy_labels(stats)
+            return stats, noisy_samples
+        else:
+            count_forgotten, forgotten = self.compute_and_order_forgetting_stats(
+                stats, epochs, save_path)
+            return stats, (count_forgotten, forgotten)
 
     def _forward(self):
 
@@ -276,7 +259,8 @@ class ForgettingEventsInterpreter(Interpreter):
 
         return avg_cost, probs, label
 
-    def _compute_and_order_forgetting_stats(self, stats, epochs):
+    def compute_and_order_forgetting_stats(self, stats, epochs,
+                                           save_path=None):
         unlearned_per_presentation = {}
         first_learned = {}
         forgotten = {}
@@ -320,4 +304,33 @@ class ForgettingEventsInterpreter(Interpreter):
             count_stats.append(example_id)
             count_forgotten[count] = count_stats
 
+        if save_path is not None:
+            with open(os.path.join(save_path, "count_forgotten.pkl"),
+                      "wb") as f:
+                pickle.dump(count_forgotten, f)
+            with open(os.path.join(save_path, "forgotten.pkl"), "wb") as f:
+                pickle.dump(forgotten, f)
+
         return count_forgotten, forgotten
+
+    def find_noisy_labels(self, stats):
+        pairs = []
+        for example_id, example_stats in stats.items():
+            presentation_acc = np.array(example_stats[0])
+            if len(np.where(presentation_acc == 1)[0]) == 0:
+                continue
+            pairs.append(
+                [example_id, np.where(presentation_acc == 1)[0].mean()])
+
+        if len(pairs) == 0:
+            return []
+
+        scores = [p[1] for p in pairs]
+        thre = np.mean(scores) + 3 * np.std(scores)
+
+        noisy_pairs = [p for p in pairs if p[1] > thre]
+        sorted_noisy_pairs = sorted(
+            noisy_pairs, key=lambda x: x[1], reverse=True)
+        img_ids = [p[0] for p in sorted_noisy_pairs]
+
+        return img_ids
