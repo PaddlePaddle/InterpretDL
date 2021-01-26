@@ -21,11 +21,11 @@ For researchers working on designing new interpretation algorithms, InterpretDL 
 Interpretation algorithms give a hint of why a black-box model makes its decision.
 
 The following table gives visualizations of several interpretation algorithms applied to the original image to tell us why the model predicts "bull_mastiff."
-Original Image | Integrated Gradients | SmoothGrad | LIME | Grad-CAM
+Original Image | Integrated Gradients ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/int_grad_tutorial_cv.ipynb)) | SmoothGrad ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/smooth_grad_tutorial_cv.ipynb)) | LIME ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/lime_tutorial_cv.ipynb)) | Grad-CAM ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/grad_cam_tutorial_cv.ipynb))
 :--------------:|:-----------:|:-----------:|:-----------:|:-----------:
 ![](imgs/catdog.jpg)|![](imgs/catdog_ig.jpg)|![](imgs/catdog_sg.jpg)|![](imgs/catdog_lime.jpg)|![](imgs/catdog_gradcam.jpg)
 
-For sentiment classfication task, the reason why a model gives positive/negative predictions can be visualized as follows.
+For sentiment classfication task, the reason why a model gives positive/negative predictions can be visualized as follows. The detailed demo can be found [here](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/int_grad_tutorial_nlp.ipynb).
 
 ![](imgs/sentiment.jpg)
 
@@ -111,21 +111,30 @@ We are planning to create a useful toolkit for offering the model interpretation
 
 ## Algorithms
 
-We are planning to implement the algorithms below (categorized into sensitivity interpreters and algorithmic interpreters):
+We are planning to implement the algorithms below (categorized by the explaining target):
 
+### Input Features
+- [x] SmoothGrad
+- [x] IntegratedGradients
+- [x] Occlusion
+- [x] GradientSHAP
 - [x] LIME
 - [x] FastNormLIME
 - [x] NormLIME
 - [x] LIMEPrior
-- [x] SmoothGrad
-- [x] Occlusion
 - [ ] DeepLIFT
-- [x] GradientSHAP
+- [ ] More ...
+
+### Intermediate Features
 - [x] GradCAM
-- [x] IntegratedGradients
-- [ ] InfluenceFunction
+- [x] ScoreCAM
+- [ ] More ...
+
+### Training Dataset
 - [x] ForgettingEvent
 - [x] SGDNoise
+- [x] TrainIng Data analYzer (TIDY)
+- [ ] InfluenceFunction
 - [ ] More ...
 
 ## Tutorials
