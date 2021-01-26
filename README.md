@@ -25,7 +25,7 @@ Original Image | Integrated Gradients ([demo](https://github.com/PaddlePaddle/In
 :--------------:|:-----------:|:-----------:|:-----------:|:-----------:
 ![](imgs/catdog.jpg)|![](imgs/catdog_ig.jpg)|![](imgs/catdog_sg.jpg)|![](imgs/catdog_lime.jpg)|![](imgs/catdog_gradcam.jpg)
 
-For sentiment classfication task, the reason why a model gives positive/negative predictions can be visualized as follows. The detailed demo can be found [here](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/int_grad_tutorial_nlp.ipynb).
+For sentiment classfication task, the reason why a model gives positive/negative predictions can be visualized as follows. A quick demo can be found [here](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/int_grad_tutorial_nlp.ipynb).
 
 ![](imgs/sentiment.jpg)
 
