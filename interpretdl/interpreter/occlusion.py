@@ -7,6 +7,7 @@ from ..data_processor.readers import preprocess_image, read_image, preprocess_in
 from ..data_processor.visualizer import visualize_grayscale
 
 import numpy as np
+import paddle
 
 
 class OcclusionInterpreter(Interpreter):
@@ -21,7 +22,6 @@ class OcclusionInterpreter(Interpreter):
 
     def __init__(self,
                  paddle_model: Callable,
-                 trained_model_path: str,
                  use_cuda=True,
                  model_input_shape=[3, 224, 224]) -> None:
         """
@@ -40,7 +40,6 @@ class OcclusionInterpreter(Interpreter):
 
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
-        self.trained_model_path = trained_model_path
         self.model_input_shape = model_input_shape
         self.use_cuda = use_cuda
         self.paddle_prepared = False
@@ -152,37 +151,18 @@ class OcclusionInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            import paddle.fluid as fluid
-            startup_prog = fluid.Program()
-            main_program = fluid.Program()
-            with fluid.program_guard(main_program, startup_prog):
-                with fluid.unique_name.guard():
-                    image_op = fluid.data(
-                        name='image',
-                        shape=[None] + self.model_input_shape,
-                        dtype='float32')
-                    probs = self.paddle_model(image_op)
-                    if isinstance(probs, tuple):
-                        probs = probs[0]
-                    main_program = main_program.clone(for_test=True)
-
             if self.use_cuda:
-                gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
-                place = fluid.CUDAPlace(gpu_id)
+                paddle.set_device('gpu:0')
             else:
-                place = fluid.CPUPlace()
-            exe = fluid.Executor(place)
+                paddle.set_device('cpu')
+            self.paddle_model.eval()
 
-            fluid.io.load_persistables(exe, self.trained_model_path,
-                                       main_program)
-
-            def predict_fn(images):
-
-                [result] = exe.run(main_program,
-                                   fetch_list=[probs],
-                                   feed={'image': images})
-
-                return result
+            def predict_fn(data):
+                data = paddle.to_tensor(data)
+                data.stop_gradient = False
+                out = self.paddle_model(data)
+                probs = paddle.nn.functional.softmax(out, axis=1)
+                return probs.numpy()
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True

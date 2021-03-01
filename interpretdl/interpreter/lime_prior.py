@@ -2,6 +2,7 @@ import os
 import typing
 from typing import Any, Callable, List, Tuple, Union
 import numpy as np
+import paddle
 
 from .lime import LIMECVInterpreter
 from ._lime_base import compute_segments
@@ -17,7 +18,6 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
 
     def __init__(self,
                  paddle_model: Callable,
-                 trained_model_path: str,
                  model_input_shape=[3, 224, 224],
                  prior_method="none",
                  use_cuda=True) -> None:
@@ -36,8 +36,13 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
                 Otherwise, the loaded prior will be used.
             use_cuda: Whether to use CUDA. Defaults to ``True``.
         """
-        LIMECVInterpreter.__init__(self, paddle_model, trained_model_path,
-                                   model_input_shape, use_cuda)
+        if int(paddle.__version__[0]) > 1:
+            raise NotImplementedError(
+                "LIMEPriorInterpreter currently doesn't support paddle version 2.0 or higher"
+            )
+
+        LIMECVInterpreter.__init__(self, paddle_model, model_input_shape,
+                                   use_cuda)
         self.prior_method = prior_method
         self.global_weights = None
 

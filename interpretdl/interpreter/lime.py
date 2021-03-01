@@ -2,6 +2,7 @@ import os
 import typing
 from typing import Any, Callable, List, Tuple, Union
 import numpy as np
+import paddle
 
 from ..data_processor.readers import preprocess_image, read_image, restore_image
 from ..data_processor.visualizer import show_important_parts, visualize_image, save_image
@@ -21,7 +22,6 @@ class LIMECVInterpreter(Interpreter):
 
     def __init__(self,
                  paddle_model: Callable,
-                 trained_model_path: str,
                  model_input_shape=[3, 224, 224],
                  use_cuda=True) -> None:
         """
@@ -33,14 +33,12 @@ class LIMECVInterpreter(Interpreter):
 
                     - data: Data inputs.
                     and outputs predictions. See the example at the end of ``interpret()``.
-            trained_model_path (str): The pretrained model directory.
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
         """
 
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
-        self.trained_model_path = trained_model_path
         self.model_input_shape = model_input_shape
         self.use_cuda = use_cuda
         self.paddle_prepared = False
@@ -140,40 +138,28 @@ class LIMECVInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            import paddle.fluid as fluid
-            startup_prog = fluid.Program()
-            main_program = fluid.Program()
-            with fluid.program_guard(main_program, startup_prog):
-                with fluid.unique_name.guard():
-                    data_op = fluid.data(
-                        name='data',
-                        shape=[None] + self.model_input_shape,
-                        dtype='float32')
-                    probs = self.paddle_model(data_op)
-                    if isinstance(probs, tuple):
-                        probs = probs[0]
-                    main_program = main_program.clone(for_test=True)
-
             if self.use_cuda:
-                gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
-                place = fluid.CUDAPlace(gpu_id)
+                paddle.set_device('gpu:0')
             else:
-                place = fluid.CPUPlace()
-            self.place = place
-            exe = fluid.Executor(place)
+                paddle.set_device('cpu')
 
-            fluid.io.load_persistables(exe, self.trained_model_path,
-                                       main_program)
+            self.paddle_model.train()
+
+            for n, v in self.paddle_model.named_sublayers():
+                if "batchnorm" in v.__class__.__name__.lower():
+                    v._use_global_stats = True
+                if "dropout" in v.__class__.__name__.lower():
+                    v.p = 0
 
             def predict_fn(data_instance):
                 data = preprocess_image(
                     data_instance
                 )  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
-                [result] = exe.run(main_program,
-                                   fetch_list=[probs],
-                                   feed={'data': data})
-
-                return result
+                data = paddle.to_tensor(data)
+                data.stop_gradient = False
+                out = self.paddle_model(data)
+                probs = paddle.nn.functional.softmax(out, axis=1)
+                return probs.numpy()
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True
@@ -187,10 +173,7 @@ class LIMENLPInterpreter(Interpreter):
     https://arxiv.org/abs/1602.04938
     """
 
-    def __init__(self,
-                 paddle_model: Callable,
-                 trained_model_path: str,
-                 use_cuda=True) -> None:
+    def __init__(self, paddle_model, use_cuda=True) -> None:
         """
         Initialize the LIMENLPInterpreter.
 
@@ -207,7 +190,6 @@ class LIMENLPInterpreter(Interpreter):
 
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
-        self.trained_model_path = trained_model_path
         self.use_cuda = use_cuda
         self.paddle_prepared = False
 
@@ -330,11 +312,7 @@ class LIMENLPInterpreter(Interpreter):
         if not isinstance(model_inputs, tuple):
             self.model_inputs = (np.array(model_inputs), )
         else:
-            self.model_inputs = tuple(np.array(inp) for inp in model_inputs)
-
-        if lod_levels is None:
-            lod_levels = [0] * len(self.model_inputs)
-        self.lod_levels = lod_levels
+            self.model_inputs = tuple(inp.numpy() for inp in model_inputs)
 
         if not self.paddle_prepared:
             self._paddle_prepare()
@@ -369,63 +347,23 @@ class LIMENLPInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            import paddle.fluid as fluid
-            startup_prog = fluid.Program()
-            main_program = fluid.Program()
-            with fluid.program_guard(main_program, startup_prog):
-                with fluid.unique_name.guard():
-                    data_ops = ()
-                    for i, inp in enumerate(self.model_inputs):
-                        if self.lod_levels[i] > 0:
-                            op_ = fluid.data(
-                                name='op_%d' % i,
-                                shape=[None],
-                                dtype=inp.dtype,
-                                lod_level=self.lod_levels[i])
-                        else:
-                            op_ = fluid.data(
-                                name='op_%d' % i,
-                                shape=(None, ) + inp.shape[1:],
-                                dtype=inp.dtype)
-                        data_ops += (op_, )
-
-                    probs = self.paddle_model(*data_ops)
-                    if isinstance(probs, tuple):
-                        probs = probs[0]
-                    main_program = main_program.clone(for_test=True)
-
             if self.use_cuda:
-                gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
-                place = fluid.CUDAPlace(gpu_id)
+                paddle.set_device('gpu:0')
             else:
-                place = fluid.CPUPlace()
-            self.place = place
-            exe = fluid.Executor(self.place)
-            #exe.run(startup_prog)
-            #fluid.io.load_persistables(exe, self.trained_model_path,
-            #                           main_program)
-            init_checkpoint(exe, self.trained_model_path, main_program)
+                paddle.set_device('cpu')
 
-            #fluid.load(main_program, self.trained_model_path, exe)
+            self.paddle_model.train()
+
+            for n, v in self.paddle_model.named_sublayers():
+                if "batchnorm" in v.__class__.__name__.lower():
+                    v._use_global_stats = True
+                if "dropout" in v.__class__.__name__.lower():
+                    v.p = 0
 
             def predict_fn(*params):
-                params = self._format_model_inputs(params)
-                [result] = exe.run(
-                    main_program,
-                    fetch_list=[probs],
-                    feed={'op_%d' % i: d
-                          for i, d in enumerate(params)})
-
-                return result
+                params = tuple(paddle.to_tensor(inp) for inp in params)
+                probs = self.paddle_model(*params)
+                return probs.numpy()
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True
-
-    def _format_model_inputs(self, model_inputs):
-        out = ()
-        for i, inp in enumerate(model_inputs):
-            if self.lod_levels[i] == 0:
-                out += (inp, )
-            else:
-                out += (to_lodtensor(inp, self.place), )
-        return out

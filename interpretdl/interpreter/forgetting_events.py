@@ -4,7 +4,6 @@ import numpy as np
 import os, sys
 import pickle
 import paddle
-import paddle.fluid as fluid
 
 import typing
 from typing import Any, Callable, List, Tuple, Union
@@ -19,10 +18,7 @@ class ForgettingEventsInterpreter(Interpreter):
     https://arxiv.org/pdf/1812.05159.pdf
     """
 
-    def __init__(self,
-                 paddle_model,
-                 use_cuda=True,
-                 model_input_shape=[3, 224, 224]):
+    def __init__(self, paddle_model, use_cuda=True):
         """
         Initialize the ForgettingEventsInterpreter.
         Args:
@@ -33,7 +29,6 @@ class ForgettingEventsInterpreter(Interpreter):
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
         self.use_cuda = use_cuda
-        self.model_input_shape = model_input_shape
         self.paddle_prepared = False
 
     def interpret(self,
@@ -178,45 +173,35 @@ class ForgettingEventsInterpreter(Interpreter):
             save_path = 'assets'
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-        main_program = fluid.default_main_program()
-        star_program = fluid.default_startup_program()
 
         if self.use_cuda:
-            gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
-            place = fluid.CUDAPlace(gpu_id)
+            paddle.set_device('gpu:0')
         else:
-            place = fluid.CPUPlace()
-        exe = fluid.Executor(place)
-
-        avg_cost, probs, label = self._forward()
-
-        test_program = main_program.clone(for_test=True)
-
-        optimizer.minimize(avg_cost)
-
-        feed_order = ['data', 'label']
-
-        feed_var_list_loop = [
-            main_program.global_block().var(var_name)
-            for var_name in feed_order
-        ]
-        feeder = fluid.DataFeeder(feed_list=feed_var_list_loop, place=place)
-        exe.run(star_program)
+            paddle.set_device('cpu')
 
         for i in range(epochs):
             counter = 0
             correct = 0
             total = 0
             for step_id, data_train in enumerate(train_reader()):
-                data_feeded = [t[1:] for t in data_train]
-                cost_out, probs_out, label_out = exe.run(
-                    main_program,
-                    feed=feeder.feed(data_feeded),
-                    fetch_list=[avg_cost, probs, label])
-                predicted = np.argmax(probs_out, axis=1)
+                if isinstance(data_train[0][1], np.ndarray):
+                    x_train = [t[1] for t in data_train]
+                else:
+                    x_train = [t[1].numpy() for t in data_train]
+                y_train = [t[2] for t in data_train]
+                x_train = paddle.to_tensor(x_train)
+                y_train = paddle.to_tensor(np.array(y_train).reshape((-1, 1)))
+                logits = self.paddle_model(x_train)
+                predicted = paddle.argmax(logits, axis=1).numpy()
                 bsz = len(predicted)
-                label_out = label_out.reshape((bsz, ))
-                acc = (predicted == label_out).astype(int)
+
+                loss = paddle.nn.functional.softmax_with_cross_entropy(logits,
+                                                                       y_train)
+                avg_loss = paddle.mean(loss)
+                y_train = y_train.reshape((bsz, )).numpy()
+
+                acc = (predicted == y_train).astype(int)
+
                 for k in range(bsz):
                     idx = data_train[k][0]
                     # first list is acc, second list is predicted label
@@ -225,12 +210,16 @@ class ForgettingEventsInterpreter(Interpreter):
                     index_stats[1].append(predicted[k])
                     stats[idx] = index_stats
 
+                avg_loss.backward()
+                optimizer.step()
+                optimizer.clear_grad()
+
                 correct += np.sum(acc)
                 total += bsz
                 sys.stdout.write('\r')
                 sys.stdout.write(
                     '| Epoch [%3d/%3d] Iter[%3d]\t\tLoss: %.4f Acc@1: %.3f%%' %
-                    (i + 1, epochs, step_id + 1, cost_out.item(),
+                    (i + 1, epochs, step_id + 1, avg_loss.numpy().item(),
                      100. * correct / total))
                 sys.stdout.flush()
 
@@ -244,20 +233,6 @@ class ForgettingEventsInterpreter(Interpreter):
             count_forgotten, forgotten = self.compute_and_order_forgetting_stats(
                 stats, epochs, save_path)
             return stats, (count_forgotten, forgotten)
-
-    def _forward(self):
-
-        images = fluid.data(
-            name='data',
-            shape=[None] + self.model_input_shape,
-            dtype='float32')
-        label = fluid.data(name='label', shape=[None, 1], dtype='int64')
-
-        probs = self.paddle_model(images)
-        cost = fluid.layers.cross_entropy(input=probs, label=label)
-        avg_cost = fluid.layers.mean(cost)
-
-        return avg_cost, probs, label
 
     def compute_and_order_forgetting_stats(self, stats, epochs,
                                            save_path=None):
@@ -326,7 +301,7 @@ class ForgettingEventsInterpreter(Interpreter):
             return []
 
         scores = [p[1] for p in pairs]
-        thre = np.mean(scores) + 3 * np.std(scores)
+        thre = np.mean(scores) + 5 * np.std(scores)
 
         noisy_pairs = [p for p in pairs if p[1] > thre]
         sorted_noisy_pairs = sorted(

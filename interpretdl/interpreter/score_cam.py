@@ -6,6 +6,8 @@ import cv2
 import numpy as np
 import os, sys
 from PIL import Image
+import paddle
+from tqdm import tqdm
 
 from .abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_image, read_image, restore_image, preprocess_inputs
@@ -22,7 +24,6 @@ class ScoreCAMInterpreter(Interpreter):
 
     def __init__(self,
                  paddle_model,
-                 trained_model_path,
                  use_cuda=True,
                  model_input_shape=[3, 224, 224]) -> None:
         """
@@ -40,7 +41,6 @@ class ScoreCAMInterpreter(Interpreter):
         """
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
-        self.trained_model_path = trained_model_path
         self.use_cuda = use_cuda
         self.model_input_shape = model_input_shape
         self.paddle_prepared = False
@@ -103,7 +103,7 @@ class ScoreCAMInterpreter(Interpreter):
         feature_map, _ = self.predict_fn(data)
         interpretations = np.zeros((b, h, w))
 
-        for i in range(feature_map.shape[1]):
+        for i in tqdm(range(feature_map.shape[1])):
             feature_channel = feature_map[:, i, :, :]
             feature_channel = np.concatenate([
                 np.expand_dims(cv2.resize(f, (h, w)), 0)
@@ -139,40 +139,30 @@ class ScoreCAMInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            import paddle.fluid as fluid
-            startup_prog = fluid.Program()
-            main_program = fluid.Program()
-            with fluid.program_guard(main_program, startup_prog):
-                with fluid.unique_name.guard():
-                    data_op = fluid.data(
-                        name='data',
-                        shape=[None] + self.model_input_shape,
-                        dtype='float32')
-
-                    probs = self.paddle_model(data_op)
-                    if isinstance(probs, tuple):
-                        probs = probs[0]
-                    trainable_vars = list(main_program.list_vars())
-                    for v in trainable_vars:
-                        if v.name == self.target_layer_name:
-                            conv = v
-
-                    main_program = main_program.clone(for_test=True)
-
             if self.use_cuda:
-                gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
-                place = fluid.CUDAPlace(gpu_id)
+                paddle.set_device('gpu:0')
             else:
-                place = fluid.CPUPlace()
-            exe = fluid.Executor(place)
-            fluid.io.load_persistables(exe, self.trained_model_path,
-                                       main_program)
+                paddle.set_device('cpu')
+
+            self.paddle_model.eval()
+
+            feature_maps = None
+
+            def hook(layer, input, output):
+                global feature_maps
+                feature_maps = output
+
+            for n, v in self.paddle_model.named_sublayers():
+                if n == self.target_layer_name:
+                    v.register_forward_post_hook(hook)
 
             def predict_fn(data):
-                feature_map, probs_out = exe.run(main_program,
-                                                 feed={'data': data},
-                                                 fetch_list=[conv, probs])
-                return feature_map, probs_out
+                global feature_maps
+                data = paddle.to_tensor(data)
+                data.stop_gradient = False
+                out = self.paddle_model(data)
+                probs = paddle.nn.functional.softmax(out, axis=1)
+                return feature_maps.numpy(), probs.numpy()
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True

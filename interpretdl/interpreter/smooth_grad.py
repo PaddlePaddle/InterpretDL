@@ -3,7 +3,7 @@ from typing import Any, Callable, List, Tuple, Union
 
 import numpy as np
 import os, sys
-
+import paddle
 from .abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_image, read_image, restore_image, preprocess_inputs
 from ..data_processor.visualizer import visualize_overlay
@@ -23,7 +23,6 @@ class SmoothGradInterpreter(Interpreter):
 
     def __init__(self,
                  paddle_model,
-                 trained_model_path,
                  use_cuda=True,
                  model_input_shape=[3, 224, 224]):
         """
@@ -41,7 +40,6 @@ class SmoothGradInterpreter(Interpreter):
         """
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
-        self.trained_model_path = trained_model_path
         self.use_cuda = use_cuda
         self.model_input_shape = model_input_shape
         self.data_type = 'float32'
@@ -93,10 +91,8 @@ class SmoothGradInterpreter(Interpreter):
             self._paddle_prepare()
 
         if labels is None:
-            _, out = self.predict_fn(
-                data, np.zeros(
-                    (len(imgs), 1), dtype='int64'))
-            labels = np.argmax(out, axis=1)
+            _, preds = self.predict_fn(data, None)
+            labels = preds
 
         labels = np.array(labels).reshape((len(imgs), 1))
 
@@ -111,8 +107,9 @@ class SmoothGradInterpreter(Interpreter):
                     np.random.normal(0.0, stds[j], (1, ) + tuple(d.shape)))
                 for j, d in enumerate(data)
             ])
-            gradients, out = self.predict_fn(data, labels, noise)
-            total_gradients += np.array(gradients)
+            data_noised = data + noise
+            gradients, _ = self.predict_fn(data_noised, labels)
+            total_gradients += gradients
 
         avg_gradients = total_gradients / n_samples
 
@@ -123,60 +120,32 @@ class SmoothGradInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            import paddle.fluid as fluid
-            startup_prog = fluid.Program()
-            main_program = fluid.Program()
-            with fluid.program_guard(main_program, startup_prog):
-                with fluid.unique_name.guard():
-                    data_op = fluid.data(
-                        name='data',
-                        shape=[None] + self.model_input_shape,
-                        dtype=self.data_type)
-                    label_op = fluid.data(
-                        name='label', shape=[None, 1], dtype='int64')
-                    x_noise = fluid.data(
-                        name='noise',
-                        shape=[None] + self.model_input_shape,
-                        dtype='float32')
-
-                    x_plus_noise = data_op + x_noise
-                    probs = self.paddle_model(x_plus_noise)
-
-                    for op in main_program.global_block().ops:
-                        if op.type == 'batch_norm':
-                            op._set_attr('use_global_stats', True)
-                        elif op.type == 'dropout':
-                            op._set_attr('dropout_prob', 0.0)
-
-                    class_num = probs.shape[-1]
-                    one_hot = fluid.layers.one_hot(label_op, class_num)
-                    one_hot = fluid.layers.elementwise_mul(probs, one_hot)
-                    target_category_loss = fluid.layers.reduce_sum(
-                        one_hot, dim=1)
-
-                    p_g_list = fluid.backward.append_backward(
-                        target_category_loss)
-                    gradients_map = fluid.gradients(one_hot, x_plus_noise)[0]
-
             if self.use_cuda:
-                gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
-                place = fluid.CUDAPlace(gpu_id)
+                paddle.set_device('gpu:0')
             else:
-                place = fluid.CPUPlace()
-            exe = fluid.Executor(place)
-            fluid.io.load_persistables(exe, self.trained_model_path,
-                                       main_program)
+                paddle.set_device('cpu')
 
-            def predict_fn(data, labels, noise=0.0):
-                if isinstance(noise, (float, int)):
-                    noise = np.ones_like(data) * noise
-                gradients, out = exe.run(
-                    main_program,
-                    feed={'data': data,
-                          'label': labels,
-                          'noise': noise},
-                    fetch_list=[gradients_map, probs])
-                return gradients, out
+            self.paddle_model.train()
+
+            for n, v in self.paddle_model.named_sublayers():
+                if "batchnorm" in v.__class__.__name__.lower():
+                    v._use_global_stats = True
+                if "dropout" in v.__class__.__name__.lower():
+                    v.p = 0
+
+            def predict_fn(data, labels):
+                data = paddle.to_tensor(data)
+                data.stop_gradient = False
+                out = self.paddle_model(data)
+                out = paddle.nn.functional.softmax(out, axis=1)
+                preds = paddle.argmax(out, axis=1)
+                if labels is None:
+                    labels = preds.numpy()
+                labels_onehot = paddle.nn.functional.one_hot(
+                    paddle.to_tensor(labels), num_classes=out.shape[1])
+                target = paddle.sum(out * labels_onehot, axis=1)
+                gradients = paddle.grad(outputs=[target], inputs=[data])[0]
+                return gradients.numpy(), labels
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True

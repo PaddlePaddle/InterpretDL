@@ -4,6 +4,7 @@ from typing import Any, Callable, List, Tuple, Union
 import numpy as np
 import os, sys
 from PIL import Image
+import paddle
 
 from .abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_image, read_image, restore_image, preprocess_inputs
@@ -20,7 +21,6 @@ class GradCAMInterpreter(Interpreter):
 
     def __init__(self,
                  paddle_model,
-                 trained_model_path,
                  use_cuda=True,
                  model_input_shape=[3, 224, 224]) -> None:
         """
@@ -38,7 +38,6 @@ class GradCAMInterpreter(Interpreter):
         """
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
-        self.trained_model_path = trained_model_path
         self.use_cuda = use_cuda
         self.model_input_shape = model_input_shape
         self.paddle_prepared = False
@@ -91,11 +90,9 @@ class GradCAMInterpreter(Interpreter):
 
         bsz = len(data)
         if labels is None:
-            _, _, out = self.predict_fn(
-                data, np.zeros(
-                    (bsz, 1), dtype='int64'))
-            labels = np.argmax(out, axis=1)
-        labels = np.array(labels).reshape((bsz, 1))
+            _, _, preds = self.predict_fn(data, labels)
+            labels = preds
+        labels = np.array(labels).reshape((bsz, ))
 
         feature_map, gradients, _ = self.predict_fn(data, labels)
 
@@ -119,68 +116,42 @@ class GradCAMInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            import paddle.fluid as fluid
-            startup_prog = fluid.Program()
-            main_program = fluid.Program()
-            with fluid.program_guard(main_program, startup_prog):
-                with fluid.unique_name.guard():
-
-                    image_op = fluid.data(
-                        name='image',
-                        shape=[None] + self.model_input_shape,
-                        dtype='float32')
-                    label_op = fluid.layers.data(
-                        name='label', shape=[None, 1], dtype='int64')
-
-                    probs = self.paddle_model(image_op)
-                    if isinstance(probs, tuple):
-                        probs = probs[0]
-
-                    # manually switch the model to test mode
-                    for op in main_program.global_block().ops:
-                        if op.type == 'batch_norm':
-                            op._set_attr('use_global_stats', True)
-                        elif op.type == 'dropout':
-                            op._set_attr('dropout_prob', 0.0)
-
-                    # fetch the target layer
-                    trainable_vars = list(main_program.list_vars())
-                    for v in trainable_vars:
-                        if v.name == self.target_layer_name:
-                            conv = v
-
-                    class_num = probs.shape[-1]
-                    one_hot = fluid.layers.one_hot(label_op, class_num)
-                    one_hot = fluid.layers.elementwise_mul(probs, one_hot)
-                    target_category_loss = fluid.layers.reduce_sum(
-                        one_hot, dim=1)
-                    # target_category_loss = - fluid.layers.cross_entropy(probs, label_op)[0]
-
-                    # add back-propagration
-                    p_g_list = fluid.backward.append_backward(
-                        target_category_loss)
-                    # calculate the gradients w.r.t. the target layer
-                    gradients_map = fluid.gradients(target_category_loss,
-                                                    conv)[0]
-
             if self.use_cuda:
-                gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
-                place = fluid.CUDAPlace(gpu_id)
+                paddle.set_device('gpu:0')
             else:
-                place = fluid.CPUPlace()
-            exe = fluid.Executor(place)
+                paddle.set_device('cpu')
 
-            fluid.io.load_persistables(exe, self.trained_model_path,
-                                       main_program)
+            self.paddle_model.train()
+
+            feature_maps = None
+
+            def hook(layer, input, output):
+                global feature_maps
+                feature_maps = output
+
+            for n, v in self.paddle_model.named_sublayers():
+                if n == self.target_layer_name:
+                    v.register_forward_post_hook(hook)
+                if "batchnorm" in v.__class__.__name__.lower():
+                    v._use_global_stats = True
+                if "dropout" in v.__class__.__name__.lower():
+                    v.p = 0
 
             def predict_fn(data, labels):
-
-                feature_map, gradients, out = exe.run(
-                    main_program,
-                    feed={'image': data,
-                          'label': labels},
-                    fetch_list=[conv, gradients_map, probs])
-                return feature_map, gradients, out
+                global feature_maps
+                data = paddle.to_tensor(data)
+                data.stop_gradient = False
+                out = self.paddle_model(data)
+                out = paddle.nn.functional.softmax(out, axis=1)
+                preds = paddle.argmax(out, axis=1)
+                if labels is None:
+                    labels = preds.numpy()
+                labels_onehot = paddle.nn.functional.one_hot(
+                    paddle.to_tensor(labels), num_classes=out.shape[1])
+                target = paddle.sum(out * labels_onehot, axis=1)
+                gradients = paddle.grad(
+                    outputs=[target], inputs=[feature_maps])[0]
+                return feature_maps.numpy(), gradients.numpy(), labels
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True

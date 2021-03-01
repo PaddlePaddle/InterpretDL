@@ -2,6 +2,7 @@ import typing
 from typing import Any, Callable, List, Tuple, Union
 import numpy as np
 import os, sys
+import paddle
 
 from .abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_image, read_image, restore_image, preprocess_inputs
@@ -18,7 +19,6 @@ class IntGradCVInterpreter(Interpreter):
 
     def __init__(self,
                  paddle_model,
-                 trained_model_path,
                  use_cuda=True,
                  model_input_shape=[3, 224, 224]) -> None:
         """
@@ -37,7 +37,6 @@ class IntGradCVInterpreter(Interpreter):
         """
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
-        self.trained_model_path = trained_model_path
         self.use_cuda = use_cuda
         self.model_input_shape = model_input_shape
         self.paddle_prepared = False
@@ -116,20 +115,20 @@ class IntGradCVInterpreter(Interpreter):
 
         n = data.shape[0]
 
-        gradients, out = self.predict_fn(data, np.array([[0]] * n))
+        gradients, preds = self.predict_fn(data, labels)
 
         if self.labels is None:
-            self.labels = np.argmax(out, axis=1)
+            self.labels = preds.reshape((n, ))
         else:
-            self.labels = np.array(self.labels)
+            self.labels = np.array(self.labels).reshape((n, ))
+
         gradients_list = []
         for i in range(num_random_trials):
             total_gradients = np.zeros_like(gradients)
             for alpha in np.linspace(0, 1, steps):
                 data_scaled = data * alpha + self.baselines[i] * (1 - alpha)
-                gradients, _ = self.predict_fn(data_scaled,
-                                               self.labels.reshape((n, 1)))
-                total_gradients += np.array(gradients)
+                gradients, _ = self.predict_fn(data_scaled, self.labels)
+                total_gradients += gradients
             ig_gradients = total_gradients * (data - self.baselines[i]) / steps
             gradients_list.append(ig_gradients)
         avg_gradients = np.average(np.array(gradients_list), axis=0)
@@ -141,60 +140,32 @@ class IntGradCVInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            import paddle.fluid as fluid
-            startup_prog = fluid.Program()
-            main_program = fluid.Program()
-            with fluid.program_guard(main_program, startup_prog):
-                with fluid.unique_name.guard():
-
-                    data_op = fluid.data(
-                        name='data',
-                        shape=[None] + self.model_input_shape,
-                        dtype=self.data_type)
-
-                    label_op = fluid.layers.data(
-                        name='label', shape=[None, 1], dtype='int64')
-
-                    data_plus = data_op + fluid.layers.zeros_like(data_op)
-                    probs = self.paddle_model(data_plus)
-
-                    for op in main_program.global_block().ops:
-                        if op.type == 'batch_norm':
-                            op._set_attr('use_global_stats', True)
-                        elif op.type == 'dropout':
-                            op._set_attr('dropout_prob', 0.0)
-
-                    class_num = probs.shape[-1]
-
-                    one_hot = fluid.layers.one_hot(label_op, class_num)
-                    one_hot = fluid.layers.elementwise_mul(probs, one_hot)
-                    target_category_loss = fluid.layers.reduce_sum(
-                        one_hot, dim=1)
-
-                    p_g_list = fluid.backward.append_backward(
-                        target_category_loss)
-
-                    gradients_map = fluid.gradients(one_hot, data_plus)[0]
-
             if self.use_cuda:
-                gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
-                place = fluid.CUDAPlace(gpu_id)
+                paddle.set_device('gpu:0')
             else:
-                place = fluid.CPUPlace()
-            exe = fluid.Executor(place)
+                paddle.set_device('cpu')
 
-            fluid.io.load_persistables(exe, self.trained_model_path,
-                                       main_program)
+            self.paddle_model.train()
 
-            def predict_fn(data, label):
+            for n, v in self.paddle_model.named_sublayers():
+                if "batchnorm" in v.__class__.__name__.lower():
+                    v._use_global_stats = True
+                if "dropout" in v.__class__.__name__.lower():
+                    v.p = 0
 
-                gradients, out = exe.run(main_program,
-                                         feed={'data': data,
-                                               'label': label},
-                                         fetch_list=[gradients_map, probs],
-                                         return_numpy=False)
-
-                return gradients, out
+            def predict_fn(data, labels):
+                data = paddle.to_tensor(data)
+                data.stop_gradient = False
+                out = self.paddle_model(data)
+                out = paddle.nn.functional.softmax(out, axis=1)
+                preds = paddle.argmax(out, axis=1)
+                if labels is None:
+                    labels = preds.numpy()
+                labels_onehot = paddle.nn.functional.one_hot(
+                    paddle.to_tensor(labels), num_classes=out.shape[1])
+                target = paddle.sum(out * labels_onehot, axis=1)
+                gradients = paddle.grad(outputs=[target], inputs=[data])[0]
+                return gradients.numpy(), labels
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True
@@ -208,8 +179,7 @@ class IntGradNLPInterpreter(Interpreter):
     https://arxiv.org/abs/1703.01365
     """
 
-    def __init__(self, paddle_model, trained_model_path,
-                 use_cuda=True) -> None:
+    def __init__(self, paddle_model, use_cuda=True) -> None:
         """
         Initialize the IntGradInterpreter.
 
@@ -228,13 +198,12 @@ class IntGradNLPInterpreter(Interpreter):
         """
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
-        self.trained_model_path = trained_model_path
         self.use_cuda = use_cuda
         self.paddle_prepared = False
 
     def interpret(self,
                   data,
-                  label=None,
+                  labels=None,
                   steps=50,
                   return_pred=True,
                   visual=True):
@@ -332,30 +301,28 @@ class IntGradNLPInterpreter(Interpreter):
             visualize_text(recs)
         """
 
-        self.label = label
-
-        self.data_type = np.array(data).dtype
-
         if not self.paddle_prepared:
             self._paddle_prepare()
 
-        n = len(data.recursive_sequence_lengths()[0])
-
-        gradients, out, data_out = self.predict_fn(data,
-                                                   np.array([[0]] * n),
-                                                   np.array([[float(1)]]))
-
-        if self.label is None:
-            self.label = np.argmax(out, axis=1)
+        if isinstance(data, tuple):
+            n = data[0].shape[0]
         else:
-            self.label = np.array(label)
+            n = data.shape[0]
 
+        global alpha
+        alpha = 1
+        gradients, out, data_out = self.predict_fn(data, [0] * n)
+
+        if labels is None:
+            labels = np.argmax(out, axis=1)
+        else:
+            labels = np.array(labels)
+
+        labels = labels.reshape((n, ))
         total_gradients = np.zeros_like(gradients)
         for alpha in np.linspace(0, 1, steps):
-            gradients, _, emb = self.predict_fn(data,
-                                                self.label.reshape((n, 1)),
-                                                np.array([[alpha]]))
-            total_gradients += np.array(gradients)
+            gradients, _, emb = self.predict_fn(data, labels)
+            total_gradients += gradients
 
         ig_gradients = total_gradients * data_out / steps
 
@@ -363,67 +330,52 @@ class IntGradNLPInterpreter(Interpreter):
 
         if return_pred:
             out = np.array(out)
-            return self.label, [o[self.label[i]] for i,o in enumerate(out)], ig_gradients
+            return labels, [o[labels[i]]
+                            for i, o in enumerate(out)], ig_gradients
 
         return ig_gradients
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            import paddle.fluid as fluid
-            startup_prog = fluid.Program()
-            main_program = fluid.Program()
-            with fluid.program_guard(main_program, startup_prog):
-                with fluid.unique_name.guard():
-
-                    data_op = fluid.data(
-                        name='data', shape=[None], dtype='int64', lod_level=1)
-
-                    label_op = fluid.layers.data(
-                        name='label', shape=[None, 1], dtype='int64')
-                    alpha_op = fluid.layers.data(
-                        name='alpha', shape=[None, 1], dtype='double')
-
-                    x_step, probs = self.paddle_model(data_op, alpha_op)
-
-                    for op in main_program.global_block().ops:
-                        if op.type == 'batch_norm':
-                            op._set_attr('use_global_stats', True)
-                        elif op.type == 'dropout':
-                            op._set_attr('dropout_prob', 0.0)
-
-                    class_num = probs.shape[-1]
-
-                    one_hot = fluid.layers.one_hot(label_op, class_num)
-                    one_hot = fluid.layers.elementwise_mul(probs, one_hot)
-                    target_category_loss = fluid.layers.reduce_sum(
-                        one_hot, dim=1)
-
-                    p_g_list = fluid.backward.append_backward(
-                        target_category_loss)
-
-                    gradients_map = fluid.gradients(one_hot, x_step)[0]
-
             if self.use_cuda:
-                gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
-                place = fluid.CUDAPlace(gpu_id)
+                paddle.set_device('gpu:0')
             else:
-                place = fluid.CPUPlace()
-            exe = fluid.Executor(place)
+                paddle.set_device('cpu')
 
-            fluid.io.load_persistables(exe, self.trained_model_path,
-                                       main_program)
+            self.paddle_model.train()
 
-            def predict_fn(data, label, alpha):
+            global embedding
+            embedding = None
 
-                gradients, out, emb = exe.run(
-                    main_program,
-                    feed={'data': data,
-                          'label': label,
-                          'alpha': alpha},
-                    fetch_list=[gradients_map, probs, x_step],
-                    return_numpy=False)
+            def hook(layer, input, output):
+                global embedding
+                global alpha
+                output = alpha * output
+                embedding = output
+                return output
 
-                return gradients, out, emb
+            for n, v in self.paddle_model.named_sublayers():
+                if "embedding" in v.__class__.__name__.lower():
+                    v.register_forward_post_hook(hook)
+                if "batchnorm" in v.__class__.__name__.lower():
+                    v._use_global_stats = True
+                if "dropout" in v.__class__.__name__.lower():
+                    v.p = 0
+
+            def predict_fn(data, labels):
+                global embedding
+                if isinstance(data, tuple):
+                    logits = self.paddle_model(*data)
+                    probs = paddle.nn.functional.softmax(logits, axis=1)
+                else:
+                    logits = self.paddle_model(data)
+                    probs = paddle.nn.functional.softmax(logits, axis=1)
+                labels_onehot = paddle.nn.functional.one_hot(
+                    paddle.to_tensor(labels), num_classes=probs.shape[1])
+                target = paddle.sum(probs * labels_onehot, axis=1)
+                gradients = paddle.grad(
+                    outputs=[target], inputs=[embedding])[0]
+                return gradients.numpy(), probs.numpy(), embedding.numpy()
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True

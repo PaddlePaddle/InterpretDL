@@ -334,8 +334,10 @@ class LimeBase(object):
 
     def _data_labels_text(self, model_inputs, classifier_fn, num_samples,
                           batch_size, distance_metric, unk_id, pad_id):
-        from paddle import fluid
+        import paddle
         word_ids = model_inputs[0]
+        if not isinstance(word_ids, np.ndarray):
+            word_ids = word_ids.numpy()
         ori_shape = word_ids.shape
         word_ids = word_ids.reshape((np.prod(ori_shape), ))
         if pad_id is None:

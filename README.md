@@ -4,7 +4,7 @@
 
 # InterpretDL: Interpretation of Deep Learning Models based on PaddlePaddle
 
-InterpretDL, short for *interpretations of deep learning models*, is a model interpretation toolkit for [PaddlePaddle](https://github.com/PaddlePaddle/Paddle) models. This toolkit contains inplementations of many interpratation algorithms, including LIME, Grad-CAM, Integrated Gradients and more. Some SOTA and new interpretation algorithms are also implemented.
+InterpretDL, short for *interpretations of deep learning models*, is a model interpretation toolkit for [PaddlePaddle](https://github.com/PaddlePaddle/Paddle) models. This toolkit contains implementations of many interpretation algorithms, including LIME, Grad-CAM, Integrated Gradients and more. Some SOTA and new interpretation algorithms are also implemented.
 
 *InterpretDL is under active construction and all contributions are welcome!*
 
@@ -113,24 +113,26 @@ We are planning to create a useful toolkit for offering the model interpretation
 
 We are planning to implement the algorithms below (categorized by the explaining target):
 
-### Input Features
-- [x] SmoothGrad
-- [x] IntegratedGradients
-- [x] Occlusion
-- [x] GradientSHAP
-- [x] LIME
-- [x] FastNormLIME
-- [x] NormLIME
-- [x] LIMEPrior
-- [ ] DeepLIFT
-- [ ] More ...
+### Feature-level Interpretation Algorithms
 
-### Intermediate Features
-- [x] GradCAM
-- [x] ScoreCAM
-- [ ] More ...
+* Target at Input Features
+    - [x] SmoothGrad
+    - [x] IntegratedGradients
+    - [x] Occlusion
+    - [x] GradientSHAP
+    - [x] LIME
+    - [x] FastNormLIME
+    - [x] NormLIME
+    - [x] LIMEPrior
+    - [ ] DeepLIFT
+    - [ ] More ...
 
-### Training Dataset
+* Target at Intermediate Features
+    - [x] GradCAM
+    - [x] ScoreCAM
+    - [ ] More ...
+
+### Dataset-level Interpretation Algorithms
 - [x] ForgettingEvent
 - [x] SGDNoise
 - [x] TrainIng Data analYzer (TIDY)
