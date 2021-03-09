@@ -90,17 +90,10 @@ All interpreters inherit the abstract class [`Interpreter`](https://github.com/P
 # an example of SmoothGradient Interpreter.
 
 import interpretdl as it
-
-def paddle_model(data):
-    class_num = 1000
-    model = ResNet50()
-    logits = model.net(input=data, class_dim=class_num)
-    probs = fluid.layers.softmax(logits, axis=-1)
-    return probs
-
-img_path = 'assets/deer.png'
-sg = it.SmoothGradInterpreter(paddle_model, "assets/ResNet50_pretrained")
-gradients = sg.interpret(img_path, visual=True, save_path='sg_test.jpg')
+from paddle.vision.models import resnet50
+paddle_model = resnet50(pretrained=True)
+sg = it.SmoothGradInterpreter(paddle_model, use_cuda=True)
+gradients = sg.interpret("test.jpg", visual=True, save_path=None)
 ```
 
 Details of the usage can be found under [tutorials](https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials) folder.
