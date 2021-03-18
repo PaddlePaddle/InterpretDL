@@ -28,11 +28,7 @@ class LIMECVInterpreter(Interpreter):
         Initialize the LIMECVInterpreter.
 
         Args:
-            paddle_model (callable): A user-defined function that gives access to model predictions.
-                    It takes the following arguments:
-
-                    - data: Data inputs.
-                    and outputs predictions. See the example at the end of ``interpret()``.
+            paddle_model (callable): A paddle model that outputs predictions.
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
         """
@@ -68,23 +64,6 @@ class LIMECVInterpreter(Interpreter):
 
         :return: LIME Prior weights: {interpret_label_i: weights on features}
         :rtype: dict
-
-        Example::
-
-            import interpretdl as it
-            def paddle_model(data):
-                import paddle.fluid as fluid
-                class_num = 1000
-                model = ResNet50()
-                logits = model.net(input=image_input, class_dim=class_num)
-                probs = fluid.layers.softmax(logits, axis=-1)
-                return probs
-            lime = it.LIMECVInterpreter(paddle_model, "assets/ResNet50_pretrained")
-            lime_weights = lime.interpret(
-                    'assets/catdog.png',
-                    num_samples=1000,
-                    batch_size=100,
-                    save_path='assets/catdog_lime.png')
 
         """
         if isinstance(data, str):
@@ -178,11 +157,7 @@ class LIMENLPInterpreter(Interpreter):
         Initialize the LIMENLPInterpreter.
 
         Args:
-            paddle_model (callable): A user-defined function that gives access to model predictions.
-                    It takes the following arguments:
-
-                    - data: Data inputs.
-                    and outputs predictions. See the example at the end of ``interpret()``.
+            paddle_model (callable): A paddle model that outputs predictions.
             trained_model_path (str): The pretrained model directory.
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
@@ -226,86 +201,6 @@ class LIMENLPInterpreter(Interpreter):
 
         :return: LIME Prior weights: {interpret_label_i: weights on features}
         :rtype: dict
-
-        Example::
-
-            from assets.bilstm import bilstm
-            import io
-
-            from interpretdl.data_processor.visualizer import VisualizationTextRecord, visualize_text
-
-            def load_vocab(file_path):
-                vocab = {}
-                with io.open(file_path, 'r', encoding='utf8') as f:
-                    wid = 0
-                    for line in f:
-                        if line.strip() not in vocab:
-                            vocab[line.strip()] = wid
-                            wid += 1
-                vocab["<unk>"] = len(vocab)
-                return vocab
-
-            MODEL_PATH = "assets/senta_model/bilstm_model"
-            VOCAB_PATH = os.path.join(MODEL_PATH, "word_dict.txt")
-            PARAMS_PATH = os.path.join(MODEL_PATH, "params")
-            DICT_DIM = 1256606
-
-            def paddle_model(data, seq_len):
-                probs = bilstm(data, seq_len, None, DICT_DIM, is_prediction=True)
-                return probs
-
-            MAX_SEQ_LEN = 256
-
-            def preprocess_fn(data):
-                word_ids = []
-                sub_word_ids = [word_dict.get(d, unk_id) for d in data.split()]
-                seq_lens = [len(sub_word_ids)]
-                if len(sub_word_ids) < MAX_SEQ_LEN:
-                    sub_word_ids += [0] * (MAX_SEQ_LEN - len(sub_word_ids))
-                word_ids.append(sub_word_ids[:MAX_SEQ_LEN])
-                return word_ids, seq_lens
-
-            #https://baidu-nlp.bj.bcebos.com/sentiment_classification-dataset-1.0.0.tar.gz
-            word_dict = load_vocab(VOCAB_PATH)
-            unk_id = word_dict[""]  #word_dict["<unk>"]
-            lime = it.LIMENLPInterpreter(paddle_model, PARAMS_PATH)
-
-            reviews = [
-                '交通 方便 ；环境 很好 ；服务态度 很好 房间 较小',
-                '这本书 实在 太烂 了 , 什么 朗读 手册 , 一点 朗读 的 内容 都 没有 . 看 了 几页 就 不 想 看 下去 了 .'
-            ]
-
-            true_labels = [1, 0]
-            recs = []
-            for i, review in enumerate(reviews):
-
-                pred_class, pred_prob, lime_weights = lime.interpret(
-                    review,
-                    preprocess_fn,
-                    num_samples=200,
-                    batch_size=10,
-                    unk_id=unk_id,
-                    pad_id=0,
-                    return_pred=True)
-
-                id2word = dict(zip(word_dict.values(), word_dict.keys()))
-                for y in lime_weights:
-                    print([(id2word[t[0]], t[1]) for t in lime_weights[y]])
-
-                words = review.split()
-                interp_class = list(lime_weights.keys())[0]
-                word_importances = [t[1] for t in lime_weights[interp_class]]
-                word_importances = np.array(word_importances) / np.linalg.norm(
-                    word_importances)
-                true_label = true_labels[i]
-                if interp_class == 0:
-                    word_importances = -word_importances
-                rec = VisualizationTextRecord(words, word_importances, true_label,
-                                              pred_class[0], pred_prob[0],
-                                              interp_class)
-                recs.append(rec)
-
-            visualize_text(recs)
         """
 
         model_inputs = preprocess_fn(data)

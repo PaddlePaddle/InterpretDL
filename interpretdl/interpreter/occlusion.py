@@ -3,7 +3,7 @@ import typing
 from typing import Any, Callable, List, Tuple, Union
 
 from .abc_interpreter import Interpreter
-from ..data_processor.readers import preprocess_image, read_image, preprocess_inputs
+from ..data_processor.readers import preprocess_inputs, preprocess_save_path
 from ..data_processor.visualizer import visualize_grayscale
 
 import numpy as np
@@ -28,12 +28,7 @@ class OcclusionInterpreter(Interpreter):
         Initialize the OcclusionInterpreter.
 
         Args:
-            paddle_model (callable): A user-defined function that gives access to model predictions. It takes the following arguments:
-
-                    - data: Data inputs.
-                    and outputs predictions. See the example at the end of ``interpret()``.
-
-            trained_model_path (str): The pretrained model directory.
+            paddle_model (callable): A paddle model that outputs predictions.
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
         """
@@ -70,31 +65,12 @@ class OcclusionInterpreter(Interpreter):
 
         :return: interpretations for images
         :rtype: numpy.ndarray
-
-        Example::
-
-            import interpretdl as it
-            def paddle_model(data):
-                import paddle.fluid as fluid
-                class_num = 1000
-                model = ResNet50()
-                logits = model.net(input=image_input, class_dim=class_num)
-                probs = fluid.layers.softmax(logits, axis=-1)
-                return probs
-            oc = it.OcclusionInterpreter(paddle_model, "assets/ResNet50_pretrained")
-            interpretations = oc.interpret(
-                    'assets/catdog.png',
-                    sliding_window_shapes=(1, 30, 30),
-                    interpret_class=None,
-                    strides=(1, 10, 10),
-                    baselines=None,
-                    perturbations_per_eval=5,
-                    visual=True,
-                    save_path='occlusion_gray.jpg')
         """
 
-        imgs, data, save_path = preprocess_inputs(inputs, save_path,
-                                                  self.model_input_shape)
+        imgs, data = preprocess_inputs(inputs, self.model_input_shape)
+
+        bsz = len(data)
+        save_path = preprocess_save_path(save_path, bsz)
 
         if not self.paddle_prepared:
             self._paddle_prepare()
@@ -107,8 +83,6 @@ class OcclusionInterpreter(Interpreter):
             baselines = np.repeat(baselines, len(data), 0)
 
         probs = self.predict_fn(data)
-
-        bsz = len(data)
 
         sliding_windows = np.ones(sliding_window_shapes)
 

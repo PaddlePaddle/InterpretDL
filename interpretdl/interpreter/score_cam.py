@@ -10,7 +10,7 @@ import paddle
 from tqdm import tqdm
 
 from .abc_interpreter import Interpreter
-from ..data_processor.readers import preprocess_image, read_image, restore_image, preprocess_inputs
+from ..data_processor.readers import preprocess_inputs, preprocess_save_path
 from ..data_processor.visualizer import visualize_heatmap
 
 
@@ -30,12 +30,7 @@ class ScoreCAMInterpreter(Interpreter):
         Initialize the GradCAMInterpreter.
 
         Args:
-            paddle_model (callable): A user-defined function that gives access to model predictions.
-                It takes the following arguments:
-
-                - data: Data inputs.
-                and outputs predictions. See the example at the end of ``interpret()``.
-            trained_model_path (str): The pretrained model directory.
+            paddle_model (callable): A paddle model that outputs predictions.
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
@@ -63,30 +58,12 @@ class ScoreCAMInterpreter(Interpreter):
 
         :return: interpretations/heatmap for each image
         :rtype: numpy.ndarray
-
-        Example::
-
-            import interpretdl as it
-            def paddle_model(image_input):
-                import paddle.fluid as fluid
-                class_num = 1000
-                model = ResNet50()
-                logits = model.net(input=image_input, class_dim=class_num)
-                probs = fluid.layers.softmax(logits, axis=-1)
-                return probs
-
-            scorecam = it.ScoreCAMInterpreter(paddle_model,
-                                              "assets/ResNet50_pretrained", True)
-            scorecam.interpret(
-                'assets/catdog.png',
-                'res5c.add.output.5.tmp_0',
-                label=None,
-                visual=True,
-                save_path='assets/scorecam_test.jpg')
         """
 
-        imgs, data, save_path = preprocess_inputs(inputs, save_path,
-                                                  self.model_input_shape)
+        imgs, data = preprocess_inputs(inputs, self.model_input_shape)
+
+        bsz = len(data)
+        save_path = preprocess_save_path(save_path, bsz)
 
         b, c, h, w = data.shape
 
@@ -98,7 +75,7 @@ class ScoreCAMInterpreter(Interpreter):
         if labels is None:
             _, probs = self.predict_fn(data)
             labels = np.argmax(probs, axis=1)
-        bsz = len(imgs)
+
         labels = np.array(labels).reshape((bsz, 1))
         feature_map, _ = self.predict_fn(data)
         interpretations = np.zeros((b, h, w))
@@ -146,15 +123,20 @@ class ScoreCAMInterpreter(Interpreter):
 
             self.paddle_model.eval()
 
-            feature_maps = None
+            self._feature_maps = None
 
             def hook(layer, input, output):
-                global feature_maps
-                feature_maps = output
+                #                 global feature_maps
+                self._feature_maps = output
 
+            registered = False
             for n, v in self.paddle_model.named_sublayers():
                 if n == self.target_layer_name:
                     v.register_forward_post_hook(hook)
+                    registered = True
+
+            assert registered, f"target_layer_name {self.target_layer_name} does not exist in the given model, \
+                            please check all valid layer names by [n for n, v in paddle_model.named_sublayers()]"
 
             def predict_fn(data):
                 global feature_maps
@@ -162,7 +144,7 @@ class ScoreCAMInterpreter(Interpreter):
                 data.stop_gradient = False
                 out = self.paddle_model(data)
                 probs = paddle.nn.functional.softmax(out, axis=1)
-                return feature_maps.numpy(), probs.numpy()
+                return self._feature_maps.numpy(), probs.numpy()
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True

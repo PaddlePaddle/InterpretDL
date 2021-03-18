@@ -23,12 +23,7 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
                  use_cuda=True) -> None:
         """
         Args:
-            paddle_model (callable): A user-defined function that gives access to model predictions.
-                It takes the following arguments:
-
-                - data: Data input.
-                and outputs predictions. See the example at the end of ``interpret()``.
-            trained_model_path (str): The pretrained model directory. It will be loaded by ``fluid.io.load_persistables``.
+            paddle_model (callable): A paddle model that outputs predictions.
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
             prior_method: Prior method. Can be chosen from ``{"none", "ridge"}``.
                 Defaults to ``"none"``, which is equivalent to LIME.
@@ -108,27 +103,6 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
 
         :return: LIME Prior weights: {interpret_label_i: weights on features}
         :rtype: dict
-
-        Example::
-
-            def paddle_model(data):
-                import paddle.fluid as fluid
-                class_num = 1000
-                model = ResNet50()
-                logits = model.net(input=image_input, class_dim=class_num)
-                probs = fluid.layers.softmax(logits, axis=-1)
-                return probs
-
-            limegp = LIMEPriorInterpreter(
-                paddle_model, trained_model, prior_method="ridge")
-            limegp.interpreter_init(
-                image_paths, batch_size=100, weights_file_path="assets/gp_weights.npy")
-            lime_weights = limegp.interpret(
-                image_paths[0],
-                num_samples=1000,
-                batch_size=100,
-                save_path='assets/lime_gp.png',
-                prior_reg_force=1.0)
 
         """
         if self.global_weights is None and self.prior_method != "none":

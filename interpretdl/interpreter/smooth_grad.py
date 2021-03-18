@@ -5,7 +5,7 @@ import numpy as np
 import os, sys
 import paddle
 from .abc_interpreter import Interpreter
-from ..data_processor.readers import preprocess_image, read_image, restore_image, preprocess_inputs
+from ..data_processor.readers import preprocess_inputs, preprocess_save_path
 from ..data_processor.visualizer import visualize_overlay
 
 
@@ -29,12 +29,7 @@ class SmoothGradInterpreter(Interpreter):
         Initialize the SmoothGradInterpreter.
 
         Args:
-            paddle_model (callable): A user-defined function that gives access to model predictions.
-                    It takes the following arguments:
-
-                    - data: Data input.
-                    and outputs predictions. See the example at the end of ``interpret()``.
-            trained_model_path (str): The pretrained model directory.
+            paddle_model (callable): A paddle model that outputs predictions.
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
@@ -66,23 +61,12 @@ class SmoothGradInterpreter(Interpreter):
 
         :return: interpretations/gradients for each image
         :rtype: numpy.ndarray
-
-        Example::
-
-            import interpretdl as it
-            def paddle_model(data):
-                import paddle.fluid as fluid
-                class_num = 1000
-                model = ResNet50()
-                logits = model.net(input=image_input, class_dim=class_num)
-                probs = fluid.layers.softmax(logits, axis=-1)
-                return probs
-            sg = it.SmoothGradInterpreter(paddle_model, "assets/ResNet50_pretrained")
-            gradients = sg.interpret(img_path, visual=True, save_path='assets/sg_test.jpg')
         """
 
-        imgs, data, save_path = preprocess_inputs(inputs, save_path,
-                                                  self.model_input_shape)
+        imgs, data = preprocess_inputs(inputs, self.model_input_shape)
+
+        bsz = len(data)
+        save_path = preprocess_save_path(save_path, bsz)
 
         data_type = np.array(data).dtype
         self.data_type = data_type

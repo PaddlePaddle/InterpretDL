@@ -97,34 +97,6 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
 
         :return: NormLIME weights: {label_i: weights on features}
         :rtype: dict
-
-        Example::
-
-            def paddle_model(image_input):
-                import paddle.fluid as fluid
-                class_num = 1000
-                model = ResNet50()
-                logits = model.net(input=image_input, class_dim=class_num)
-                probs = fluid.layers.softmax(logits, axis=-1)
-                return probs
-
-            # The model can be downloaded from
-            # http://paddle-imagenet-models-name.bj.bcebos.com/ResNet101_pretrained.tar
-            # More pretrained models can be found in
-            # https://github.com/PaddlePaddle/models/tree/release/1.8/PaddleCV/image_classification
-
-            # 10 images are used here for example, but more images should be used.
-            dataset_dir = "assets"
-            image_paths = sorted(glob.glob(dataset_dir + "/*.png"))
-            image_paths = image_paths[:10]
-
-            normlime = it.NormLIMECVInterpreter(paddle_model,
-                                                "assets/ResNet50_pretrained")
-
-            # this can be very slow.
-            normlime.interpret(image_paths, num_samples=2000, batch_size=50)
-
-
         """
         _, h_pre_models_kmeans = get_pre_models()
         kmeans_model = load_pickle_file(h_pre_models_kmeans)
@@ -305,87 +277,6 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
 
         :return: NormLIME weights: {label_i: weights on words}
         :rtype: dict
-
-        Example::
-
-            import interpretdl as it
-            from assets.bilstm import bilstm
-            import io
-            import paddle.fluid as fluid
-
-            def paddle_model(data, seq_len):
-                probs = bilstm(data, seq_len, None, DICT_DIM, is_prediction=True)
-                return probs
-
-            MAX_SEQ_LEN = 256
-            MODEL_PATH = "assets/senta_model/bilstm_model/"
-            VOCAB_PATH = os.path.join(MODEL_PATH, "word_dict.txt")
-            PARAMS_PATH = os.path.join(MODEL_PATH, "params")
-            DATA_PATH = "assets/senta_data/test.tsv"
-
-            def preprocess_fn(data):
-                word_ids = []
-                sub_word_ids = [
-                    word_dict.get(d, word_dict['<unk>']) for d in data.split()
-                ]
-                seq_lens = [len(sub_word_ids)]
-                if len(sub_word_ids) < MAX_SEQ_LEN:
-                    sub_word_ids += [0] * (MAX_SEQ_LEN - len(sub_word_ids))
-                word_ids.append(sub_word_ids[:MAX_SEQ_LEN])
-                return word_ids, seq_lens
-
-            def load_vocab(file_path):
-                vocab = {}
-                with io.open(file_path, 'r', encoding='utf8') as f:
-                    wid = 0
-                    for line in f:
-                        if line.strip() not in vocab:
-                            vocab[line.strip()] = wid
-                            wid += 1
-                vocab["<unk>"] = len(vocab)
-                return vocab
-
-            DICT_DIM = 1256606
-
-            word_dict = load_vocab(VOCAB_PATH)
-            unk_id = word_dict[""]  #["<unk>"]
-
-            pad_id = 0
-            data = []
-            max_len = 512
-            with io.open(DATA_PATH, "r", encoding='utf8') as fin:
-                for line in fin:
-                    if line.startswith('text_a'):
-                        continue
-                    cols = line.strip().split("\t")
-                    if len(cols) != 2:
-                        sys.stderr.write("[NOTICE] Error Format Line!")
-                        continue
-                    data.append(cols[0])
-            print('total of %d sentences' % len(data))
-
-            normlime = it.NormLIMENLPInterpreter(
-                paddle_model, PARAMS_PATH, temp_data_file='all_lime_weights_nlp.npz')
-
-            normlime_weights = normlime.interpret(
-                data,
-                preprocess_fn,
-                unk_id=unk_id,
-                pad_id=0,
-                num_samples=500,
-                batch_size=50)
-
-            id2word = dict(zip(word_dict.values(), word_dict.keys()))
-            for label in normlime_weights:
-                print(label)
-                temp = {
-                    id2word[wid]: normlime_weights[label][wid]
-                    for wid in normlime_weights[label]
-                }
-                W = [(word, weight[0], weight[1]) for word, weight in temp.items()]
-                print(sorted(W, key=lambda x: -x[1])[:15])
-
-
         """
 
         # compute lime weights and put in self.all_lime_weights

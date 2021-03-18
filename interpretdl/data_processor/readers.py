@@ -107,7 +107,7 @@ def preprocess_image(img, random_mirror=False):
     return img
 
 
-def read_image(img_path, target_size=256, crop_size=224):
+def read_image(img_path, target_size=256, crop_size=224, crop=True):
     """
     resize_short to 256, then center crop to 224.
     :param img_path: one image path
@@ -120,7 +120,8 @@ def read_image(img_path, target_size=256, crop_size=224):
             img = img.convert('RGB')
             img = np.array(img)
             img = resize_short(img, target_size, interpolation=None)
-            img = crop_image(img, target_size=crop_size, center=True)
+            if crop:
+                img = crop_image(img, target_size=crop_size, center=True)
             # img = img[:, :, ::-1]
             img = np.expand_dims(img, axis=0)
             return img
@@ -221,12 +222,10 @@ def extract_img_paths(directory):
     return img_paths, img_names
 
 
-def preprocess_inputs(inputs, save_path, model_input_shape):
+def preprocess_inputs(inputs, model_input_shape):
     if isinstance(inputs, str):
         imgs = read_image(inputs, crop_size=model_input_shape[1])
         data = preprocess_image(imgs)
-        if save_path is None or isinstance(save_path, str):
-            save_path = [save_path]
     elif bool(list) and isinstance(inputs, list) and all(
             isinstance(elem, str) for elem in inputs):
         imgs = []
@@ -235,8 +234,6 @@ def preprocess_inputs(inputs, save_path, model_input_shape):
             imgs.append(img)
         imgs = np.concatenate(imgs)
         data = preprocess_image(imgs)
-        if save_path is None:
-            save_path = [None] * len(imgs)
     else:
         if len(inputs.shape) == 3:
             inputs = np.expand_dims(inputs, axis=0)
@@ -246,6 +243,15 @@ def preprocess_inputs(inputs, save_path, model_input_shape):
         else:
             imgs = restore_image(inputs.copy())
             data = inputs
-        if save_path is None:
-            save_path = [None] * len(imgs)
-    return imgs, data, save_path
+    return imgs, data
+
+
+def preprocess_save_path(save_path, bsz):
+    if isinstance(save_path, str):
+        save_path = [save_path]
+    if save_path is None:
+        save_path = [None] * bsz
+    assert len(
+        save_path
+    ) == bsz, f"number of save_paths ({len(save_path)}) should be equal to number of images ({bsz})"
+    return save_path
