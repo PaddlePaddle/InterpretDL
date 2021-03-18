@@ -7,5 +7,5 @@ pillow
 opencv-python
 matplotlib
 IPython
-paddlepaddle-gpu
+paddlepaddle-gpu==2.0.1
 paddlepaddle
