@@ -2,12 +2,13 @@
 
 import os
 from setuptools import setup, find_packages
+import interpretdl
 
 # get key package details from py_pkg/__version__.py
 about = {
     '__title__': 'interpretdl',
     '__description__': 'interpretation of deep learning models',
-    '__version__': '0.2.0'
+    '__version__': interpretdl.__version__
 }  # type: ignore
 here = os.path.abspath(os.path.dirname(__file__))
 # with open(os.path.join(here, 'py_pkg', '__version__.py')) as f:
