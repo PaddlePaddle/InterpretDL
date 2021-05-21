@@ -94,11 +94,7 @@ class GradCAMInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            if self.use_cuda:
-                paddle.set_device('gpu:0')
-            else:
-                paddle.set_device('cpu')
-
+            paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
             self.paddle_model.train()
 
             self._feature_maps = None
