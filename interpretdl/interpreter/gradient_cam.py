@@ -33,14 +33,21 @@ class GradCAMInterpreter(Interpreter):
         """
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
-        self.use_cuda = use_cuda
         self.model_input_shape = model_input_shape
         self.paddle_prepared = False
+
+        self.use_cuda = use_cuda
+        if not paddle.is_compiled_with_cuda():
+            self.use_cuda = False
+
+        # init for usages during the interpretation.
+        self._target_layer_name = None
+        self._feature_maps = None
 
     def interpret(self,
                   inputs,
                   target_layer_name,
-                  labels=None,
+                  label=None,
                   visual=True,
                   save_path=None):
         """
@@ -58,35 +65,34 @@ class GradCAMInterpreter(Interpreter):
         """
 
         imgs, data = preprocess_inputs(inputs, self.model_input_shape)
-
-        bsz = len(data)
+        bsz = len(data)  # batch size
         save_path = preprocess_save_path(save_path, bsz)
 
-        self.target_layer_name = target_layer_name
+        assert target_layer_name in [n for n, v in self.paddle_model.named_sublayers()], \
+            f"target_layer_name {target_layer_name} does not exist in the given model, " \
+            f"please check all valid layer names by [n for n, v in paddle_model.named_sublayers()]"
 
+        self._target_layer_name = target_layer_name
         if not self.paddle_prepared:
             self._paddle_prepare()
 
-        if labels is None:
-            _, _, preds = self.predict_fn(data, labels)
-            labels = preds
-        labels = np.array(labels).reshape((bsz, ))
+        if label is None:
+            _, _, preds = self.predict_fn(data, label)
+            label = preds
+        label = np.array(label).reshape((bsz,))
 
-        feature_map, gradients, _ = self.predict_fn(data, labels)
+        feature_map, gradients, _ = self.predict_fn(data, label)
+        f = np.array(feature_map.numpy())
+        g = np.array(gradients.numpy())
 
-        f = np.array(feature_map)
-        g = np.array(gradients)
-        mean_g = np.mean(g, (2, 3))
-        heatmap = f.transpose([0, 2, 3, 1])
-        dim_array = np.ones((1, heatmap.ndim), int).ravel()
-        dim_array[heatmap.ndim - 1] = -1
-        dim_array[0] = bsz
-        heatmap = heatmap * mean_g.reshape(dim_array)
+        # print(f.shape, g.shape)  # [bsz, channels, w, h]
 
-        heatmap = np.mean(heatmap, axis=-1)
+        cam_weights = np.mean(g, (2, 3), keepdims=True)
+        heatmap = cam_weights * f
+        heatmap = heatmap.mean(1)
+        # relu
         heatmap = np.maximum(heatmap, 0)
-        heatmap_max = np.max(heatmap, axis=tuple(np.arange(1, heatmap.ndim)))
-        heatmap /= heatmap_max.reshape((bsz, ) + (1, ) * (heatmap.ndim - 1))
+
         for i in range(bsz):
             visualize_heatmap(heatmap[i], imgs[i], visual, save_path[i])
 
@@ -95,40 +101,36 @@ class GradCAMInterpreter(Interpreter):
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
             paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
+            # to get gradients, the ``train`` mode must be set.
+            # we cannot set v.training = False for the same reason.
             self.paddle_model.train()
-
-            self._feature_maps = None
 
             def hook(layer, input, output):
                 self._feature_maps = output
 
-            registered = False
             for n, v in self.paddle_model.named_sublayers():
-                if n == self.target_layer_name:
+                if n == self._target_layer_name:
                     v.register_forward_post_hook(hook)
-                    registered = True
                 if "batchnorm" in v.__class__.__name__.lower():
                     v._use_global_stats = True
                 if "dropout" in v.__class__.__name__.lower():
                     v.p = 0
+                # Report issues if more layers need to be added.
 
-            assert registered, f"target_layer_name {self.target_layer_name} does not exist in the given model, \
-                            please check all valid layer names by [n for n, v in paddle_model.named_sublayers()]"
-
-            def predict_fn(data, labels):
+            def predict_fn(data, label):
                 data = paddle.to_tensor(data)
                 data.stop_gradient = False
                 out = self.paddle_model(data)
                 out = paddle.nn.functional.softmax(out, axis=1)
                 preds = paddle.argmax(out, axis=1)
-                if labels is None:
-                    labels = preds.numpy()
-                labels_onehot = paddle.nn.functional.one_hot(
-                    paddle.to_tensor(labels), num_classes=out.shape[1])
-                target = paddle.sum(out * labels_onehot, axis=1)
+                if label is None:
+                    label = preds.numpy()
+                label_onehot = paddle.nn.functional.one_hot(
+                    paddle.to_tensor(label), num_classes=out.shape[1])
+                target = paddle.sum(out * label_onehot, axis=1)
                 gradients = paddle.grad(
                     outputs=[target], inputs=[self._feature_maps])[0]
-                return self._feature_maps.numpy(), gradients.numpy(), labels
+                return self._feature_maps, gradients, label
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True

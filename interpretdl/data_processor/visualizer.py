@@ -119,8 +119,9 @@ def visualize_grayscale(gradients, percentile=99, visual=True, save_path=None):
 
 def visualize_heatmap(heatmap, org, visual=True, save_path=None):
     org = np.array(org).astype('float32')
-    org = cv2.cvtColor(org, cv2.COLOR_BGR2RGB)
 
+    heatmap_max = np.max(heatmap, axis=(0, 1), keepdims=True)
+    heatmap /= heatmap_max
     heatmap = cv2.resize(heatmap, (org.shape[1], org.shape[0]))
     heatmap = np.uint8(255 * heatmap)
     heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
@@ -136,7 +137,7 @@ def visualize_heatmap(heatmap, org, visual=True, save_path=None):
 
     if save_path is not None:
         x.save(save_path)
-        #cv2.imwrite(save_path, x)
+        # cv2.imwrite(save_path, x)
 
 
 class VisualizationTextRecord:

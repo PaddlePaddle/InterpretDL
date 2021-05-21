@@ -33,9 +33,12 @@ class GradShapCVInterpreter(Interpreter):
         """
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
-        self.use_cuda = use_cuda
         self.model_input_shape = model_input_shape
         self.paddle_prepared = False
+
+        self.use_cuda = use_cuda
+        if not paddle.is_compiled_with_cuda():
+            self.use_cuda = False
 
     def interpret(self,
                   inputs,

@@ -35,10 +35,13 @@ class SmoothGradInterpreter(Interpreter):
         """
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
-        self.use_cuda = use_cuda
         self.model_input_shape = model_input_shape
         self.data_type = 'float32'
         self.paddle_prepared = False
+
+        self.use_cuda = use_cuda
+        if not paddle.is_compiled_with_cuda():
+            self.use_cuda = False
 
     def interpret(self,
                   inputs,
@@ -104,12 +107,9 @@ class SmoothGradInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            if self.use_cuda:
-                paddle.set_device('gpu:0')
-            else:
-                paddle.set_device('cpu')
-
-            self.paddle_model.train()
+            paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
+            # to get gradients, the ``train`` mode must be set.
+            # self.paddle_model.train()
 
             for n, v in self.paddle_model.named_sublayers():
                 if "batchnorm" in v.__class__.__name__.lower():
