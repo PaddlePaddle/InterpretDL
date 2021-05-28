@@ -40,6 +40,7 @@ import copy
 from functools import partial
 from skimage.segmentation import quickshift
 from skimage.measure import regionprops
+from tqdm import tqdm
 
 
 class LimeBase(object):
@@ -160,7 +161,7 @@ class LimeBase(object):
         labels = []
         data[0, :] = 1
         imgs = []
-        for row in data:
+        for row in tqdm(data):
             temp = copy.deepcopy(image)
             zeros = np.where(row == 0)[0]
             mask = np.zeros(segments.shape).astype(bool)

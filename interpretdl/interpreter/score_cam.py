@@ -119,11 +119,7 @@ class ScoreCAMInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            if self.use_cuda:
-                paddle.set_device('gpu:0')
-            else:
-                paddle.set_device('cpu')
-
+            paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
             self.paddle_model.eval()
 
             self._feature_maps = None
@@ -144,7 +140,6 @@ class ScoreCAMInterpreter(Interpreter):
             def predict_fn(data):
                 global feature_maps
                 data = paddle.to_tensor(data)
-                data.stop_gradient = False
                 out = self.paddle_model(data)
                 probs = paddle.nn.functional.softmax(out, axis=1)
                 return self._feature_maps.numpy(), probs.numpy()

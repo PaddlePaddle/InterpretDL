@@ -115,7 +115,7 @@ class GradCAMInterpreter(Interpreter):
                     v._use_global_stats = True
                 if "dropout" in v.__class__.__name__.lower():
                     v.p = 0
-                # Report issues if more layers need to be added.
+                # Report issues or pull requests if more layers need to be added.
 
             def predict_fn(data, label):
                 data = paddle.to_tensor(data)

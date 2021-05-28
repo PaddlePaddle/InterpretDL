@@ -31,13 +31,13 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
                     - data: Data inputs.
                     and outputs predictions. See the example at the end of ``interpret()``.
         :type paddle_model: callable
-        :param trained_model_path: The pretrained model directory.
-        :type trained_model_path: str
         :param model_input_shape: The input shape of the model. Default: [3, 224, 224]
         :type model_input_shape: list, optional
         :param use_cuda: Whether or not to use cuda. Default: True
         :type use_cuda: bool, optional
-        :param temp_data_file: The .npz file to save/load the dictionary where key is image path and value is another dictionary with lime weights, segmentation and input. Default: 'all_lime_weights.npz'
+        :param temp_data_file: The .npz file to save/load the dictionary where key is image path,
+            and value is another dictionary with lime weights, segmentation and input.
+            Default: 'all_lime_weights.npz'
         :type temp_data_file: str, optional
         """
         if int(paddle.__version__[0]) > 1:
@@ -66,8 +66,8 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
         lime_weights = self.lime_interpret(
             data, num_samples=num_samples, batch_size=batch_size, visual=False)
 
-        sp_seg = self.lime_intermediate_results['segmentation']
-        data_instance = self.lime_intermediate_results['input']
+        sp_seg = self.lime_results['segmentation']
+        data_instance = self.lime_results['input']
 
         self.all_lime_weights[data] = {
             'lime_weights': lime_weights,

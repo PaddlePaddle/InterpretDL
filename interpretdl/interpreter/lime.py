@@ -21,9 +21,10 @@ class LIMECVInterpreter(Interpreter):
     """
 
     def __init__(self,
-                 paddle_model: Callable,
+                 paddle_model,
                  model_input_shape=[3, 224, 224],
-                 use_cuda=True) -> None:
+                 use_cuda=True,
+                 random_seed=None) -> None:
         """
         Initialize the LIMECVInterpreter.
 
@@ -43,9 +44,9 @@ class LIMECVInterpreter(Interpreter):
             self.use_cuda = False
 
         # use the default LIME setting
-        self.lime_base = LimeBase()
+        self.lime_base = LimeBase(random_state=random_seed)
 
-        self.lime_intermediate_results = {}
+        self.lime_results = {}
 
     def interpret(self,
                   data,
@@ -80,9 +81,6 @@ class LIMECVInterpreter(Interpreter):
             else:
                 data_instance = restore_image(data.copy())
 
-        self.input_type = type(data_instance)
-        self.data_type = np.array(data_instance).dtype
-
         if not self.paddle_prepared:
             self._paddle_prepare()
         # only one example here
@@ -110,35 +108,24 @@ class LIMECVInterpreter(Interpreter):
             visual=visual,
             save_path=save_path)
 
-        self.lime_intermediate_results['probability'] = probability
-        self.lime_intermediate_results['input'] = data_instance[0]
-        self.lime_intermediate_results[
-            'segmentation'] = self.lime_base.segments
-        self.lime_intermediate_results['r2_scores'] = r2_scores
+        self.lime_results['probability'] = probability
+        self.lime_results['input'] = data_instance[0]
+        self.lime_results['segmentation'] = self.lime_base.segments
+        self.lime_results['r2_scores'] = r2_scores
+        self.lime_results['lime_weights'] = lime_weights
 
         return lime_weights
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            if self.use_cuda:
-                paddle.set_device('gpu:0')
-            else:
-                paddle.set_device('cpu')
-
-            self.paddle_model.train()
-
-            for n, v in self.paddle_model.named_sublayers():
-                if "batchnorm" in v.__class__.__name__.lower():
-                    v._use_global_stats = True
-                if "dropout" in v.__class__.__name__.lower():
-                    v.p = 0
+            paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
+            self.paddle_model.eval()
 
             def predict_fn(data_instance):
                 data = preprocess_image(
                     data_instance
                 )  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
                 data = paddle.to_tensor(data)
-                data.stop_gradient = False
                 out = self.paddle_model(data)
                 probs = paddle.nn.functional.softmax(out, axis=1)
                 return probs.numpy()
@@ -155,7 +142,7 @@ class LIMENLPInterpreter(Interpreter):
     https://arxiv.org/abs/1602.04938
     """
 
-    def __init__(self, paddle_model, use_cuda=True) -> None:
+    def __init__(self, paddle_model, use_cuda=True, random_seed=None) -> None:
         """
         Initialize the LIMENLPInterpreter.
 
@@ -169,10 +156,13 @@ class LIMENLPInterpreter(Interpreter):
         Interpreter.__init__(self)
         self.paddle_model = paddle_model
         self.use_cuda = use_cuda
+        if not paddle.is_compiled_with_cuda():
+            self.use_cuda = False
+
         self.paddle_prepared = False
 
         # use the default LIME setting
-        self.lime_base = LimeBase()
+        self.lime_base = LimeBase(random_state=random_seed)
 
         self.lime_intermediate_results = {}
 
@@ -245,18 +235,8 @@ class LIMENLPInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            if self.use_cuda:
-                paddle.set_device('gpu:0')
-            else:
-                paddle.set_device('cpu')
-
-            self.paddle_model.train()
-
-            for n, v in self.paddle_model.named_sublayers():
-                if "batchnorm" in v.__class__.__name__.lower():
-                    v._use_global_stats = True
-                if "dropout" in v.__class__.__name__.lower():
-                    v.p = 0
+            paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
+            self.paddle_model.eval()
 
             def predict_fn(*params):
                 params = tuple(paddle.to_tensor(inp) for inp in params)

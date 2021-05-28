@@ -21,7 +21,7 @@ class OcclusionInterpreter(Interpreter):
     """
 
     def __init__(self,
-                 paddle_model: Callable,
+                 paddle_model,
                  use_cuda=True,
                  model_input_shape=[3, 224, 224]) -> None:
         """
@@ -128,15 +128,11 @@ class OcclusionInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            if self.use_cuda:
-                paddle.set_device('gpu:0')
-            else:
-                paddle.set_device('cpu')
+            paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
             self.paddle_model.eval()
 
             def predict_fn(data):
                 data = paddle.to_tensor(data)
-                data.stop_gradient = False
                 out = self.paddle_model(data)
                 probs = paddle.nn.functional.softmax(out, axis=1)
                 return probs.numpy()

@@ -145,10 +145,10 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
             visual=visual,
             save_path=save_path)
 
-        self.lime_intermediate_results['probability'] = probability
-        self.lime_intermediate_results['input'] = data_instance[0]
-        self.lime_intermediate_results[
-            'segmentation'] = self.lime_base.segments
-        self.lime_intermediate_results['r2_scores'] = r2_scores
+        self.lime_results['probability'] = probability
+        self.lime_results['input'] = data_instance[0]
+        self.lime_results['segmentation'] = self.lime_base.segments
+        self.lime_results['r2_scores'] = r2_scores
+        self.lime_results['lime_weights'] = lime_weights
 
         return lime_weights

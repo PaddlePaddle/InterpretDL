@@ -109,7 +109,7 @@ class SmoothGradInterpreter(Interpreter):
         if predict_fn is None:
             paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
             # to get gradients, the ``train`` mode must be set.
-            # self.paddle_model.train()
+            self.paddle_model.train()
 
             for n, v in self.paddle_model.named_sublayers():
                 if "batchnorm" in v.__class__.__name__.lower():
