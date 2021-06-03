@@ -16,7 +16,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import numpy as np
 import paddle
 from paddle import ParamAttr
 import paddle.nn as nn
@@ -183,11 +182,7 @@ class BasicBlock(nn.Layer):
 
 
 class ResNet(nn.Layer):
-    def __init__(self,
-                 layers=50,
-                 class_dim=1000,
-                 input_image_channel=3,
-                 data_format="NCHW"):
+    def __init__(self, layers=50, class_dim=1000, input_image_channel=3, data_format="NCHW"):
         super(ResNet, self).__init__()
 
         self.layers = layers
@@ -220,7 +215,10 @@ class ResNet(nn.Layer):
             name="conv1",
             data_format=self.data_format)
         self.pool2d_max = MaxPool2D(
-            kernel_size=3, stride=2, padding=1, data_format=self.data_format)
+            kernel_size=3,
+            stride=2, 
+            padding=1,
+            data_format=self.data_format)
 
         self.block_list = []
         if layers >= 50:
@@ -278,14 +276,18 @@ class ResNet(nn.Layer):
             bias_attr=ParamAttr(name="fc_0.b_0"))
 
     def forward(self, inputs):
-        y = self.conv(inputs)
-        y = self.pool2d_max(y)
-        for block in self.block_list:
-            y = block(y)
-        y = self.pool2d_avg(y)
-        y = paddle.reshape(y, shape=[-1, self.pool2d_avg_channels])
-        y = self.out(y)
-        return y
+        with paddle.static.amp.fp16_guard():
+            if self.data_format == "NHWC":
+                inputs = paddle.tensor.transpose(inputs, [0, 2, 3, 1])
+                inputs.stop_gradient = True
+            y = self.conv(inputs)
+            y = self.pool2d_max(y)
+            for block in self.block_list:
+                y = block(y)
+            y = self.pool2d_avg(y)
+            y = paddle.reshape(y, shape=[-1, self.pool2d_avg_channels])
+            y = self.out(y)
+            return y
 
 
 def ResNet18(**args):
