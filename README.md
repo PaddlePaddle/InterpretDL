@@ -16,9 +16,10 @@ By utilizing these helpful methods, people can better understand why models work
 
 For researchers working on designing new interpretation algorithms, InterpretDL gives an easy access to existing methods that they can compare their work with.
 
-# News :fire:
+# :fire: :fire: :fire: News :fire: :fire: :fire:
 
-Compatibility to PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas#transformer-series).
+- (2021/06/03) Compatibility to PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas#transformer-series). 
+See the [notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ViT_explanations.ipynb) for the visual results.
 ```python
 import paddle
 import interpretdl as it
@@ -33,7 +34,6 @@ img_path = 'assets/catdog.png'
 lime = it.LIMECVInterpreter(paddle_model, use_cuda=True)
 lime_weights = lime.interpret(img_path, batch_size=50, num_samples=2000, visual=True)
 ```
-See the [notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ViT_explanations.ipynb) for the visual results.
 
 # Demo
 
