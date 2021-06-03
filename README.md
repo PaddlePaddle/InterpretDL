@@ -16,6 +16,25 @@ By utilizing these helpful methods, people can better understand why models work
 
 For researchers working on designing new interpretation algorithms, InterpretDL gives an easy access to existing methods that they can compare their work with.
 
+# News :fire:
+
+Compatibility to PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas#transformer-series).
+```python
+import paddle
+import interpretdl as it
+
+# wget -c https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/ViT_small_patch16_224_pretrained.pdparams -P assets/
+from assets.vision_transformer import ViT_small_patch16_224
+paddle_model = ViT_small_patch16_224()
+MODEL_PATH = 'assets/ViT_small_patch16_224_pretrained.pdparams'
+paddle_model.set_dict(paddle.load(MODEL_PATH))
+
+img_path = 'assets/catdog.png'
+lime = it.LIMECVInterpreter(paddle_model, use_cuda=True)
+lime_weights = lime.interpret(img_path, batch_size=50, num_samples=2000, visual=True)
+```
+See the [notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ViT_explanations.ipynb) for the visual results.
+
 # Demo
 
 Interpretation algorithms give a hint of why a black-box model makes its decision.
