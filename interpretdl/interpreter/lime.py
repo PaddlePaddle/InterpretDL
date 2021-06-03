@@ -1,12 +1,9 @@
-import os
-import typing
-from typing import Any, Callable, List, Tuple, Union
+
 import numpy as np
 import paddle
 
 from ..data_processor.readers import preprocess_image, read_image, restore_image
-from ..data_processor.visualizer import show_important_parts, visualize_image, save_image
-from ..common.paddle_utils import init_checkpoint, to_lodtensor
+from ..data_processor.visualizer import show_important_parts
 
 from ._lime_base import LimeBase
 from .abc_interpreter import Interpreter

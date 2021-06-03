@@ -1,7 +1,5 @@
-import typing
-from typing import Any, Callable, List, Tuple, Union
+
 import numpy as np
-import os, sys
 import paddle
 
 from .abc_interpreter import Interpreter

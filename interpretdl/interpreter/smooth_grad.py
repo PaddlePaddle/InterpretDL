@@ -1,9 +1,7 @@
-import typing
-from typing import Any, Callable, List, Tuple, Union
 
 import numpy as np
-import os, sys
 import paddle
+from tqdm import tqdm
 from .abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_inputs, preprocess_save_path
 from ..data_processor.visualizer import visualize_overlay
@@ -88,7 +86,7 @@ class SmoothGradInterpreter(Interpreter):
             np.max(data, axis=max_axis) - np.min(data, axis=max_axis))
 
         total_gradients = np.zeros_like(data)
-        for i in range(n_samples):
+        for i in tqdm(range(n_samples)):
             noise = np.concatenate([
                 np.float32(
                     np.random.normal(0.0, stds[j], (1, ) + tuple(d.shape)))
