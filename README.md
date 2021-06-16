@@ -58,7 +58,6 @@ For sentiment classfication task, the reason why a model gives positive/negative
     * [Developer installation](#developer-installation)
 * [Documentation](#Documentation)
 * [Usage Guideline](#Usage-Guideline)
-* [Contribution](#Contribution)
 * [Roadmap](#Roadmap)
     * [Algorithms](#Algorithms)
     * [Tutorials](#Tutorials)
