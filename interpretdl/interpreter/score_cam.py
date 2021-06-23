@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from .abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_inputs, preprocess_save_path
-from ..data_processor.visualizer import visualize_heatmap
+from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
 
 
 class ScoreCAMInterpreter(Interpreter):
@@ -106,9 +106,13 @@ class ScoreCAMInterpreter(Interpreter):
                                     (interp.max() - interp.min())
                                     for interp in interpretations])
 
+        # visualization and save image.
         for i in range(b):
-            visualize_heatmap(interpretations[i], imgs[i], visual,
-                              save_path[i])
+            vis_explanation = explanation_to_vis(imgs[i], interpretations[i], style='overlay_heatmap')
+            if visual:
+                show_vis_explanation(vis_explanation)
+            if save_path[i] is not None:
+                save_image(save_path[i], vis_explanation)
 
         return interpretations
 

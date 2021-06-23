@@ -7,7 +7,7 @@ from .lime import LIMECVInterpreter
 from ._lime_base import compute_segments
 from ._global_prior_base import precompute_global_prior, use_fast_normlime_as_prior
 from ..data_processor.readers import read_image, load_npy_dict_file
-from ..data_processor.visualizer import show_important_parts, visualize_image, save_image
+from ..data_processor.visualizer import sp_weights_to_image_explanation, overlay_threshold, save_image, show_vis_explanation
 
 
 class LIMEPriorInterpreter(LIMECVInterpreter):
@@ -136,13 +136,15 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
             prior=prior,
             reg_force=prior_reg_force)
 
-        interpretation = show_important_parts(
-            data_instance[0],
-            lime_weights,
-            interpret_class[0],
-            self.lime_base.segments,
-            visual=visual,
-            save_path=save_path)
+        # visualization and save image.
+        explanation_mask = sp_weights_to_image_explanation(
+            data_instance[0], lime_weights, interpret_class[0], self.lime_base.segments
+        )
+        explanation_vis = overlay_threshold(data_instance[0], explanation_mask)
+        if visual:
+            show_vis_explanation(explanation_vis)
+        if save_path is not None:
+            save_image(save_path, explanation_vis)
 
         self.lime_results['probability'] = probability
         self.lime_results['input'] = data_instance[0]

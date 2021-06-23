@@ -4,7 +4,7 @@ import paddle
 
 from .abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_inputs, preprocess_save_path
-from ..data_processor.visualizer import visualize_heatmap
+from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
 
 
 class GradCAMInterpreter(Interpreter):
@@ -87,12 +87,17 @@ class GradCAMInterpreter(Interpreter):
         heatmap = cam_weights * f
         heatmap = heatmap.mean(1)
         # relu
-        heatmap = np.maximum(heatmap, 0)
+        gradcam_explanation = np.maximum(heatmap, 0)
 
+        # visualization and save image.
         for i in range(bsz):
-            visualize_heatmap(heatmap[i], imgs[i], visual, save_path[i])
+            vis_explanation = explanation_to_vis(imgs[i], gradcam_explanation[i], style='overlay_heatmap')
+            if visual:
+                show_vis_explanation(vis_explanation)
+            if save_path[i] is not None:
+                save_image(save_path[i], vis_explanation)
 
-        return heatmap
+        return gradcam_explanation
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:

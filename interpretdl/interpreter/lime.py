@@ -3,7 +3,7 @@ import numpy as np
 import paddle
 
 from ..data_processor.readers import preprocess_image, read_image, restore_image
-from ..data_processor.visualizer import show_important_parts
+from ..data_processor.visualizer import sp_weights_to_image_explanation, overlay_threshold, save_image, show_vis_explanation
 
 from ._lime_base import LimeBase
 from .abc_interpreter import Interpreter
@@ -97,13 +97,15 @@ class LIMECVInterpreter(Interpreter):
             num_samples=num_samples,
             batch_size=batch_size)
 
-        interpretation = show_important_parts(
-            data_instance[0],
-            lime_weights,
-            interpret_class[0],
-            self.lime_base.segments,
-            visual=visual,
-            save_path=save_path)
+        # visualization and save image.
+        explanation_mask = sp_weights_to_image_explanation(
+            data_instance[0], lime_weights, interpret_class[0], self.lime_base.segments
+        )
+        explanation_vis = overlay_threshold(data_instance[0], explanation_mask)
+        if visual:
+            show_vis_explanation(explanation_vis)
+        if save_path is not None:
+            save_image(save_path, explanation_vis)
 
         self.lime_results['probability'] = probability
         self.lime_results['input'] = data_instance[0]

@@ -4,7 +4,7 @@ import paddle
 
 from .abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_inputs, preprocess_save_path
-from ..data_processor.visualizer import visualize_overlay
+from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
 
 
 class IntGradCVInterpreter(Interpreter):
@@ -107,8 +107,13 @@ class IntGradCVInterpreter(Interpreter):
             gradients_list.append(ig_gradients)
         avg_gradients = np.average(np.array(gradients_list), axis=0)
 
+        # visualization and save image.
         for i in range(len(imgs)):
-            visualize_overlay(avg_gradients[i], imgs[i], visual, save_path[i])
+            vis_explanation = explanation_to_vis(imgs[i], np.abs(avg_gradients[i]).sum(0), style='overlay_grayscale')
+            if visual:
+                show_vis_explanation(vis_explanation)
+            if save_path[i] is not None:
+                save_image(save_path[i], vis_explanation)
 
         return avg_gradients
 

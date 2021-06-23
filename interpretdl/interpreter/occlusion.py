@@ -1,7 +1,7 @@
 
 from .abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_inputs, preprocess_save_path
-from ..data_processor.visualizer import visualize_grayscale
+from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
 
 import numpy as np
 import paddle
@@ -117,9 +117,13 @@ class OcclusionInterpreter(Interpreter):
                                           current_mask,
                                           axis=0)[0]
 
+        # visualization and save image.
         for i in range(len(data)):
-            visualize_grayscale(
-                total_interp[i], visual=visual, save_path=save_path[i])
+            vis_explanation = explanation_to_vis(imgs[i], np.abs(total_interp[i]).sum(0), style='overlay_grayscale')
+            if visual:
+                show_vis_explanation(vis_explanation)
+            if save_path[i] is not None:
+                save_image(save_path[i], vis_explanation)
 
         return total_interp
 

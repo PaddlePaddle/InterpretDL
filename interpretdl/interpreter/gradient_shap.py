@@ -1,6 +1,6 @@
 from .abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_inputs, preprocess_save_path
-from ..data_processor.visualizer import visualize_grayscale
+from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
 
 import numpy as np
 import paddle
@@ -72,7 +72,7 @@ class GradShapCVInterpreter(Interpreter):
             repeated_data = np.repeat(data, (n_samples, ) * len(data), axis=0)
             return repeated_data + noise
 
-        _, data = preprocess_inputs(inputs, self.model_input_shape)
+        imgs, data = preprocess_inputs(inputs, self.model_input_shape)
 
         bsz = len(data)
         save_path = preprocess_save_path(save_path, bsz)
@@ -117,9 +117,13 @@ class GradShapCVInterpreter(Interpreter):
                 keepdims=True) for i in range(bsz)
         ])
 
+        # visualization and save image.
         for i in range(bsz):
-            visualize_grayscale(
-                interpretations[i], visual=visual, save_path=save_path[i])
+            vis_explanation = explanation_to_vis(imgs[i], np.abs(interpretations[i]).sum(0), style='overlay_grayscale')
+            if visual:
+                show_vis_explanation(vis_explanation)
+            if save_path[i] is not None:
+                save_image(save_path[i], vis_explanation)
 
         return interpretations
 

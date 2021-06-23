@@ -6,138 +6,176 @@ from PIL import Image
 import cv2
 
 
-def is_jupyter():
-    # ref: https://stackoverflow.com/a/39662359/4834515
-    try:
-        shell = get_ipython().__class__.__name__
-        if shell == 'ZMQInteractiveShell':
-            return True  # Jupyter notebook or qtconsole
-        elif shell == 'TerminalInteractiveShell':
-            return False  # Terminal running IPython
-        else:
-            return False  # Other type (?)
-    except NameError:
-        return False  # Probably standard Python interpreter
+def show_vis_explanation(explanation_image, cmap=None):
+    """
+    Get the environment and show the image.
+    Args:
+        explanation_image:
+        cmap:
+
+    Returns: None
+
+    """
+    plt.imshow(explanation_image, cmap)
+    plt.axis("off")
+    plt.show()
 
 
-def show_important_parts(image,
-                         lime_weights,
-                         label=None,
-                         segments=None,
-                         ratio_superpixels=0.2,
-                         visual=True,
-                         save_path=None):
-    if label is None:
-        label = list(lime_weights.keys())[0]
-
-    if label not in lime_weights:
-        raise KeyError('Label not in interpretation')
-
-    if segments is None:
-        segments = quickshift(image, sigma=1)
-
-    num_sp = int(ratio_superpixels * len(lime_weights[label]))
-    lime_weight = lime_weights[label]
-    mask = np.zeros(segments.shape, segments.dtype)
-    temp = image.copy()
-
-    fs = [x[0] for x in lime_weight if x[1] > 0][:num_sp]
-    for f in fs:
-        temp[segments == f, 1] = 255
-        mask[segments == f] = 1
-
-    interps = mark_boundaries(temp, mask)
-    x = np.clip(interps * 255, 0, 255)
-    x = np.uint8(x)
-    x = Image.fromarray(x)
-
-    if visual:
-        visualize_image(x)
-
-    if save_path is not None:
-        x.save(save_path)
-
-    return interps
+# def is_jupyter():
+#     # ref: https://stackoverflow.com/a/39662359/4834515
+#     try:
+#         shell = get_ipython().__class__.__name__
+#         if shell == 'ZMQInteractiveShell':
+#             return True  # Jupyter notebook or qtconsole
+#         elif shell == 'TerminalInteractiveShell':
+#             return False  # Terminal running IPython
+#         else:
+#             return False  # Other type (?)
+#     except NameError:
+#         return False  # Probably standard Python interpreter
 
 
-def visualize_image(image):
-    if is_jupyter():
-        display(image)
+def explanation_to_vis(batched_image, explanation, style='grayscale'):
+    """
+
+    Args:
+        batched_image: e.g., (1, height, width, 3).
+        explanation: should have the same width and height as image.
+        style: ['grayscale', 'heatmap', 'overlay_grayscale', 'overlay_heatmap', 'overlay_threshold'].
+
+    Returns:
+
+    """
+    if len(batched_image.shape) == 4:
+        assert batched_image.shape[0] == 1, "For one image only"
+        batched_image = batched_image[0]
+        assert len(batched_image.shape) == 3
+
+    assert len(explanation.shape) == 2, f"image shape {batched_image.shape} vs " \
+                                        f"explanation {explanation.shape}"
+
+    image = batched_image
+    if style == 'grayscale':
+        # explanation has the same size as image, no need to scale.
+        # usually for gradient-based explanations w.r.t. the image.
+        return _grayscale(explanation)
+    elif style == 'heatmap':
+        # explanation's width and height are usually smaller than image.
+        # usually for CAM, GradCAM etc, which produce lower-resolution explanations.
+        return _heatmap(explanation, (image.shape[1], image.shape[0]))  # image just for the shape.
+    elif style == 'overlay_grayscale':
+        return overlay_grayscale(image, explanation)
+    elif style == 'overlay_heatmap':
+        return overlay_heatmap(image, explanation)
+    elif style == 'overlay_threshold':
+        # usually for LIME etc, which originally shows positive and negative parts.
+        return overlay_heatmap(image, explanation)
     else:
-        plt.imshow(image)
-        plt.show()
+        raise KeyError("Unknown visualization style.")
 
 
-def save_image(file_path, image):
-    plt.imsave(file_path, image)
+def _grayscale(explanation, percentile=99):
+    """
 
+    Args:
+        explanation: numpy.array, 2d.
+        percentile:
 
-def visualize_overlay(gradients, img, visual=True, save_path=None):
-    gradients = gradients.transpose((1, 2, 0))
-    interpretation = np.clip(gradients, 0, 1)
-    channel = [0, 255, 0]
-    interpretation = np.average(interpretation, axis=2)
+    Returns: numpy.array, uint8, same shape as explanation
 
-    m, e = np.percentile(np.abs(interpretation),
-                         99.5), np.min(np.abs(interpretation))
-    transformed = (np.abs(interpretation) - e) / (m - e)
+    """
+    assert len(explanation.shape) == 2, f"{explanation.shape}. " \
+                                        "Currently support 2D explanation results for visualization. " \
+                                        "Reduce higher dimensions to 2D for visualization."
 
-    # Recover the original sign of the interpretation.
-    transformed *= np.sign(interpretation)
-
-    # Clip values above and below.
-    transformed = np.clip(transformed, 0.0, 1.0)
-
-    interpretation = np.expand_dims(transformed, 2) * channel
-    interpretation = np.clip(0.7 * img + 0.5 * interpretation, 0, 255)
-
-    x = np.uint8(interpretation)
-    x = Image.fromarray(x)
-
-    if visual:
-        visualize_image(x)
-
-    if save_path is not None:
-        x.save(save_path)
-
-
-def visualize_grayscale(gradients, percentile=99, visual=True, save_path=None):
-    image_2d = np.sum(np.abs(gradients), axis=0)
+    image_2d = explanation
 
     vmax = np.percentile(image_2d, percentile)
     vmin = np.min(image_2d)
 
     x = np.clip((image_2d - vmin) / (vmax - vmin), 0, 1) * 255
     x = np.uint8(x)
-    x = Image.fromarray(x)
-    if visual:
-        visualize_image(x)
 
-    if save_path is not None:
-        x.save(save_path)
+    return x
 
 
-def visualize_heatmap(heatmap, org, visual=True, save_path=None):
-    org = np.array(org).astype('float32')
+def overlay_grayscale(image, explanation, percentile=99):
+    x = _grayscale(explanation, percentile)
 
-    heatmap_max = np.max(heatmap, axis=(0, 1), keepdims=True)
-    heatmap /= heatmap_max
-    heatmap = cv2.resize(heatmap, (org.shape[1], org.shape[0]))
-    heatmap = np.uint8(255 * heatmap)
-    heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
+    overlay_vis = np.zeros_like(image, dtype=np.uint8)
+    overlay_vis[:, :, 1] = x
 
-    x = heatmap * 0.5 + org * 0.7
-    x = np.clip(x, 0, 255)
-    x = np.uint8(x)
-    x = cv2.cvtColor(x, cv2.COLOR_BGR2RGB)
-    x = Image.fromarray(x)
+    overlay_vis = overlay_vis * 0.4 + image * 0.6
 
-    if visual:
-        visualize_image(x)
+    return np.uint8(overlay_vis)
 
-    if save_path is not None:
-        x.save(save_path)
-        # cv2.imwrite(save_path, x)
+
+def _heatmap(explanation, resize_shape=(224, 224)):
+    """
+
+    Args:
+        explanation:
+        resize_shape: (width, height)
+
+    Returns:
+
+    """
+    assert len(explanation.shape) == 2, f"{explanation.shape}. " \
+                                        f"Currently support 2D explanation results for visualization. " \
+                                        "Reduce higher dimensions to 2D for visualization."
+
+    explanation = np.maximum(explanation, 0)
+    ex_max = np.max(explanation)
+    explanation /= ex_max
+
+    explanation = cv2.resize(explanation, resize_shape)
+    explanation = np.uint8(255 * explanation)
+    explanation = cv2.applyColorMap(explanation, cv2.COLORMAP_JET)
+    explanation = cv2.cvtColor(explanation, cv2.COLOR_BGR2RGB)
+
+    return explanation
+
+
+def overlay_heatmap(image, explanation):
+    x = _heatmap(explanation, (image.shape[1], image.shape[0]))
+
+    overlay_vis = x * 0.4 + image * 0.6
+
+    return np.uint8(overlay_vis)
+
+
+def overlay_threshold(image, explanation_mask):
+    overlay_vis = np.zeros_like(image, dtype=np.uint8)
+    overlay_vis[:, :, 1] = explanation_mask * 255
+
+    overlay_vis = overlay_vis * 0.6 + image * 0.4
+
+    return np.uint8(overlay_vis)
+
+
+def sp_weights_to_image_explanation(image, sp_weights, label=None, segments=None, ratio_superpixels=0.2):
+    if label is None:
+        label = list(sp_weights.keys())[0]
+
+    if label not in sp_weights:
+        raise KeyError('Label not in interpretation')
+
+    if segments is None:
+        segments = quickshift(image, sigma=1)
+
+    num_sp = int(ratio_superpixels * len(sp_weights[label]))
+    sp_weight = sp_weights[label]
+    explanation_mask = np.zeros(segments.shape, segments.dtype)
+
+    fs = [x[0] for x in sp_weight if x[1] > 0][:num_sp]
+    for f in fs:
+        explanation_mask[segments == f] = 1
+
+    return explanation_mask
+
+
+def save_image(file_path, image):
+    plt.imsave(file_path, image)
 
 
 class VisualizationTextRecord:
