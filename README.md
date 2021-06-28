@@ -42,7 +42,7 @@ Interpretation algorithms give a hint of why a black-box model makes its decisio
 The following table gives visualizations of several interpretation algorithms applied to the original image to tell us why the model predicts "bull_mastiff."
 Original Image | Integrated Gradients ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/int_grad_tutorial_cv.ipynb)) | SmoothGrad ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/smooth_grad_tutorial_cv.ipynb)) | LIME ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/lime_tutorial_cv.ipynb)) | Grad-CAM ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/grad_cam_tutorial_cv.ipynb))
 :-----------:|:-----------:|:-----------:|:-----------:|:-----------:
-![](imgs/deer.png)|![](imgs/deer_ig_overlay.jpeg)|![](imgs/deer_sg_overlay.jpeg)|![](imgs/deer_lime_overlay.jpeg)|![](imgs/deer_gradcam_overlay.jpeg)
+![](imgs/catdog.jpg)|![](imgs/catdog_ig_overlay.jpeg)|![](imgs/catdog_sg_overlay.jpeg)|![](imgs/catdog_lime_overlay.jpeg)|![](imgs/catdog_gradcam_overlay.jpeg)
 
 For sentiment classfication task, the reason why a model gives positive/negative predictions can be visualized as follows. A quick demo can be found [here](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/int_grad_tutorial_nlp.ipynb).
 
