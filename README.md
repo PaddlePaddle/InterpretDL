@@ -136,18 +136,20 @@ We are planning to implement the algorithms below (categorized by the explaining
     - [x] NormLIME
     - [x] LIMEPrior
     - [ ] DeepLIFT
+    - [ ] LRP
     - [ ] More ...
 
 * Target at Intermediate Features
+    - [x] CAM
     - [x] GradCAM
     - [x] ScoreCAM
     - [ ] More ...
 
 ### Dataset-level Interpretation Algorithms
-- [x] ForgettingEvent
+- [x] Forgetting Event
 - [x] SGDNoise
 - [x] TrainIng Data analYzer (TIDY)
-- [ ] InfluenceFunction
+- [ ] Influence Function
 - [ ] More ...
 
 ## Tutorials
