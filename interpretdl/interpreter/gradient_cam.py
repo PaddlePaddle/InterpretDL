@@ -79,7 +79,7 @@ class GradCAMInterpreter(Interpreter):
 
         feature_map, gradients, _ = self.predict_fn(data, label)
         f = np.array(feature_map.numpy())
-        g = np.array(gradients.numpy())
+        g = gradients
 
         # print(f.shape, g.shape)  # [bsz, channels, w, h]
 
@@ -129,8 +129,12 @@ class GradCAMInterpreter(Interpreter):
                 label_onehot = paddle.nn.functional.one_hot(
                     paddle.to_tensor(label), num_classes=out.shape[1])
                 target = paddle.sum(out * label_onehot, axis=1)
-                gradients = paddle.grad(
-                    outputs=[target], inputs=[self._feature_maps])[0]
+
+                target.backward()
+                gradients = self._feature_maps.grad
+
+                # gradients = paddle.grad(
+                #     outputs=[target], inputs=[self._feature_maps])[0]
                 return self._feature_maps, gradients, label
 
         self.predict_fn = predict_fn
