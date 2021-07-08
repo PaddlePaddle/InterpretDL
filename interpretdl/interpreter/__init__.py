@@ -6,12 +6,14 @@ from .occlusion import OcclusionInterpreter
 from .gradient_shap import GradShapCVInterpreter, GradShapNLPInterpreter
 from ._normlime_base import NormLIMECVInterpreter, NormLIMENLPInterpreter
 from .score_cam import ScoreCAMInterpreter
+from .lrp import LRPCVInterpreter
 
 __all__ = [
     "LIMECVInterpreter", "LIMENLPInterpreter", "NormLIMECVInterpreter",
     "NormLIMENLPInterpreter", "GradCAMInterpreter", "IntGradCVInterpreter",
     "IntGradNLPInterpreter", "SmoothGradInterpreter", "OcclusionInterpreter",
-    "GradShapCVInterpreter", "GradShapNLPInterpreter", "ScoreCAMInterpreter"
+    "GradShapCVInterpreter", "GradShapNLPInterpreter", "ScoreCAMInterpreter",
+    "LRPCVInterpreter"
 ]
 
 try:
