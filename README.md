@@ -51,17 +51,23 @@ For sentiment classfication task, the reason why a model gives positive/negative
 
 # Contents
 
-* [Why InterpretDL](#Why-InterpretDL)
-* [Demo](#demo)
-* [Installation](#Installation)
-    * [Pip installation](#pip-installation)
-    * [Developer installation](#developer-installation)
-* [Documentation](#Documentation)
-* [Usage Guideline](#Usage-Guideline)
-* [Roadmap](#Roadmap)
-    * [Algorithms](#Algorithms)
-    * [Tutorials](#Tutorials)
-* [Copyright and License](#Copyright-and-License)
+- [InterpretDL: Interpretation of Deep Learning Models based on PaddlePaddle](#interpretdl-interpretation-of-deep-learning-models-based-on-paddlepaddle)
+- [Why InterpretDL](#why-interpretdl)
+- [:fire: :fire: :fire: News :fire: :fire: :fire:](#fire-fire-fire-news-fire-fire-fire)
+- [Demo](#demo)
+- [Contents](#contents)
+- [Installation](#installation)
+  - [Pip installation](#pip-installation)
+  - [Developer installation](#developer-installation)
+- [Documentation](#documentation)
+- [Usage Guideline](#usage-guideline)
+- [Roadmap](#roadmap)
+  - [Algorithms](#algorithms)
+    - [Feature-level Interpretation Algorithms](#feature-level-interpretation-algorithms)
+    - [Dataset-level Interpretation Algorithms](#dataset-level-interpretation-algorithms)
+  - [Tutorials](#tutorials)
+  - [References of Algorithms](#references-of-algorithms)
+- [Copyright and License](#copyright-and-license)
 
 # Installation
 
@@ -135,8 +141,8 @@ We are planning to implement the algorithms below (categorized by the explaining
     - [x] FastNormLIME
     - [x] NormLIME
     - [x] LIMEPrior
+    - [x] LRP
     - [ ] DeepLIFT
-    - [ ] LRP
     - [ ] More ...
 
 * Target at Intermediate Features
