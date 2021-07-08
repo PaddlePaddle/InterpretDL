@@ -139,8 +139,10 @@ class IntGradCVInterpreter(Interpreter):
                 labels_onehot = paddle.nn.functional.one_hot(
                     paddle.to_tensor(labels), num_classes=out.shape[1])
                 target = paddle.sum(out * labels_onehot, axis=1)
-                gradients = paddle.grad(outputs=[target], inputs=[data])[0]
-                return gradients.numpy(), labels
+                target.backward()
+                gradients = data.grad
+
+                return gradients, labels
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True
@@ -258,9 +260,9 @@ class IntGradNLPInterpreter(Interpreter):
                 labels_onehot = paddle.nn.functional.one_hot(
                     paddle.to_tensor(labels), num_classes=probs.shape[1])
                 target = paddle.sum(probs * labels_onehot, axis=1)
-                gradients = paddle.grad(
-                    outputs=[target], inputs=[self._embedding])[0]
-                return gradients.numpy(), probs.numpy(), self._embedding.numpy(
+                target.backward()
+                gradients = self._embedding.grad
+                return gradients, probs.numpy(), self._embedding.numpy(
                 )
 
         self.predict_fn = predict_fn

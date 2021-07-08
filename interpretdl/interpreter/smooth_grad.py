@@ -132,8 +132,10 @@ class SmoothGradInterpreter(Interpreter):
                 labels_onehot = paddle.nn.functional.one_hot(
                     paddle.to_tensor(labels), num_classes=out.shape[1])
                 target = paddle.sum(out * labels_onehot, axis=1)
-                gradients = paddle.grad(outputs=[target], inputs=[data])[0]
-                return gradients.numpy(), labels
+                # gradients = paddle.grad(outputs=[target], inputs=[data])[0]
+                target.backward()
+                gradients = data.grad
+                return gradients, labels
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True
