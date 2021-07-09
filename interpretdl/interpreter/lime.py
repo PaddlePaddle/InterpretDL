@@ -205,7 +205,8 @@ class LIMENLPInterpreter(Interpreter):
             self._paddle_prepare()
         # only one example here
         probability = self.predict_fn(*self.model_inputs)[0]
-
+        probability = paddle.nn.functional.softmax(paddle.to_tensor(probability)).numpy()
+        
         # only interpret top 1
         if interpret_class is None:
             pred_label = np.argsort(probability)

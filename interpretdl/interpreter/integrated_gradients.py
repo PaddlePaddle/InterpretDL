@@ -203,7 +203,8 @@ class IntGradNLPInterpreter(Interpreter):
 
         self._alpha = 1
         gradients, out, data_out = self.predict_fn(data, [0] * n)
-
+        out = paddle.nn.functional.softmax(paddle.to_tensor(out)).numpy()
+        
         if labels is None:
             labels = np.argmax(out, axis=1)
         else:
