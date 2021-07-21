@@ -135,6 +135,8 @@ class SmoothGradInterpreter(Interpreter):
                 # gradients = paddle.grad(outputs=[target], inputs=[data])[0]
                 target.backward()
                 gradients = data.grad
+                if isinstance(gradients, paddle.Tensor):
+                    gradients = gradients.numpy()
                 return gradients, labels
 
         self.predict_fn = predict_fn

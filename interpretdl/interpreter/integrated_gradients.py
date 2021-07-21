@@ -263,6 +263,8 @@ class IntGradNLPInterpreter(Interpreter):
                 target = paddle.sum(probs * labels_onehot, axis=1)
                 target.backward()
                 gradients = self._embedding.grad
+                if isinstance(gradients, paddle.Tensor):
+                    gradients = gradients.numpy()
                 return gradients, probs.numpy(), self._embedding.numpy(
                 )
 
