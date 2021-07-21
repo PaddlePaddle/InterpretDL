@@ -38,7 +38,7 @@ class GradCAMInterpreter(Interpreter):
 
         # init for usages during the interpretation.
         self._target_layer_name = None
-        self._feature_maps = None
+        self._feature_maps = {}
 
     def interpret(self,
                   inputs,
@@ -109,11 +109,13 @@ class GradCAMInterpreter(Interpreter):
             self.paddle_model.eval()
 
             def hook(layer, input, output):
-                self._feature_maps = output
+                self._feature_maps[layer._layer_name_for_hook] = output
 
             for n, v in self.paddle_model.named_sublayers():
                 if n == self._target_layer_name:
+                    v._layer_name_for_hook = n
                     v.register_forward_post_hook(hook)
+                    
                 if "dropout" in v.__class__.__name__.lower():
                     v.p = 0
                 # Report issues or pull requests if more layers need to be added.
@@ -131,7 +133,7 @@ class GradCAMInterpreter(Interpreter):
                 target = paddle.sum(out * label_onehot, axis=1)
 
                 target.backward()
-                gradients = self._feature_maps.grad
+                gradients = self._feature_maps[self._target_layer_name].grad
                 target.clear_gradient()
 
                 # gradients = paddle.grad(
@@ -139,7 +141,7 @@ class GradCAMInterpreter(Interpreter):
                 if isinstance(gradients, paddle.Tensor):
                     gradients = gradients.numpy()
 
-                return self._feature_maps, gradients, label
+                return self._feature_maps[self._target_layer_name], gradients, label
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True
