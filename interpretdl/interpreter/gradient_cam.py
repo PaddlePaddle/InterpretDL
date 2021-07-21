@@ -67,17 +67,19 @@ class GradCAMInterpreter(Interpreter):
         assert target_layer_name in [n for n, v in self.paddle_model.named_sublayers()], \
             f"target_layer_name {target_layer_name} does not exist in the given model, " \
             f"please check all valid layer names by [n for n, v in paddle_model.named_sublayers()]"
+        
+        if self._target_layer_name != target_layer_name:
+            self._target_layer_name = target_layer_name
+            self.paddle_prepared = False
 
-        self._target_layer_name = target_layer_name
         if not self.paddle_prepared:
             self._paddle_prepare()
 
+        feature_map, gradients, preds = self.predict_fn(data, label)
         if label is None:
-            _, _, preds = self.predict_fn(data, label)
             label = preds
-        label = np.array(label).reshape((bsz,))
 
-        feature_map, gradients, _ = self.predict_fn(data, label)
+        label = np.array(label).reshape((bsz,))
         f = np.array(feature_map.numpy())
         g = gradients
 
@@ -104,7 +106,7 @@ class GradCAMInterpreter(Interpreter):
             paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
             # to get gradients, the ``train`` mode must be set.
             # we cannot set v.training = False for the same reason.
-            self.paddle_model.train()
+            self.paddle_model.eval()
 
             def hook(layer, input, output):
                 self._feature_maps = output
@@ -112,8 +114,6 @@ class GradCAMInterpreter(Interpreter):
             for n, v in self.paddle_model.named_sublayers():
                 if n == self._target_layer_name:
                     v.register_forward_post_hook(hook)
-                if "batchnorm" in v.__class__.__name__.lower():
-                    v._use_global_stats = True
                 if "dropout" in v.__class__.__name__.lower():
                     v.p = 0
                 # Report issues or pull requests if more layers need to be added.
@@ -132,9 +132,13 @@ class GradCAMInterpreter(Interpreter):
 
                 target.backward()
                 gradients = self._feature_maps.grad
+                target.clear_gradient()
 
                 # gradients = paddle.grad(
                 #     outputs=[target], inputs=[self._feature_maps])[0]
+                if isinstance(gradients, paddle.Tensor):
+                    gradients = gradients.numpy()
+
                 return self._feature_maps, gradients, label
 
         self.predict_fn = predict_fn
