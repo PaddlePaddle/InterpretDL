@@ -4,7 +4,6 @@ import numpy as np
 from .abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_inputs, preprocess_save_path
 from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
-from . import _utils
 
 
 class LRPCVInterpreter(Interpreter):
@@ -80,15 +79,6 @@ class LRPCVInterpreter(Interpreter):
                 data = paddle.to_tensor(data, stop_gradient=False)
                 output = self.paddle_model(data)
 
-                # print top 10 classification result
-                x = output.detach().squeeze()
-                # softmax
-                softmax_x = paddle.nn.functional.softmax(x).numpy()
-                ind = np.argsort(-softmax_x)
-                for i in ind[:10]:
-                    print('%20s (%3d): %6.3f' %
-                          (_utils.imgclasses[i][:20], i, softmax_x[i]))
-
                 if label is None:
                     T = output.argmax().numpy()[0]
                 else:
@@ -96,7 +86,6 @@ class LRPCVInterpreter(Interpreter):
                     assert 0 <= label < 1000, "input label is not correct, label should be at [0 ,1000)"
                     T = label
 
-                print(f'Use label: {str(T)}, {_utils.imgclasses[T][:20]}')
                 T = np.expand_dims(T, 0)
                 T = (T[:, np.newaxis] == np.arange(1000)) * 1.0
                 T = paddle.to_tensor(T).astype('float32')
