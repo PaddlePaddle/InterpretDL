@@ -26,3 +26,6 @@ tutorials/assets/ResNet101_pretrained
 
 # notebook checkpoints
 .ipynb_checkpoints
+
+# pretrained weights
+*.pdparams

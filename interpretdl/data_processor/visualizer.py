@@ -124,9 +124,11 @@ def _heatmap(explanation, resize_shape=(224, 224)):
                                         f"Currently support 2D explanation results for visualization. " \
                                         "Reduce higher dimensions to 2D for visualization."
 
-    explanation = np.maximum(explanation, 0)
-    ex_max = np.max(explanation)
-    explanation /= ex_max
+    # explanation = np.maximum(explanation, 0)
+    # ex_max = np.max(explanation)
+    # explanation /= ex_max
+    
+    explanation = (explanation - explanation.min()) / (explanation.max() - explanation.min()) 
 
     explanation = cv2.resize(explanation, resize_shape)
     explanation = np.uint8(255 * explanation)
