@@ -106,7 +106,7 @@ class GradCAMInterpreter(Interpreter):
             paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
             # to get gradients, the ``train`` mode must be set.
             # we cannot set v.training = False for the same reason.
-            self.paddle_model.eval()
+            self.paddle_model.train()
 
             def hook(layer, input, output):
                 self._feature_maps[layer._layer_name_for_hook] = output
@@ -115,7 +115,8 @@ class GradCAMInterpreter(Interpreter):
                 if n == self._target_layer_name:
                     v._layer_name_for_hook = n
                     v.register_forward_post_hook(hook)
-                    
+                if "batchnorm" in v.__class__.__name__.lower():
+                    v._use_global_stats = True
                 if "dropout" in v.__class__.__name__.lower():
                     v.p = 0
                 # Report issues or pull requests if more layers need to be added.
