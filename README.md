@@ -18,8 +18,8 @@ For researchers working on designing new interpretation algorithms, InterpretDL 
 
 # :fire: :fire: :fire: News :fire: :fire: :fire:
 
-- (2021/06/03) Compatibility to PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas#transformer-series). 
-See the [notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ViT_explanations.ipynb) for the visual results.
+- (2021/07/22) Implemented Rollout Explanations for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas#transformer-series). See the [notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ViT_explanations_rollout.ipynb) for the visualization.
+
 ```python
 import paddle
 import interpretdl as it
@@ -31,8 +31,8 @@ MODEL_PATH = 'assets/ViT_small_patch16_224_pretrained.pdparams'
 paddle_model.set_dict(paddle.load(MODEL_PATH))
 
 img_path = 'assets/catdog.png'
-lime = it.LIMECVInterpreter(paddle_model, use_cuda=True)
-lime_weights = lime.interpret(img_path, batch_size=50, num_samples=2000, visual=True)
+rollout = it.RolloutInterpreter(paddle_model, use_cuda=True)
+heatmap = rollout.interpret(img_path, start_layer=0, visual=True)
 ```
 
 # Demo
@@ -149,6 +149,7 @@ We are planning to implement the algorithms below (categorized by the explaining
     - [x] CAM
     - [x] GradCAM
     - [x] ScoreCAM
+    - [x] Rollout
     - [ ] More ...
 
 ### Dataset-level Interpretation Algorithms
@@ -175,6 +176,8 @@ Current tutorials can be accessed under [tutorials](https://github.com/PaddlePad
 * `NormLime`: [NormLime: A New Feature Importance Metric for Explaining Deep Neural Networks, Isaac Ahern et al. 2019](https://arxiv.org/abs/1909.04200)
 * `ScoreCAM`: [Score-CAM: Score-Weighted Visual Explanations for Convolutional Neural Networks, Haofan Wang et al. 2020](https://arxiv.org/abs/1910.01279)
 * `ForgettingEvents`: [An Empirical Study of Example Forgetting during Deep Neural Network Learning, Mariya Toneva et al. 2019](http://arxiv.org/abs/1812.05159)
+* `LRP`: [On Pixel-Wise Explanations for Non-Linear Classifier Decisions by Layer-Wise Relevance Propagation, Bach et al. 2015](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140)
+* `Rollout`: [Quantifying Attention Flow in Transformers, Abnar et al. 2020](https://arxiv.org/abs/2005.00928)
 
 # Copyright and License
 
