@@ -35,7 +35,7 @@ def show_vis_explanation(explanation_image, cmap=None):
 #         return False  # Probably standard Python interpreter
 
 
-def explanation_to_vis(batched_image, explanation, style='grayscale'):
+def explanation_to_vis(batched_image: np.ndarray, explanation: np.ndarray, style='grayscale') -> np.ndarray:
     """
 
     Args:
@@ -74,14 +74,14 @@ def explanation_to_vis(batched_image, explanation, style='grayscale'):
         raise KeyError("Unknown visualization style.")
 
 
-def _grayscale(explanation, percentile=99):
+def _grayscale(explanation: np.ndarray, percentile=99) -> np.ndarray:
     """
 
     Args:
-        explanation: numpy.array, 2d.
+        explanation: numpy.ndarray, 2d.
         percentile:
 
-    Returns: numpy.array, uint8, same shape as explanation
+    Returns: numpy.ndarray, uint8, same shape as explanation
 
     """
     assert len(explanation.shape) == 2, f"{explanation.shape}. " \
@@ -99,7 +99,7 @@ def _grayscale(explanation, percentile=99):
     return x
 
 
-def overlay_grayscale(image, explanation, percentile=99):
+def overlay_grayscale(image, explanation, percentile=99) -> np.ndarray:
     x = _grayscale(explanation, percentile)
 
     overlay_vis = np.zeros_like(image, dtype=np.uint8)
@@ -110,7 +110,7 @@ def overlay_grayscale(image, explanation, percentile=99):
     return np.uint8(overlay_vis)
 
 
-def _heatmap(explanation, resize_shape=(224, 224)):
+def _heatmap(explanation, resize_shape=(224, 224)) -> np.ndarray:
     """
 
     Args:
@@ -138,7 +138,7 @@ def _heatmap(explanation, resize_shape=(224, 224)):
     return explanation
 
 
-def overlay_heatmap(image, explanation):
+def overlay_heatmap(image, explanation) -> np.ndarray:
     x = _heatmap(explanation, (image.shape[1], image.shape[0]))
 
     overlay_vis = x * 0.4 + image * 0.6
@@ -146,7 +146,7 @@ def overlay_heatmap(image, explanation):
     return np.uint8(overlay_vis)
 
 
-def overlay_threshold(image, explanation_mask):
+def overlay_threshold(image, explanation_mask) -> np.ndarray:
     overlay_vis = np.zeros_like(image, dtype=np.uint8)
     overlay_vis[:, :, 1] = explanation_mask * 255
 
