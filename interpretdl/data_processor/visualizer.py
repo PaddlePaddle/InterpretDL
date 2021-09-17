@@ -2,7 +2,6 @@ from skimage.segmentation import quickshift, mark_boundaries
 import numpy as np
 import matplotlib.pyplot as plt
 from IPython.core.display import display, HTML
-from PIL import Image
 import cv2
 
 
@@ -87,6 +86,10 @@ def _grayscale(explanation: np.ndarray, percentile=99) -> np.ndarray:
     assert len(explanation.shape) == 2, f"{explanation.shape}. " \
                                         "Currently support 2D explanation results for visualization. " \
                                         "Reduce higher dimensions to 2D for visualization."
+
+    assert np.max(explanation) <= 1.0
+    assert isinstance(percentile, int)
+    assert 0 <= percentile <= 100                       
 
     image_2d = explanation
 

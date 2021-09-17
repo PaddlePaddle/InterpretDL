@@ -100,7 +100,7 @@ class SmoothGradInterpreter(Interpreter):
 
         # visualization and save image.
         for i in range(len(imgs)):
-            print(imgs[i].shape, avg_gradients[i].shape)
+            # print(imgs[i].shape, avg_gradients[i].shape)
             vis_explanation = explanation_to_vis(imgs[i], np.abs(avg_gradients[i]).sum(0), style='overlay_grayscale')
             if visual:
                 show_vis_explanation(vis_explanation)

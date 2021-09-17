@@ -35,8 +35,8 @@ def load_pickle_file(fname):
         return None
 
 
-def resize_short(img: np.ndarray, target_size: int, interpolation=None) -> np.ndarray:
-    """resize image
+def resize_image(img: np.ndarray, target_size: int, interpolation=None) -> np.ndarray:
+    """resize image with shorter edge equal to target_size.
 
     Args:
         img: image data
@@ -84,14 +84,15 @@ def crop_image(img: np.ndarray, target_size: int, center=True) -> np.ndarray:
 
 def preprocess_image(img: np.ndarray, random_mirror=False) -> np.ndarray:
     """
-    centered, scaled by 1/255.
+    image(uint8) to tensor(float32). scaled by 1/255, centered, standarized.
     :param img: np.ndarray: shape: [ns, h, w, 3], color order: rgb.
     :return: np.ndarray: shape: [ns, h, w, 3]
     """
+    # ImageNet stats.
     mean = [0.485, 0.456, 0.406]
     std = [0.229, 0.224, 0.225]
 
-    # transpose to [ns, 3, h, w]
+    # transpose to [ns, c, h, w]
     img = img.astype('float32').transpose((0, 3, 1, 2)) / 255
 
     img_mean = np.array(mean).reshape((3, 1, 1))
@@ -119,7 +120,7 @@ def read_image(img_path, target_size=256, crop_size=224, crop=True) -> np.ndarra
             img = Image.open(f)
             img = img.convert('RGB')
             img = np.array(img)
-            img = resize_short(img, target_size, interpolation=None)
+            img = resize_image(img, target_size, interpolation=None)
             if crop:
                 img = crop_image(img, target_size=crop_size, center=True)
             # img = img[:, :, ::-1]
@@ -130,6 +131,19 @@ def read_image(img_path, target_size=256, crop_size=224, crop=True) -> np.ndarra
         return img_path
     else:
         ValueError(f"Not recognized data type {type(img_path)}.")
+
+
+def restore_image(img: np.ndarray) -> np.ndarray:
+    mean = [0.485, 0.456, 0.406]
+    std = [0.229, 0.224, 0.225]
+    img_mean = np.array(mean).reshape((3, 1, 1))
+    img_std = np.array(std).reshape((3, 1, 1))
+    img *= img_std
+    img += img_mean
+    img *= 255
+    img += 0.5  # for float to integer
+    img = np.uint8(img.transpose((0, 2, 3, 1)))
+    return img
 
 
 def _find_classes(dir):
@@ -196,19 +210,6 @@ def get_typical_dataset_info(dataset_dir,
         labels = labels[random_per]
 
     return image_paths, seg_paths, labels, len(class_names)
-
-
-def restore_image(img: np.ndarray) -> np.ndarray:
-    mean = [0.485, 0.456, 0.406]
-    std = [0.229, 0.224, 0.225]
-    img_mean = np.array(mean).reshape((3, 1, 1))
-    img_std = np.array(std).reshape((3, 1, 1))
-    img *= img_std
-    img += img_mean
-    img *= 255
-    img += 0.5  # for float to integer
-    img = np.uint8(img.transpose((0, 2, 3, 1)))
-    return img
 
 
 def extract_img_paths(directory):
