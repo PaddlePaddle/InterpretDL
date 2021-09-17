@@ -1,5 +1,6 @@
 
 import numpy as np
+from numpy.lib.arraysetops import isin
 import paddle
 
 from ..data_processor.readers import preprocess_image, read_image, restore_image
@@ -68,14 +69,16 @@ class LIMECVInterpreter(Interpreter):
 
         """
         if isinstance(data, str):
-            data_instance = read_image(
-                data, crop_size=self.model_input_shape[1])
+            crop_size = self.model_input_shape[1]
+            target_size = int(self.model_input_shape[1] * 1.143)
+            data_instance = read_image(data, target_size, crop_size)
         else:
             if len(data.shape) == 3:
                 data = np.expand_dims(data, axis=0)
             if np.issubdtype(data.dtype, np.integer):
                 data_instance = data
             else:
+                # for later visualization
                 data_instance = restore_image(data.copy())
 
         if not self.paddle_prepared:
@@ -83,12 +86,17 @@ class LIMECVInterpreter(Interpreter):
         # only one example here
         probability = self.predict_fn(data_instance)[0]
 
-        # only interpret top 1
         if interpret_class is None:
+            # only interpret top 1 if not provided.
             pred_label = np.argsort(probability)
             interpret_class = pred_label[-1:]
-
-        interpret_class = np.array(interpret_class)
+            interpret_class = np.array(interpret_class)
+        elif isinstance(interpret_class, list):
+            interpret_class = np.array(interpret_class)
+        elif isinstance(interpret_class, int):
+            interpret_class = np.array([interpret_class])
+        else:
+            interpret_class = np.array([interpret_class])
 
         lime_weights, r2_scores = self.lime_base.interpret_instance(
             data_instance[0],
@@ -107,7 +115,7 @@ class LIMECVInterpreter(Interpreter):
         if save_path is not None:
             save_image(save_path, explanation_vis)
 
-        self.lime_results['probability'] = probability
+        self.lime_results['probability'] = {c: probability[c] for c in interpret_class.ravel()}
         self.lime_results['input'] = data_instance[0]
         self.lime_results['segmentation'] = self.lime_base.segments
         self.lime_results['r2_scores'] = r2_scores
