@@ -35,7 +35,7 @@ def load_pickle_file(fname):
         return None
 
 
-def resize_short(img, target_size, interpolation=None):
+def resize_short(img: np.ndarray, target_size: int, interpolation=None) -> np.ndarray:
     """resize image
 
     Args:
@@ -57,7 +57,7 @@ def resize_short(img, target_size, interpolation=None):
     return resized
 
 
-def crop_image(img, target_size, center=True):
+def crop_image(img: np.ndarray, target_size: int, center=True) -> np.ndarray:
     """crop image
 
     Args:
@@ -82,11 +82,11 @@ def crop_image(img, target_size, center=True):
     return img
 
 
-def preprocess_image(img, random_mirror=False):
+def preprocess_image(img: np.ndarray, random_mirror=False) -> np.ndarray:
     """
     centered, scaled by 1/255.
-    :param img: np.array: shape: [ns, h, w, 3], color order: rgb.
-    :return: np.array: shape: [ns, h, w, 3]
+    :param img: np.ndarray: shape: [ns, h, w, 3], color order: rgb.
+    :return: np.ndarray: shape: [ns, h, w, 3]
     """
     mean = [0.485, 0.456, 0.406]
     std = [0.229, 0.224, 0.225]
@@ -107,11 +107,11 @@ def preprocess_image(img, random_mirror=False):
     return img
 
 
-def read_image(img_path, target_size=256, crop_size=224, crop=True):
+def read_image(img_path, target_size=256, crop_size=224, crop=True) -> np.ndarray:
     """
     resize_short to 256, then center crop to 224.
     :param img_path: one image path
-    :return: np.array: shape: [1, h, w, 3], color order: rgb.
+    :return: np.ndarray: shape: [1, h, w, 3], color order: rgb.
     """
 
     if isinstance(img_path, str):
@@ -198,7 +198,7 @@ def get_typical_dataset_info(dataset_dir,
     return image_paths, seg_paths, labels, len(class_names)
 
 
-def restore_image(img):
+def restore_image(img: np.ndarray) -> np.ndarray:
     mean = [0.485, 0.456, 0.406]
     std = [0.229, 0.224, 0.225]
     img_mean = np.array(mean).reshape((3, 1, 1))
@@ -206,6 +206,7 @@ def restore_image(img):
     img *= img_std
     img += img_mean
     img *= 255
+    img += 0.5  # for float to integer
     img = np.uint8(img.transpose((0, 2, 3, 1)))
     return img
 
