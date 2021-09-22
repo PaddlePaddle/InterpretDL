@@ -54,6 +54,9 @@ class LRPCVInterpreter(Interpreter):
         :rtype: numpy.ndarray
         """
         imgs, data = preprocess_inputs(inputs, self.model_input_shape)
+        
+        bsz = len(data)
+        save_path = preprocess_save_path(save_path, bsz)
 
         if not self.paddle_prepared:
             self._paddle_prepare()
@@ -61,12 +64,12 @@ class LRPCVInterpreter(Interpreter):
         R, output = self.predict_fn(data, label)
 
         # visualization and save image.
-        vis_explanation = explanation_to_vis(
-            imgs, R.squeeze(), style='overlay_grayscale')
-        if visual:
-            show_vis_explanation(vis_explanation)
-        if save_path is not None:
-            save_image(save_path, vis_explanation)
+        for i in range(len(imgs)):
+            vis_explanation = explanation_to_vis(imgs[i], R[i].squeeze(), style='overlay_grayscale')
+            if visual:
+                show_vis_explanation(vis_explanation)
+            if save_path[i] is not None:
+                save_image(save_path[i], vis_explanation)
 
         return R
 
@@ -74,6 +77,9 @@ class LRPCVInterpreter(Interpreter):
         if predict_fn is None:
             paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
             self.paddle_model.eval()
+
+            layer_list = [(n, v) for n, v in self.paddle_model.named_sublayers()]
+            num_classes = layer_list[-1][1].weight.shape[1]
 
             def predict_fn(data, label):
                 data = paddle.to_tensor(data, stop_gradient=False)
@@ -83,11 +89,11 @@ class LRPCVInterpreter(Interpreter):
                     T = output.argmax().numpy()[0]
                 else:
                     assert isinstance(label, int), "label should be an integer"
-                    assert 0 <= label < 1000, "input label is not correct, label should be at [0 ,1000)"
+                    assert 0 <= label < num_classes, f"input label is not correct, label should be at [0, {num_classes})"
                     T = label
 
                 T = np.expand_dims(T, 0)
-                T = (T[:, np.newaxis] == np.arange(1000)) * 1.0
+                T = (T[:, np.newaxis] == np.arange(num_classes)) * 1.0
                 T = paddle.to_tensor(T).astype('float32')
 
                 R = self.paddle_model.relprop(
