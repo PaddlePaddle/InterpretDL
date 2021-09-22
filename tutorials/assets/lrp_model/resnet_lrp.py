@@ -1,3 +1,4 @@
+from copy import Error
 import paddle.nn as nn
 import paddle
 
@@ -367,6 +368,7 @@ def resnet18(pretrained=False, **kwargs):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
+    raise NameError("TODO: fix bugs")
     model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
     if pretrained:
         weight_path = paddle.utils.download.get_weights_path_from_url(
@@ -384,6 +386,7 @@ def resnet34(pretrained=False, **kwargs):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
+    raise NameError("TODO: fix bugs")
     model = ResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
     if pretrained:
         weight_path = paddle.utils.download.get_weights_path_from_url(
