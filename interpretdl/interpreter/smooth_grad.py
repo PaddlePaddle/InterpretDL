@@ -86,7 +86,7 @@ class SmoothGradInterpreter(Interpreter):
             np.max(data, axis=max_axis) - np.min(data, axis=max_axis))
 
         total_gradients = np.zeros_like(data)
-        for i in tqdm(range(n_samples)):
+        for i in tqdm(range(n_samples), leave=False, position=1):
             noise = np.concatenate([
                 np.float32(
                     np.random.normal(0.0, stds[j], (1, ) + tuple(d.shape)))

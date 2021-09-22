@@ -78,14 +78,14 @@ class ScoreCAMInterpreter(Interpreter):
         feature_map, _ = self.predict_fn(data)
         interpretations = np.zeros((b, h, w))
 
-        for i in tqdm(range(feature_map.shape[1])):
+        for i in tqdm(range(feature_map.shape[1]), leave=False, position=1):
             feature_channel = feature_map[:, i, :, :]
             feature_channel = np.concatenate([
                 np.expand_dims(cv2.resize(f, (h, w)), 0)
                 for f in feature_channel
             ])
             norm_feature_channel = np.array(
-                [(f - f.min()) / (f.max() - f.min())
+                [(f - f.min()) / (f.max() - f.min()) if f.max() - f.min() > 0.0 else f
                  for f in feature_channel]).reshape((b, 1, h, w))
             _, probs = self.predict_fn(data * norm_feature_channel)
             scores = [p[labels[i]] for i, p in enumerate(probs)]

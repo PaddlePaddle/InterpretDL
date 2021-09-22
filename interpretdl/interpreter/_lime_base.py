@@ -161,7 +161,7 @@ class LimeBase(object):
         labels = []
         data[0, :] = 1
         imgs = []
-        for row in tqdm(data):
+        for row in tqdm(data, leave=False, position=1):
             temp = copy.deepcopy(image)
             zeros = np.where(row == 0)[0]
             mask = np.zeros(segments.shape).astype(bool)

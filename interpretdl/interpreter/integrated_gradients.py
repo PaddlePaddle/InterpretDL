@@ -97,7 +97,7 @@ class IntGradCVInterpreter(Interpreter):
             self.labels = np.array(self.labels).reshape((n, ))
 
         gradients_list = []
-        with tqdm(total=num_random_trials * steps) as pbar:
+        with tqdm(total=num_random_trials * steps, leave=False, position=1) as pbar:
             for i in range(num_random_trials):
                 total_gradients = np.zeros_like(gradients)
                 for alpha in np.linspace(0, 1, steps):
