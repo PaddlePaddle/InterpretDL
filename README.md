@@ -97,7 +97,7 @@ python setup.py install
 # run gradcam unit tests
 python -m unittest -v tests.interpreter.test_gradcam
 # run all unit tests
-pytest -m unittest -v
+python -m unittest -v
 ```
 
 # Documentation
