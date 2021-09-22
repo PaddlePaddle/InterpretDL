@@ -8,12 +8,12 @@ from tests.utils import assert_arrays_almost_equal
 
 class TestLIME(unittest.TestCase):
 
-    def test_cv_lime(self):
+    def test_cv(self):
         paddle_model = mobilenet_v2(pretrained=True)
 
         img_path = 'imgs/catdog.jpg'
-        lime = it.LIMECVInterpreter(paddle_model, model_input_shape=[3, 64, 64], use_cuda=False, random_seed=42)
-        exp = lime.interpret(img_path, num_samples=200, batch_size=50, visual=False)
+        algo = it.LIMECVInterpreter(paddle_model, model_input_shape=[3, 64, 64], use_cuda=False, random_seed=42)
+        exp = algo.interpret(img_path, num_samples=200, batch_size=50, visual=False)
         result = np.zeros(len(exp[537]))
         for sp_id, v in exp[537]:
             result[sp_id] = v
@@ -22,13 +22,13 @@ class TestLIME(unittest.TestCase):
 
         assert_arrays_almost_equal(self, result, desired)
 
-    def test_cv_lime_class(self):
+    def test_cv_class(self):
         paddle_model = mobilenet_v2(pretrained=True)
         interpret_class = 282
 
         img_path = 'imgs/catdog.jpg'
-        lime = it.LIMECVInterpreter(paddle_model, model_input_shape=[3, 64, 64], use_cuda=False, random_seed=42)
-        exp = lime.interpret(img_path, interpret_class=interpret_class, num_samples=200, batch_size=50, visual=False)
+        algo = it.LIMECVInterpreter(paddle_model, model_input_shape=[3, 64, 64], use_cuda=False, random_seed=42)
+        exp = algo.interpret(img_path, interpret_class=interpret_class, num_samples=200, batch_size=50, visual=False)
         result = np.zeros(len(exp[interpret_class]))
         for sp_id, v in exp[interpret_class]:
             result[sp_id] = v

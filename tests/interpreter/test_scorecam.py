@@ -1,35 +1,36 @@
 import unittest
-from paddle.vision.models import mobilenet_v2
+from paddle.vision.models import mobilenet_v2, resnet50
 import numpy as np
-from paddle.vision.models.resnet import resnet50
 
 import interpretdl as it
 from tests.utils import assert_arrays_almost_equal
 
 
-class TestGradCAM(unittest.TestCase):
-
+class TestScoreCAM(unittest.TestCase):
+    
     def test_cv(self):
         paddle_model = mobilenet_v2(pretrained=True)
 
         img_path = 'imgs/catdog.jpg'
-        algo = it.GradCAMInterpreter(paddle_model, use_cuda=False)
+        algo = it.ScoreCAMInterpreter(paddle_model, use_cuda=False)
         exp = algo.interpret(img_path, 'features.18.2', visual=False)
+
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max(), *exp.shape])
-        desired = np.array([7.08578909e-06, 9.28105146e-06, 0.00000000e+00, 3.74892770e-05,
-            1.00000000e+00, 7.00000000e+00, 7.00000000e+00])
+        desired = np.array([ 67.57363816,  39.71009002,   3.64695652, 144.3522944 ,
+         1.        , 224.        , 224.        ])
 
         assert_arrays_almost_equal(self, result, desired, 1e-8)
-
+    
     def test_cv_class(self):
         paddle_model = mobilenet_v2(pretrained=True)
 
         img_path = 'imgs/catdog.jpg'
-        algo = it.GradCAMInterpreter(paddle_model, use_cuda=False)
-        exp = algo.interpret(img_path, 'features.18.2', label=282, visual=False)
+        algo = it.ScoreCAMInterpreter(paddle_model, use_cuda=False)
+        exp = algo.interpret(img_path, 'features.18.2', labels=282, visual=False)
+
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max(), *exp.shape])
-        desired = np.array([5.12873930e-06, 7.74075761e-06, 0.00000000e+00, 2.88265182e-05,
-        1.00000000e+00, 7.00000000e+00, 7.00000000e+00])
+        desired = np.array([ 48.47917838,  27.82020997,   3.85096038, 116.12830776,
+         1.        , 224.        , 224.        ])
 
         assert_arrays_almost_equal(self, result, desired, 1e-8)
 
@@ -37,11 +38,11 @@ class TestGradCAM(unittest.TestCase):
         paddle_model = mobilenet_v2(pretrained=True)
 
         img_path = 'imgs/catdog.jpg'
-        algo = it.GradCAMInterpreter(paddle_model, use_cuda=False)
+        algo = it.ScoreCAMInterpreter(paddle_model, use_cuda=False)
         exp = algo.interpret(img_path, 'features.16.conv.3', visual=False)
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max(), *exp.shape])
-        desired = np.array([2.97199367e-05, 3.79896701e-05, 0.00000000e+00, 1.25247447e-04,
-            1.00000000e+00, 7.00000000e+00, 7.00000000e+00])
+        desired = np.array([  0.45457669,   1.73647004,  -3.54019404,   3.77973473,
+         1.        , 224.        , 224.        ])
 
         assert_arrays_almost_equal(self, result, desired, 1e-8)
 
@@ -49,11 +50,11 @@ class TestGradCAM(unittest.TestCase):
         paddle_model = mobilenet_v2(pretrained=True)
 
         img_path = 'imgs/catdog.jpg'
-        algo = it.GradCAMInterpreter(paddle_model, use_cuda=False)
+        algo = it.ScoreCAMInterpreter(paddle_model, use_cuda=False)
         exp = algo.interpret(img_path, 'features.8.conv.3', visual=False)
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max(), *exp.shape])
-        desired = np.array([1.13254619e-05, 1.62324668e-05, 0.00000000e+00, 6.76311683e-05,
-            1.00000000e+00, 1.40000000e+01, 1.40000000e+01])
+        desired = np.array([ 1.04185688e-01,  1.23888987e+00, -4.07477156e+00,  2.84238683e+00,
+        1.00000000e+00,  2.24000000e+02,  2.24000000e+02])
 
         assert_arrays_almost_equal(self, result, desired, 1e-8)
 
@@ -61,11 +62,11 @@ class TestGradCAM(unittest.TestCase):
         paddle_model = mobilenet_v2(pretrained=True)
 
         img_path = ['imgs/catdog.jpg', 'imgs/catdog.jpg']
-        algo = it.GradCAMInterpreter(paddle_model, use_cuda=False)
+        algo = it.ScoreCAMInterpreter(paddle_model, use_cuda=False)
         exp = algo.interpret(img_path, 'features.18.2', visual=False)
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max(), *exp.shape])
-        desired = np.array([7.08578864e-06, 9.28105146e-06, 0.00000000e+00, 3.74892770e-05,
-            2.00000000e+00, 7.00000000e+00, 7.00000000e+00])
+        desired = np.array([ 67.57363816,  39.71009002,   3.64695652, 144.3522944 ,
+         2.        , 224.        , 224.        ])
 
         assert_arrays_almost_equal(self, result, desired, 1e-8)
 

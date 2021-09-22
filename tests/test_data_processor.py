@@ -1,11 +1,21 @@
 import unittest
 import numpy as np
+from numpy.core.fromnumeric import size
 
 import interpretdl as it
 from interpretdl.data_processor.readers import *
 from interpretdl.data_processor.visualizer import *
 from interpretdl.data_processor.visualizer import _grayscale, _heatmap
 from tests.utils import assert_arrays_almost_equal
+
+
+class TestBasicMethods(unittest.TestCase):
+    def test_random_seed(self):
+        np.random.seed(42)
+
+        desired = np.array([51, 92, 14, 71, 60, 20, 82, 86, 74, 74])
+        results = np.random.randint(0, 100, size=10)
+        assert_arrays_almost_equal(self, results, desired)
 
 
 class TestImageProcessingMethods(unittest.TestCase):
