@@ -27,7 +27,7 @@ class TestRollout(unittest.TestCase):
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
         desired = np.array([0.00429746, 0.00077522, 0.00285467, 0.00699459])
 
-        assert_arrays_almost_equal(self, result, desired, 1e-8)
+        assert_arrays_almost_equal(self, result, desired)
 
 
     def test_cv_layer(self):
@@ -39,7 +39,7 @@ class TestRollout(unittest.TestCase):
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
         desired = np.array([0.00487551, 0.00092406, 0.00239019, 0.00717532])
 
-        assert_arrays_almost_equal(self, result, desired, 1e-8)
+        assert_arrays_almost_equal(self, result, desired)
 
     def test_cv_multiple_inputs(self):
         paddle_model = self.set_paddle_model()
@@ -51,7 +51,7 @@ class TestRollout(unittest.TestCase):
         desired = np.array([4.29746090e-03, 7.75220629e-04, 2.85467086e-03, 6.99458644e-03,
         2.00000000e+00, 1.40000000e+01, 1.40000000e+01])
 
-        assert_arrays_almost_equal(self, result, desired, 1e-8)
+        assert_arrays_almost_equal(self, result, desired)
 
 
 if __name__ == '__main__':

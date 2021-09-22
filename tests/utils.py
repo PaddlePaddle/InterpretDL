@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 
 
-def assert_arrays_almost_equal(test: unittest.TestCase, actuals: np.ndarray, desires: np.ndarray, delta=1e-4):
+def assert_arrays_almost_equal(test: unittest.TestCase, actuals: np.ndarray, desires: np.ndarray, dif_ratio=1e-3, limit=1e-8):
     assert(isinstance(actuals, np.ndarray))
     assert(isinstance(desires, np.ndarray))
 
@@ -12,4 +12,5 @@ def assert_arrays_almost_equal(test: unittest.TestCase, actuals: np.ndarray, des
         test.assertEqual(a, b)
 
     for _, (input, ref) in enumerate(zip(actuals.ravel(), desires.ravel())):
+        delta = max(abs(ref * dif_ratio), limit)
         test.assertAlmostEqual(input, ref, delta=delta)

@@ -16,7 +16,7 @@ class TestLRP(unittest.TestCase):
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
         desired = np.array([1.8663127e-04, 2.1888215e-04, 1.7363816e-06, 3.2938947e-03])
 
-        assert_arrays_almost_equal(self, result, desired, 1e-8)
+        assert_arrays_almost_equal(self, result, desired)
 
 
     def test_cv_class(self):
@@ -28,7 +28,7 @@ class TestLRP(unittest.TestCase):
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
         desired = np.array([1.5382419e-04, 1.4931166e-04, 2.2044858e-06, 2.2588256e-03])
 
-        assert_arrays_almost_equal(self, result, desired, 1e-8)
+        assert_arrays_almost_equal(self, result, desired)
 
 
     def test_cv_multiple_inputs(self):
@@ -40,7 +40,7 @@ class TestLRP(unittest.TestCase):
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
         desired = np.array([1.8663125e-04, 2.1888215e-04, 1.7363816e-06, 3.2938947e-03])
 
-        assert_arrays_almost_equal(self, result, desired, 1e-8)
+        assert_arrays_almost_equal(self, result, desired)
 
 
 if __name__ == '__main__':

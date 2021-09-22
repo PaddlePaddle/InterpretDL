@@ -18,7 +18,7 @@ class TestIG(unittest.TestCase):
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
         desired = np.array([ 3.0684089e-06,  1.9912077e-03, -3.8767897e-02,  4.7322020e-02])
 
-        assert_arrays_almost_equal(self, result, desired, 1e-8)
+        assert_arrays_almost_equal(self, result, desired)
 
 
     def test_cv_class(self):
@@ -31,7 +31,7 @@ class TestIG(unittest.TestCase):
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
         desired = np.array([ 2.5876125e-06,  1.4400641e-03, -2.1012696e-02,  2.6807360e-02])
 
-        assert_arrays_almost_equal(self, result, desired, 1e-8)
+        assert_arrays_almost_equal(self, result, desired)
 
 
     def test_cv_multiple_inputs(self):
@@ -44,7 +44,7 @@ class TestIG(unittest.TestCase):
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
         desired = np.array([ 3.0684084e-06,  1.9912077e-03, -3.8767897e-02,  4.7322020e-02])
 
-        assert_arrays_almost_equal(self, result, desired, 1e-8)
+        assert_arrays_almost_equal(self, result, desired)
 
 
 if __name__ == '__main__':

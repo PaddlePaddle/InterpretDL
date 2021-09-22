@@ -18,7 +18,7 @@ class TestGradiantSHAP(unittest.TestCase):
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
         desired = np.array([-5.8417476e-07,  4.0108559e-04, -8.5048620e-03,  5.4389671e-03])
 
-        assert_arrays_almost_equal(self, result, desired, 1e-8)
+        assert_arrays_almost_equal(self, result, desired)
 
 
     def test_cv_class(self):
@@ -31,7 +31,7 @@ class TestGradiantSHAP(unittest.TestCase):
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
         desired = np.array([-1.0111845e-07,  1.0295232e-03, -3.5716087e-02,  2.2971490e-02])
 
-        assert_arrays_almost_equal(self, result, desired, 1e-8)
+        assert_arrays_almost_equal(self, result, desired)
 
 
     def test_cv_multiple_inputs(self):
@@ -44,7 +44,7 @@ class TestGradiantSHAP(unittest.TestCase):
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
         desired = np.array([-6.1479746e-08,  5.9210538e-04, -1.2553556e-02,  1.4099267e-02])
 
-        assert_arrays_almost_equal(self, result, desired, 1e-8)
+        assert_arrays_almost_equal(self, result, desired)
 
 
 if __name__ == '__main__':
