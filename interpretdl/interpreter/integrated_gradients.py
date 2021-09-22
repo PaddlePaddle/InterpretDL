@@ -1,7 +1,7 @@
 
 import numpy as np
 import paddle
-
+from tqdm import tqdm
 from .abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_inputs, preprocess_save_path
 from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
@@ -97,14 +97,17 @@ class IntGradCVInterpreter(Interpreter):
             self.labels = np.array(self.labels).reshape((n, ))
 
         gradients_list = []
-        for i in range(num_random_trials):
-            total_gradients = np.zeros_like(gradients)
-            for alpha in np.linspace(0, 1, steps):
-                data_scaled = data * alpha + self.baselines[i] * (1 - alpha)
-                gradients, _ = self.predict_fn(data_scaled, self.labels)
-                total_gradients += gradients
-            ig_gradients = total_gradients * (data - self.baselines[i]) / steps
-            gradients_list.append(ig_gradients)
+        with tqdm(total=num_random_trials * steps) as pbar:
+            for i in range(num_random_trials):
+                total_gradients = np.zeros_like(gradients)
+                for alpha in np.linspace(0, 1, steps):
+                    data_scaled = data * alpha + self.baselines[i] * (1 - alpha)
+                    gradients, _ = self.predict_fn(data_scaled, self.labels)
+                    total_gradients += gradients
+                    pbar.update(1)
+
+                ig_gradients = total_gradients * (data - self.baselines[i]) / steps
+                gradients_list.append(ig_gradients)
         avg_gradients = np.average(np.array(gradients_list), axis=0)
 
         # visualization and save image.

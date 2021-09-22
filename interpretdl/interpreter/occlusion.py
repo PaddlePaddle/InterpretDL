@@ -3,6 +3,7 @@ from .abc_interpreter import Interpreter
 from ..data_processor.readers import preprocess_inputs, preprocess_save_path
 from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
 
+from tqdm import tqdm
 import numpy as np
 import paddle
 
@@ -88,6 +89,8 @@ class OcclusionInterpreter(Interpreter):
 
         if labels is None:
             labels = np.argmax(probs, axis=1)
+        elif isinstance(labels, int):
+            labels = [labels]
 
         current_shape = np.subtract(self.model_input_shape,
                                     sliding_window_shapes)
@@ -98,24 +101,28 @@ class OcclusionInterpreter(Interpreter):
             [probs[i][labels[i]] for i in range(bsz)]).reshape((1, bsz))
         total_interp = np.zeros_like(data)
 
-        for (ablated_features, current_mask) in self._ablation_generator(
-                data, sliding_windows, strides, baselines, shift_counts,
-                perturbations_per_eval):
-            ablated_features = ablated_features.reshape((
-                -1, ) + ablated_features.shape[2:])
-            modified_probs = self.predict_fn(np.float32(ablated_features))
-            modified_eval = [
-                p[labels[i % bsz]] for i, p in enumerate(modified_probs)
-            ]
-            eval_diff = initial_eval - np.array(modified_eval).reshape(
-                (-1, bsz))
-            eval_diff = eval_diff.T
-            dim_tuple = (len(current_mask), ) + (1, ) * (current_mask.ndim - 1)
-            for i, diffs in enumerate(eval_diff):
-                #j = i % perturbations_per_eval
-                total_interp[i] += np.sum(diffs.reshape(dim_tuple) *
-                                          current_mask,
-                                          axis=0)[0]
+        num_features = np.prod(shift_counts)
+        with tqdm(total=num_features) as pbar:
+            for (ablated_features, current_mask) in self._ablation_generator(
+                    data, sliding_windows, strides, baselines, shift_counts,
+                    perturbations_per_eval):
+                ablated_features = ablated_features.reshape((
+                    -1, ) + ablated_features.shape[2:])
+                modified_probs = self.predict_fn(np.float32(ablated_features))
+                modified_eval = [
+                    p[labels[i % bsz]] for i, p in enumerate(modified_probs)
+                ]
+                eval_diff = initial_eval - np.array(modified_eval).reshape(
+                    (-1, bsz))
+                eval_diff = eval_diff.T
+                dim_tuple = (len(current_mask), ) + (1, ) * (current_mask.ndim - 1)
+                for i, diffs in enumerate(eval_diff):
+                    #j = i % perturbations_per_eval
+                    total_interp[i] += np.sum(diffs.reshape(dim_tuple) *
+                                            current_mask,
+                                            axis=0)[0]
+                
+                pbar.update(1)
 
         # visualization and save image.
         for i in range(len(data)):

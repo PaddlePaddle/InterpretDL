@@ -92,19 +92,19 @@ class ScoreCAMInterpreter(Interpreter):
             interpretations += feature_channel * np.array(scores).reshape((
                 b, ) + (1, ) * (interpretations.ndim - 1))
 
-        interpretations = np.maximum(interpretations, 0)
-        interpretations_min, interpretations_max = interpretations.min(
-        ), interpretations.max()
+        # interpretations = np.maximum(interpretations, 0)
+        # interpretations_min, interpretations_max = interpretations.min(
+        # ), interpretations.max()
 
-        if interpretations_min == interpretations_max:
-            return None
+        # if interpretations_min == interpretations_max:
+        #     return None
 
-        interpretations = (interpretations - interpretations_min) / (
-            interpretations_max - interpretations_min)
+        # interpretations = (interpretations - interpretations_min) / (
+        #     interpretations_max - interpretations_min)
 
-        interpretations = np.array([(interp - interp.min()) /
-                                    (interp.max() - interp.min())
-                                    for interp in interpretations])
+        # interpretations = np.array([(interp - interp.min()) /
+        #                             (interp.max() - interp.min())
+        #                             for interp in interpretations])
 
         # visualization and save image.
         for i in range(b):
