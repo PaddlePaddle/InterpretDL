@@ -141,6 +141,8 @@ class IntGradCVInterpreter(Interpreter):
                 target = paddle.sum(out * labels_onehot, axis=1)
                 target.backward()
                 gradients = data.grad
+                if isinstance(gradients, paddle.Tensor):
+                    gradients = gradients.numpy()
 
                 return gradients, labels
 
