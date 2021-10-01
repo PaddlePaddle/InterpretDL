@@ -1,10 +1,10 @@
-Gradients
+Input Feature Interpreters
 =========
+   
+Smooth Gradients
+----------------
 
-Grad-CAM
---------
-
-.. autoclass:: interpretdl.GradCAMInterpreter
+.. autoclass:: interpretdl.SmoothGradInterpreter
    :members:
 
 Integrated Gradients
@@ -16,12 +16,12 @@ Integrated Gradients
 .. autoclass:: interpretdl.IntGradNLPInterpreter
    :members:
    
-Smooth Gradients
-----------------
+Occlusion
+---------
 
-.. autoclass:: interpretdl.SmoothGradInterpreter
+.. autoclass:: interpretdl.OcclusionInterpreter
    :members:
-
+      
 Gradient Shap
 -------------
 
@@ -30,16 +30,7 @@ Gradient Shap
 
 .. autoclass:: interpretdl.GradShapNLPInterpreter
    :members:
-
-Score CAM
----------
-
-.. autoclass:: interpretdl.ScoreCAMInterpreter
-   :members:
-
-Features
-========
-
+   
 LIME
 ----
 
@@ -55,12 +46,6 @@ LIME With Global Prior
 .. autoclass:: interpretdl.LIMEPriorInterpreter
    :members:
 
-Occlusion
----------
-
-.. autoclass:: interpretdl.OcclusionInterpreter
-   :members:
-
 NormLIME
 --------
 
@@ -69,8 +54,31 @@ NormLIME
 
 .. autoclass:: interpretdl.NormLIMENLPInterpreter
   :members:
+  
+Intermediate-Layer Feature Interpreters
+=========
 
-Training
+Grad-CAM
+--------
+
+.. autoclass:: interpretdl.GradCAMInterpreter
+   :members:
+
+Score CAM
+---------
+
+.. autoclass:: interpretdl.ScoreCAMInterpreter
+   :members:
+
+Rollout
+--------
+
+.. autoclass:: interpretdl.RolloutInterpreter
+   :members:
+
+
+
+Dataset & Training-Process Interpreters
 ========
 
 Forgetting Events
@@ -78,3 +86,13 @@ Forgetting Events
 
 .. autoclass:: interpretdl.ForgettingEventsInterpreter
    :members:
+
+SGDNoise
+-----------------
+
+See Tutorials.
+
+TrainIng Data analYzer (TIDY)
+-----------------
+
+See Tutorials.
