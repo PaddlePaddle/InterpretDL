@@ -39,12 +39,11 @@ class TAMInterpreter(Interpreter):
             self.use_cuda = False
 
         # init for usages during the interpretation.
-        self.attns = []
-        self.hooks = []
 
     def interpret(self,
                   inputs,
                   start_layer=4,
+                  steps=20,
                   label=None,
                   visual=True,
                   save_path=None):
@@ -53,6 +52,8 @@ class TAMInterpreter(Interpreter):
 
         Args:
             inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy array of read images.
+            start_layer (int, optional): Compute the state from the start layer. Default: 4
+            steps (int, optional): number of steps in the Riemman approximation of the integral. Default: 50
             labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels should be equal to the number of images. If None, the most likely label for each image will be used. Default: None
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None, the image will not be saved. Default: None
@@ -68,36 +69,26 @@ class TAMInterpreter(Interpreter):
         if not self.paddle_prepared:
             self._paddle_prepare()
 
-        output, preds = self.predict_fn(data)
-        assert start_layer < len(self.attns), "start_layer should be in the range of [0, num_block-1]"
+        attns, _, preds = self.predict_fn(data)
+        assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
 
-        if label == None:
-            label = np.argmax(output.numpy(), axis=-1)
+        if label is None:
+            label = preds
 
-        b, h, s, _ = self.attns[0].shape
-        num_blocks = len(self.attns)
-        states = self.attns[-1].detach().mean(1)[:, 0, :].reshape((b, 1, s))
+        b, h, s, _ = attns[0].shape
+        num_blocks = len(attns)
+        states = attns[-1].detach().mean(1)[:, 0, :].reshape((b, 1, s))
         for i in range(start_layer, num_blocks-1)[::-1]:
-            attn = self.attns[i].detach().mean(1)
+            attn = attns[i].detach().mean(1)
             states_ = states
             states = states @ attn
             states += states_
 
         total_gradients = paddle.zeros((b, h, s, s))
-        steps = 20
         for alpha in np.linspace(0, 1, steps):
             # forward propagation
             data_scaled = data * alpha
-            output, preds = self.predict_fn(data_scaled)
-            # backward propagation
-            one_hot = np.zeros((b, output.shape[-1]), dtype=np.float32)
-            one_hot[np.arange(b), label] = 1
-            one_hot = paddle.to_tensor(one_hot, stop_gradient=False)
-            target = paddle.sum(one_hot * output)
-
-            target.backward()
-            gradients = self.attns[-1].grad
-            target.clear_gradient()
+            _, gradients, _ = self.predict_fn(data_scaled, label=label)
 
             gradients = paddle.to_tensor(gradients)
             total_gradients += gradients.detach()
@@ -123,10 +114,6 @@ class TAMInterpreter(Interpreter):
             # we cannot set v.training = False for the same reason.
             self.paddle_model.train()
 
-            def hook(layer, input, output):
-                self.attns.append(output)
-
-            self.hooks = []
             for n, v in self.paddle_model.named_sublayers():
                 if "batchnorm" in v.__class__.__name__.lower():
                     v._use_global_stats = True
@@ -135,24 +122,36 @@ class TAMInterpreter(Interpreter):
 
                 # Report issues or pull requests if more layers need to be added.
 
-            def predict_fn(data):
+            def predict_fn(data, label=None):
                 data = paddle.to_tensor(data)
                 data.stop_gradient = False
-                self.attns = []
-                self.hooks = []
+
+                attns = []
+                def hook(layer, input, output):
+                    attns.append(output)
+
+                hooks = []
                 for n, v in self.paddle_model.named_sublayers():
                     if re.match('^blocks.*.attn.attn_drop$', n):
                         h = v.register_forward_post_hook(hook)
-                        self.hooks.append(h)
-                output = self.paddle_model(data)
-                for h in self.hooks:
+                        hooks.append(h)
+                out = self.paddle_model(data)
+                for h in hooks:
                     h.remove()
 
-                out = paddle.nn.functional.softmax(output, axis=1)
+                out = paddle.nn.functional.softmax(out, axis=1)
                 preds = paddle.argmax(out, axis=1)
-                label = preds.numpy()
+                if label is None:
+                    label = preds.numpy()
 
-                return output, label
+                label_onehot = paddle.nn.functional.one_hot(
+                    paddle.to_tensor(label), num_classes=out.shape[1])
+                target = paddle.sum(out * label_onehot, axis=1)
+                target.backward()
+                gradients = attns[-1].grad
+                target.clear_gradient()
+
+                return attns, gradients, label
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True
