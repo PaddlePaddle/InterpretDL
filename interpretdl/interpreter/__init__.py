@@ -8,13 +8,14 @@ from ._normlime_base import NormLIMECVInterpreter, NormLIMENLPInterpreter
 from .score_cam import ScoreCAMInterpreter
 from .lrp import LRPCVInterpreter
 from .rollout import RolloutInterpreter
+from .transition_attention_maps import TAMInterpreter
 
 __all__ = [
     "LIMECVInterpreter", "LIMENLPInterpreter", "NormLIMECVInterpreter",
     "NormLIMENLPInterpreter", "GradCAMInterpreter", "IntGradCVInterpreter",
     "IntGradNLPInterpreter", "SmoothGradInterpreter", "OcclusionInterpreter",
     "GradShapCVInterpreter", "GradShapNLPInterpreter", "ScoreCAMInterpreter",
-    "LRPCVInterpreter", "RolloutInterpreter"
+    "LRPCVInterpreter", "RolloutInterpreter", "TAMInterpreter"
 ]
 
 try:
