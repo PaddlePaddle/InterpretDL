@@ -42,7 +42,7 @@ class TestSG(unittest.TestCase):
         algo = it.SmoothGradInterpreter(paddle_model, use_cuda=False)
         exp = algo.interpret(img_path, visual=False)
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
-        desired = np.array([-4.6287074e-08,  2.9826777e-05, -4.1774806e-04,  5.0336571e-04])
+        desired = np.array([-2.3143537e-08,  1.4913388e-05, -2.0887403e-04,  2.5168285e-04])
 
         assert_arrays_almost_equal(self, result, desired)
 
