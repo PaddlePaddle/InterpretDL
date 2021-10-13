@@ -77,25 +77,24 @@ class TAMInterpreter(Interpreter):
 
         b, h, s, _ = attns[0].shape
         num_blocks = len(attns)
-        states = attns[-1].detach().mean(1)[:, 0, :].reshape((b, 1, s))
+        states = np.mean(attns[-1], axis=1)[:, 0, :].reshape((b, 1, s))
         for i in range(start_layer, num_blocks-1)[::-1]:
-            attn = attns[i].detach().mean(1)
+            attn = np.mean(attns[i], 1)
             states_ = states
             states = states @ attn
             states += states_
 
-        total_gradients = paddle.zeros((b, h, s, s))
+        total_gradients = np.zeros((b, h, s, s))
         for alpha in np.linspace(0, 1, steps):
             # forward propagation
             data_scaled = data * alpha
             _, gradients, _ = self.predict_fn(data_scaled, label=label)
 
-            gradients = paddle.to_tensor(gradients)
-            total_gradients += gradients.detach()
+            total_gradients += gradients
 
-        W_state = (total_gradients / steps).clip(min=0).mean(1)[:, 0, :].reshape((b, 1, s)).detach()
+        W_state = np.mean((total_gradients / steps).clip(min=0), axis=1)[:, 0, :].reshape((b, 1, s))
 
-        tam_explanation = (states * W_state)[:, 0, 1:].reshape((-1, 14, 14)).cpu().detach().numpy()
+        tam_explanation = (states * W_state)[:, 0, 1:].reshape((-1, 14, 14))
 
         # visualization and save image.
         for i in range(bsz):
@@ -150,8 +149,14 @@ class TAMInterpreter(Interpreter):
                 target.backward()
                 gradients = attns[-1].grad
                 target.clear_gradient()
+                if isinstance(gradients, paddle.Tensor):
+                    gradients = gradients.numpy()
 
-                return attns, gradients, label
+                a = []
+                for attn in attns:
+                    a.append(attn.numpy())
+
+                return a, gradients, label
 
         self.predict_fn = predict_fn
         self.paddle_prepared = True
