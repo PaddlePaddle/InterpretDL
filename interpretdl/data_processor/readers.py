@@ -86,7 +86,7 @@ def preprocess_image(img: np.ndarray, random_mirror=False) -> np.ndarray:
     """
     image(uint8) to tensor(float32). scaled by 1/255, centered, standarized.
     :param img: np.ndarray: shape: [ns, h, w, 3], color order: rgb.
-    :return: np.ndarray: shape: [ns, h, w, 3]
+    :return: np.ndarray: shape: [ns, c, h, w]
     """
     # ImageNet stats.
     mean = [0.485, 0.456, 0.406]
@@ -225,6 +225,16 @@ def extract_img_paths(directory):
 
 
 def preprocess_inputs(inputs, model_input_shape):
+    """[summary]
+
+    Args:
+        inputs ([type]): [description]
+        model_input_shape ([type]): [description]
+
+    Returns:
+        imgs: uint8 images, used for visualization. [ns, h, w, 3]
+        data: float scaled image data, used for computation. [ns, 3, h, w]
+    """
     if isinstance(inputs, str):
         imgs = read_image(inputs, crop_size=model_input_shape[1])
         data = preprocess_image(imgs)
