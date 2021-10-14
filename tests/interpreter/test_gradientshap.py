@@ -16,7 +16,7 @@ class TestGradiantSHAP(unittest.TestCase):
         algo = it.GradShapCVInterpreter(paddle_model, use_cuda=False)
         exp = algo.interpret(img_path, visual=False)
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
-        desired = np.array([-5.8417476e-07,  4.0108559e-04, -8.5048620e-03,  5.4389671e-03])
+        desired = np.array([-1.16835075e-07,  8.02171271e-05, -1.70097279e-03,  1.08779408e-03])
 
         assert_arrays_almost_equal(self, result, desired)
 
@@ -29,7 +29,7 @@ class TestGradiantSHAP(unittest.TestCase):
         algo = it.GradShapCVInterpreter(paddle_model, use_cuda=False)
         exp = algo.interpret(img_path, labels=282, visual=False)
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
-        desired = np.array([-1.0111845e-07,  1.0295232e-03, -3.5716087e-02,  2.2971490e-02])
+        desired = np.array([-2.0223466e-08,  2.0590464e-04, -7.1432171e-03,  4.5942976e-03])
 
         assert_arrays_almost_equal(self, result, desired)
 
@@ -42,7 +42,7 @@ class TestGradiantSHAP(unittest.TestCase):
         algo = it.GradShapCVInterpreter(paddle_model, use_cuda=False)
         exp = algo.interpret(img_path, visual=False)
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
-        desired = np.array([-6.1479746e-08,  5.9210538e-04, -1.2553556e-02,  1.4099267e-02])
+        desired = np.array([-6.147997e-09,  5.921054e-05, -1.255356e-03,  1.409926e-03])
 
         assert_arrays_almost_equal(self, result, desired)
 
