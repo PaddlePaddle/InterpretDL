@@ -3,14 +3,14 @@ import numpy as np
 from numpy.lib.arraysetops import isin
 import paddle
 
-from ..data_processor.readers import preprocess_image, read_image, restore_image
+from ..data_processor.readers import preprocess_inputs, preprocess_image, read_image, restore_image
 from ..data_processor.visualizer import sp_weights_to_image_explanation, overlay_threshold, save_image, show_vis_explanation
 
 from ._lime_base import LimeBase
-from .abc_interpreter import Interpreter
+from .abc_interpreter import Interpreter, InputOutputInterpreter
 
 
-class LIMECVInterpreter(Interpreter):
+class LIMECVInterpreter(InputOutputInterpreter):
     """
     LIME Interpreter for CV tasks.
 
@@ -20,8 +20,9 @@ class LIMECVInterpreter(Interpreter):
 
     def __init__(self,
                  paddle_model,
+                 use_cuda=None,
+                 device='gpu:0',
                  model_input_shape=[3, 224, 224],
-                 use_cuda=True,
                  random_seed=None) -> None:
         """
         Initialize the LIMECVInterpreter.
@@ -31,19 +32,11 @@ class LIMECVInterpreter(Interpreter):
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
         """
-
-        Interpreter.__init__(self)
-        self.paddle_model = paddle_model
+        InputOutputInterpreter.__init__(self, paddle_model, device, use_cuda)
         self.model_input_shape = model_input_shape
-        self.paddle_prepared = False
-
-        self.use_cuda = use_cuda
-        if not paddle.is_compiled_with_cuda():
-            self.use_cuda = False
 
         # use the default LIME setting
         self.lime_base = LimeBase(random_state=random_seed)
-
         self.lime_results = {}
 
     def interpret(self,
@@ -68,23 +61,28 @@ class LIMECVInterpreter(Interpreter):
         :rtype: dict
 
         """
+        # preprocess_inputs
         if isinstance(data, str):
             crop_size = self.model_input_shape[1]
             target_size = int(self.model_input_shape[1] * 1.143)
-            data_instance = read_image(data, target_size, crop_size)
+            img = read_image(data, target_size, crop_size)
         else:
             if len(data.shape) == 3:
                 data = np.expand_dims(data, axis=0)
             if np.issubdtype(data.dtype, np.integer):
-                data_instance = data
+                img = data
             else:
                 # for later visualization
-                data_instance = restore_image(data.copy())
+                img = restore_image(data.copy())
+        data = preprocess_image(img)
+        data_type = np.array(data).dtype
+        self.data_type = data_type
 
-        if not self.paddle_prepared:
-            self._paddle_prepare()
+        self._build_predict_fn(output='probability')
+
+        probability, _ = self.predict_fn(data, None)
         # only one example here
-        probability = self.predict_fn(data_instance)[0]
+        probability = probability[0]
 
         if interpret_class is None:
             # only interpret top 1 if not provided.
@@ -93,52 +91,48 @@ class LIMECVInterpreter(Interpreter):
             interpret_class = np.array(interpret_class)
         elif isinstance(interpret_class, list):
             interpret_class = np.array(interpret_class)
-        elif isinstance(interpret_class, int):
-            interpret_class = np.array([interpret_class])
         else:
             interpret_class = np.array([interpret_class])
+        
+        def predict_fn_for_lime(_imgs):
+            _data = preprocess_image(
+                _imgs
+            )  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
+            
+            output, _ = self.predict_fn(_data, None)
+            return output
 
+        self.predict_fn_for_lime = predict_fn_for_lime
         lime_weights, r2_scores = self.lime_base.interpret_instance(
-            data_instance[0],
-            self.predict_fn,
+            img[0],
+            self.predict_fn_for_lime,
             interpret_class,
             num_samples=num_samples,
-            batch_size=batch_size)
+            batch_size=batch_size
+        )
 
         # visualization and save image.
-        explanation_mask = sp_weights_to_image_explanation(
-            data_instance[0], lime_weights, interpret_class[0], self.lime_base.segments
-        )
-        explanation_vis = overlay_threshold(data_instance[0], explanation_mask)
-        if visual:
-            show_vis_explanation(explanation_vis)
-        if save_path is not None:
-            save_image(save_path, explanation_vis)
+        if save_path is None and not visual:
+            # no need to visualize or save explanation results.
+            pass
+        else:
+            explanation_mask = sp_weights_to_image_explanation(
+                img[0], lime_weights, interpret_class[0], self.lime_base.segments
+            )
+            explanation_vis = overlay_threshold(img[0], explanation_mask)
+            if visual:
+                show_vis_explanation(explanation_vis)
+            if save_path is not None:
+                save_image(save_path, explanation_vis)
 
+        # intermediate results, for possible further usages.
         self.lime_results['probability'] = {c: probability[c] for c in interpret_class.ravel()}
-        self.lime_results['input'] = data_instance[0]
+        self.lime_results['input'] = img[0]
         self.lime_results['segmentation'] = self.lime_base.segments
         self.lime_results['r2_scores'] = r2_scores
         self.lime_results['lime_weights'] = lime_weights
 
         return lime_weights
-
-    def _paddle_prepare(self, predict_fn=None):
-        if predict_fn is None:
-            paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
-            self.paddle_model.eval()
-
-            def predict_fn(data_instance):
-                data = preprocess_image(
-                    data_instance
-                )  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
-                data = paddle.to_tensor(data)
-                out = self.paddle_model(data)
-                probs = paddle.nn.functional.softmax(out, axis=1)
-                return probs.numpy()
-
-        self.predict_fn = predict_fn
-        self.paddle_prepared = True
 
 
 class LIMENLPInterpreter(Interpreter):
@@ -160,7 +154,7 @@ class LIMENLPInterpreter(Interpreter):
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
         """
 
-        Interpreter.__init__(self)
+        Interpreter.__init__(self, paddle_model, 'gpu:0', use_cuda)
         self.paddle_model = paddle_model
         self.use_cuda = use_cuda
         if not paddle.is_compiled_with_cuda():

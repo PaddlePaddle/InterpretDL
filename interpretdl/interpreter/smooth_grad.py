@@ -1,13 +1,12 @@
-
 import numpy as np
-import paddle
+
 from tqdm import tqdm
-from .abc_interpreter import Interpreter
+from .abc_interpreter import InputGradientInterpreter
 from ..data_processor.readers import preprocess_inputs, preprocess_save_path
 from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
 
 
-class SmoothGradInterpreter(Interpreter):
+class SmoothGradInterpreter(InputGradientInterpreter):
     """
     Smooth Gradients Interpreter.
 
@@ -21,25 +20,22 @@ class SmoothGradInterpreter(Interpreter):
 
     def __init__(self,
                  paddle_model,
-                 use_cuda=True,
+                 use_cuda=None,
+                 device='gpu:0',
                  model_input_shape=[3, 224, 224]):
         """
         Initialize the SmoothGradInterpreter.
 
         Args:
             paddle_model (callable): A paddle model that outputs predictions.
-            use_cuda (bool, optional): Whether or not to use cuda. Default: True
+            use_cuda (bool, optional): Whether or not to use cuda. Default: None
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
-        Interpreter.__init__(self)
-        self.paddle_model = paddle_model
+        
+        InputGradientInterpreter.__init__(self, paddle_model, device, use_cuda)
+        
         self.model_input_shape = model_input_shape
         self.data_type = 'float32'
-        self.paddle_prepared = False
-
-        self.use_cuda = use_cuda
-        if not paddle.is_compiled_with_cuda():
-            self.use_cuda = False
 
     def interpret(self,
                   inputs,
@@ -65,22 +61,21 @@ class SmoothGradInterpreter(Interpreter):
         """
 
         imgs, data = preprocess_inputs(inputs, self.model_input_shape)
+        # print(imgs.shape, data.shape, imgs.dtype, data.dtype)  # (1, 224, 224, 3) (1, 3, 224, 224) uint8 float32
 
         bsz = len(data)
-        save_path = preprocess_save_path(save_path, bsz)
-
         data_type = np.array(data).dtype
         self.data_type = data_type
 
-        if not self.paddle_prepared:
-            self._paddle_prepare()
+        self._build_predict_fn(gradient_of='probability')
 
+        # obtain the labels (and initialization).
         if labels is None:
             _, preds = self.predict_fn(data, None)
             labels = preds
+        labels = np.array(labels).reshape((bsz, ))
 
-        labels = np.array(labels).reshape((len(imgs), 1))
-
+        # SmoothGrad
         max_axis = tuple(np.arange(1, data.ndim))
         stds = noise_amount * (
             np.max(data, axis=max_axis) - np.min(data, axis=max_axis))
@@ -98,46 +93,21 @@ class SmoothGradInterpreter(Interpreter):
 
         avg_gradients = total_gradients / n_samples
 
-        # visualization and save image.
-        for i in range(len(imgs)):
-            # print(imgs[i].shape, avg_gradients[i].shape)
-            vis_explanation = explanation_to_vis(imgs[i], np.abs(avg_gradients[i]).sum(0), style='overlay_grayscale')
-            if visual:
-                show_vis_explanation(vis_explanation)
-            if save_path[i] is not None:
-                save_image(save_path[i], vis_explanation)
+        # visualize and save image.
+        if save_path is None and not visual:
+            # no need to visualize or save explanation results.
+            pass
+        else:
+            save_path = preprocess_save_path(save_path, bsz)
+            for i in range(bsz):
+                # print(imgs[i].shape, avg_gradients[i].shape)
+                vis_explanation = explanation_to_vis(imgs[i], np.abs(avg_gradients[i]).sum(0), style='overlay_grayscale')
+                if visual:
+                    show_vis_explanation(vis_explanation)
+                if save_path[i] is not None:
+                    save_image(save_path[i], vis_explanation)
+
+        # intermediate results, for possible further usages.
+        self.labels = labels
 
         return avg_gradients
-
-    def _paddle_prepare(self, predict_fn=None):
-        if predict_fn is None:
-            paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
-            # to get gradients, the ``train`` mode must be set.
-            self.paddle_model.train()
-
-            for n, v in self.paddle_model.named_sublayers():
-                if "batchnorm" in v.__class__.__name__.lower():
-                    v._use_global_stats = True
-                if "dropout" in v.__class__.__name__.lower():
-                    v.p = 0
-
-            def predict_fn(data, labels):
-                data = paddle.to_tensor(data)
-                data.stop_gradient = False
-                out = self.paddle_model(data)
-                out = paddle.nn.functional.softmax(out, axis=1)
-                preds = paddle.argmax(out, axis=1)
-                if labels is None:
-                    labels = preds.numpy()
-                labels_onehot = paddle.nn.functional.one_hot(
-                    paddle.to_tensor(labels), num_classes=out.shape[1])
-                target = paddle.sum(out * labels_onehot, axis=1)
-                # gradients = paddle.grad(outputs=[target], inputs=[data])[0]
-                target.backward()
-                gradients = data.grad
-                if isinstance(gradients, paddle.Tensor):
-                    gradients = gradients.numpy()
-                return gradients, labels
-
-        self.predict_fn = predict_fn
-        self.paddle_prepared = True

@@ -1,13 +1,12 @@
-
 import numpy as np
 import paddle
 from tqdm import tqdm
-from .abc_interpreter import Interpreter
+from .abc_interpreter import InputGradientInterpreter, Interpreter
 from ..data_processor.readers import preprocess_inputs, preprocess_save_path
 from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
 
 
-class IntGradCVInterpreter(Interpreter):
+class IntGradCVInterpreter(InputGradientInterpreter):
     """
     Integrated Gradients Interpreter for CV tasks.
 
@@ -17,7 +16,8 @@ class IntGradCVInterpreter(Interpreter):
 
     def __init__(self,
                  paddle_model,
-                 use_cuda=True,
+                 use_cuda=None,
+                 device='gpu:0',
                  model_input_shape=[3, 224, 224]) -> None:
         """
         Initialize the IntGradCVInterpreter.
@@ -28,14 +28,9 @@ class IntGradCVInterpreter(Interpreter):
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
 
         """
-        Interpreter.__init__(self)
-        self.paddle_model = paddle_model
-        self.model_input_shape = model_input_shape
-        self.paddle_prepared = False
+        InputGradientInterpreter.__init__(self, paddle_model, device, use_cuda)
 
-        self.use_cuda = use_cuda
-        if not paddle.is_compiled_with_cuda():
-            self.use_cuda = False
+        self.model_input_shape = model_input_shape
 
     def interpret(self,
                   inputs,
@@ -62,20 +57,15 @@ class IntGradCVInterpreter(Interpreter):
         :rtype: numpy.ndarray
         """
 
-        self.labels = labels
-
-        if baselines is None:
-            num_random_trials = 1
-
         imgs, data = preprocess_inputs(inputs, self.model_input_shape)
-
-        bsz = len(data)
-        save_path = preprocess_save_path(save_path, bsz)
 
         self.data_type = np.array(data).dtype
         self.input_type = type(data)
 
+        self._build_predict_fn(gradient_of='probability')
+
         if baselines is None:
+            num_random_trials = 1
             self.baselines = np.zeros(
                 (num_random_trials, ) + data.shape, dtype=self.data_type)
         elif baselines == 'random':
@@ -83,26 +73,22 @@ class IntGradCVInterpreter(Interpreter):
                 size=(num_random_trials, ) + data.shape).astype(self.data_type)
         else:
             self.baselines = baselines
+        bsz = len(data)
 
-        if not self.paddle_prepared:
-            self._paddle_prepare()
+        # obtain the labels (and initialization).
+        if labels is None:
+            gradients, preds = self.predict_fn(data, labels)
+            labels = preds
+        labels = np.array(labels).reshape((bsz, ))
 
-        n = data.shape[0]
-
-        gradients, preds = self.predict_fn(data, labels)
-
-        if self.labels is None:
-            self.labels = preds.reshape((n, ))
-        else:
-            self.labels = np.array(self.labels).reshape((n, ))
-
+        # IntGrad.
         gradients_list = []
         with tqdm(total=num_random_trials * steps, leave=False, position=1) as pbar:
             for i in range(num_random_trials):
-                total_gradients = np.zeros_like(gradients)
+                total_gradients = np.zeros_like(data)
                 for alpha in np.linspace(0, 1, steps):
                     data_scaled = data * alpha + self.baselines[i] * (1 - alpha)
-                    gradients, _ = self.predict_fn(data_scaled, self.labels)
+                    gradients, _ = self.predict_fn(data_scaled, labels)
                     total_gradients += gradients
                     pbar.update(1)
 
@@ -111,46 +97,22 @@ class IntGradCVInterpreter(Interpreter):
         avg_gradients = np.average(np.array(gradients_list), axis=0)
 
         # visualization and save image.
-        for i in range(len(imgs)):
-            vis_explanation = explanation_to_vis(imgs[i], np.abs(avg_gradients[i]).sum(0), style='overlay_grayscale')
-            if visual:
-                show_vis_explanation(vis_explanation)
-            if save_path[i] is not None:
-                save_image(save_path[i], vis_explanation)
+        if save_path is None and not visual:
+            # no need to visualize or save explanation results.
+            pass
+        else:
+            save_path = preprocess_save_path(save_path, bsz)
+            for i in range(bsz):
+                vis_explanation = explanation_to_vis(imgs[i], np.abs(avg_gradients[i]).sum(0), style='overlay_grayscale')
+                if visual:
+                    show_vis_explanation(vis_explanation)
+                if save_path[i] is not None:
+                    save_image(save_path[i], vis_explanation)
+
+        # intermediate results, for possible further usages.
+        self.labels = labels
 
         return avg_gradients
-
-    def _paddle_prepare(self, predict_fn=None):
-        if predict_fn is None:
-            paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
-            self.paddle_model.train()
-
-            for n, v in self.paddle_model.named_sublayers():
-                if "batchnorm" in v.__class__.__name__.lower():
-                    v._use_global_stats = True
-                if "dropout" in v.__class__.__name__.lower():
-                    v.p = 0
-
-            def predict_fn(data, labels):
-                data = paddle.to_tensor(data)
-                data.stop_gradient = False
-                out = self.paddle_model(data)
-                out = paddle.nn.functional.softmax(out, axis=1)
-                preds = paddle.argmax(out, axis=1)
-                if labels is None:
-                    labels = preds.numpy()
-                labels_onehot = paddle.nn.functional.one_hot(
-                    paddle.to_tensor(labels), num_classes=out.shape[1])
-                target = paddle.sum(out * labels_onehot, axis=1)
-                target.backward()
-                gradients = data.grad
-                if isinstance(gradients, paddle.Tensor):
-                    gradients = gradients.numpy()
-
-                return gradients, labels
-
-        self.predict_fn = predict_fn
-        self.paddle_prepared = True
 
 
 class IntGradNLPInterpreter(Interpreter):
@@ -171,7 +133,7 @@ class IntGradNLPInterpreter(Interpreter):
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
 
         """
-        Interpreter.__init__(self)
+        Interpreter.__init__(self, paddle_model, 'gpu:0', use_cuda)
         self.paddle_model = paddle_model
         self.use_cuda = use_cuda
         self.paddle_prepared = False

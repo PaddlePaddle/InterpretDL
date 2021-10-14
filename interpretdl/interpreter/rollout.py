@@ -28,7 +28,7 @@ class RolloutInterpreter(Interpreter):
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
-        Interpreter.__init__(self)
+        Interpreter.__init__(self, paddle_model, 'gpu:0', use_cuda)
         self.paddle_model = paddle_model
         self.model_input_shape = model_input_shape
         self.paddle_prepared = False

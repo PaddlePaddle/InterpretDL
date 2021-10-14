@@ -29,16 +29,9 @@ class TAMInterpreter(Interpreter):
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
-        Interpreter.__init__(self)
-        self.paddle_model = paddle_model
+        Interpreter.__init__(self, paddle_model, 'gpu:0', use_cuda)
         self.model_input_shape = model_input_shape
         self.paddle_prepared = False
-
-        self.use_cuda = use_cuda
-        if not paddle.is_compiled_with_cuda():
-            self.use_cuda = False
-
-        # init for usages during the interpretation.
 
     def interpret(self,
                   inputs,
@@ -108,7 +101,7 @@ class TAMInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
+            paddle.set_device(self.device)
             # to get gradients, the ``train`` mode must be set.
             # we cannot set v.training = False for the same reason.
             self.paddle_model.train()

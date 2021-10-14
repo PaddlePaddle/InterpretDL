@@ -67,15 +67,14 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
         assert list_file_paths is not None or weights_file_path is not None, \
             "Cannot prepare without anything. "
 
-        if not self.paddle_prepared:
-            self._paddle_prepare()
+        self._build_predict_fn(rebuild=True, output='probability')
 
         precomputed_weights = load_npy_dict_file(weights_file_path)
         if precomputed_weights is not None:
             self.global_weights = precomputed_weights
         else:
             self.global_weights = precompute_global_prior(
-                list_file_paths, self.predict_fn, batch_size,
+                list_file_paths, self.predict_fn_for_lime, batch_size,
                 self.prior_method)
             if weights_file_path is not None and self.global_weights is not None:
                 np.save(weights_file_path, self.global_weights)
@@ -112,7 +111,7 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
         data_instance = read_image(data_path)
 
         # only one example here
-        probability = self.predict_fn(data_instance)[0]
+        probability = self.predict_fn_for_lime(data_instance)[0]
 
         # only interpret top 1
         if interpret_class is None:
@@ -129,7 +128,7 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
 
         lime_weights, r2_scores = self.lime_base.interpret_instance(
             data_instance[0],
-            self.predict_fn,
+            self.predict_fn_for_lime,
             interpret_class,
             num_samples=num_samples,
             batch_size=batch_size,

@@ -1,14 +1,14 @@
-
-from .abc_interpreter import Interpreter
-from ..data_processor.readers import preprocess_inputs, preprocess_save_path
-from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
-
 from tqdm import tqdm
 import numpy as np
 import paddle
 
+from .abc_interpreter import Interpreter, InputOutputInterpreter
+from ..data_processor.readers import preprocess_inputs, preprocess_save_path
+from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
 
-class OcclusionInterpreter(Interpreter):
+
+
+class OcclusionInterpreter(InputOutputInterpreter):
     """
     Occlusion Interpreter.
 
@@ -20,7 +20,8 @@ class OcclusionInterpreter(Interpreter):
 
     def __init__(self,
                  paddle_model,
-                 use_cuda=True,
+                 use_cuda=None,
+                 device='gpu:0',
                  model_input_shape=[3, 224, 224]) -> None:
         """
         Initialize the OcclusionInterpreter.
@@ -30,15 +31,8 @@ class OcclusionInterpreter(Interpreter):
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
         """
-
-        Interpreter.__init__(self)
-        self.paddle_model = paddle_model
+        InputOutputInterpreter.__init__(self, paddle_model, device, use_cuda)
         self.model_input_shape = model_input_shape
-        self.paddle_prepared = False
-
-        self.use_cuda = use_cuda
-        if not paddle.is_compiled_with_cuda():
-            self.use_cuda = False
 
     def interpret(self,
                   inputs,
@@ -73,8 +67,7 @@ class OcclusionInterpreter(Interpreter):
         bsz = len(data)
         save_path = preprocess_save_path(save_path, bsz)
 
-        if not self.paddle_prepared:
-            self._paddle_prepare()
+        self._build_predict_fn(output='probability')
 
         if baselines is None:
             baselines = np.zeros_like(data)
@@ -83,7 +76,7 @@ class OcclusionInterpreter(Interpreter):
         if len(baselines) == 1:
             baselines = np.repeat(baselines, len(data), 0)
 
-        probs = self.predict_fn(data)
+        probs, _ = self.predict_fn(data, None)
 
         sliding_windows = np.ones(sliding_window_shapes)
 
@@ -92,10 +85,12 @@ class OcclusionInterpreter(Interpreter):
         elif isinstance(labels, int):
             labels = [labels]
 
-        current_shape = np.subtract(self.model_input_shape,
-                                    sliding_window_shapes)
+        current_shape = np.subtract(
+            self.model_input_shape, sliding_window_shapes
+        )
         shift_counts = tuple(
-            np.add(np.ceil(np.divide(current_shape, strides)).astype(int), 1))
+            np.add(np.ceil(np.divide(current_shape, strides)).astype(int), 1)
+        )
 
         initial_eval = np.array(
             [probs[i][labels[i]] for i in range(bsz)]).reshape((1, bsz))
@@ -106,21 +101,23 @@ class OcclusionInterpreter(Interpreter):
             for (ablated_features, current_mask) in self._ablation_generator(
                     data, sliding_windows, strides, baselines, shift_counts,
                     perturbations_per_eval):
-                ablated_features = ablated_features.reshape((
-                    -1, ) + ablated_features.shape[2:])
-                modified_probs = self.predict_fn(np.float32(ablated_features))
+                ablated_features = ablated_features.reshape(
+                    ( -1, ) + ablated_features.shape[2:]
+                )
+                modified_probs, _ = self.predict_fn(np.float32(ablated_features), None)
                 modified_eval = [
                     p[labels[i % bsz]] for i, p in enumerate(modified_probs)
                 ]
                 eval_diff = initial_eval - np.array(modified_eval).reshape(
-                    (-1, bsz))
+                    (-1, bsz)
+                )
                 eval_diff = eval_diff.T
                 dim_tuple = (len(current_mask), ) + (1, ) * (current_mask.ndim - 1)
                 for i, diffs in enumerate(eval_diff):
                     #j = i % perturbations_per_eval
-                    total_interp[i] += np.sum(diffs.reshape(dim_tuple) *
-                                            current_mask,
-                                            axis=0)[0]
+                    total_interp[i] += np.sum(
+                        diffs.reshape(dim_tuple) * current_mask, axis=0
+                    )[0]
                 
                 pbar.update(1)
 
@@ -133,20 +130,6 @@ class OcclusionInterpreter(Interpreter):
                 save_image(save_path[i], vis_explanation)
 
         return total_interp
-
-    def _paddle_prepare(self, predict_fn=None):
-        if predict_fn is None:
-            paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
-            self.paddle_model.eval()
-
-            def predict_fn(data):
-                data = paddle.to_tensor(data)
-                out = self.paddle_model(data)
-                probs = paddle.nn.functional.softmax(out, axis=1)
-                return probs.numpy()
-
-        self.predict_fn = predict_fn
-        self.paddle_prepared = True
 
     def _ablation_generator(self, inputs, sliding_window, strides, baselines,
                             shift_counts, perturbations_per_eval):
