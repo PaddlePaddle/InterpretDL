@@ -8,7 +8,6 @@ from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation
 
 class SmoothGradInterpreter(InputGradientInterpreter):
     """
-    Smooth Gradients Interpreter.
 
     Smooth Gradients method solves the problem of meaningless local variations in partial derivatives
     by adding random noise to the inputs multiple times and take the average of the
@@ -24,11 +23,11 @@ class SmoothGradInterpreter(InputGradientInterpreter):
                  device='gpu:0',
                  model_input_shape=[3, 224, 224]):
         """
-        Initialize the SmoothGradInterpreter.
 
         Args:
-            paddle_model (callable): A paddle model that outputs predictions.
-            use_cuda (bool, optional): Whether or not to use cuda. Default: None
+            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
+            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
         

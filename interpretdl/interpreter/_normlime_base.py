@@ -22,8 +22,6 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
                  use_cuda=True,
                  temp_data_file='all_lime_weights.npz'):
         """
-        Initialize the NormLIMECVInterpreter.
-
 
         :param paddle_model: A user-defined function that gives access to model predictions.
                     It takes the following arguments:
@@ -44,8 +42,8 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
             raise NotImplementedError(
                 "NormLIMECVInterpreter currently doesn't support paddle version 2.0 or higher"
             )
-        LIMECVInterpreter.__init__(self, paddle_model, model_input_shape,
-                                   use_cuda)
+        LIMECVInterpreter.__init__(self, paddle_model, model_input_shape=model_input_shape,
+                                   use_cuda=use_cuda)
         self.lime_interpret = super().interpret
 
         if temp_data_file.endswith('.npz'):
@@ -95,8 +93,8 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
             batch_size (int, optional): Number of samples to forward each time. Default: 50
             save_path (str, optional): The .npy path to save the normlime weights. It is a dictionary where the key is label and value is segmentation ids with their importance. Default: 'normlime_weights.npy'
 
-        :return: NormLIME weights: {label_i: weights on features}
-        :rtype: dict
+        Returns:
+            [dict] NormLIME weights: {label_i: weights on features}
         """
         _, h_pre_models_kmeans = get_pre_models()
         kmeans_model = load_pickle_file(h_pre_models_kmeans)
@@ -191,7 +189,6 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
                  use_cuda=True,
                  temp_data_file='all_lime_weights.npz'):
         """
-        Initialize the NormLIMENLPInterpreter.
 
         Args:
             paddle_model (callable): A user-defined function that gives access to model predictions.
@@ -274,9 +271,9 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
             lod_levels (list or tuple or numpy.ndarray or None, optional): The lod levels for model inputs. It should have the length equal to number of outputs given by preprocess_fn.
                                                         If None, lod levels are all zeros. Default: None.
             save_path (str, optional): The .npy path to save the normlime weights. It is a dictionary where the key is label and value is segmentation ids with their importance. Default: 'normlime_weights.npy'
-
-        :return: NormLIME weights: {label_i: weights on words}
-        :rtype: dict
+        
+        Returns:
+            [dict] NormLIME weights: {label_i: weights on features}
         """
 
         # compute lime weights and put in self.all_lime_weights

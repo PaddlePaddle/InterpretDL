@@ -1,3 +1,6 @@
+from .abc_interpreter import Interpreter
+from .abc_interpreter import InputGradientInterpreter, InputOutputInterpreter, IntermediateLayerInterpreter
+
 from .lime import LIMECVInterpreter, LIMENLPInterpreter
 from .gradient_cam import GradCAMInterpreter
 from .integrated_gradients import IntGradCVInterpreter, IntGradNLPInterpreter
@@ -11,6 +14,8 @@ from .rollout import RolloutInterpreter
 from .transition_attention_maps import TAMInterpreter
 
 __all__ = [
+    "Interpreter",
+    "InputGradientInterpreter", "InputOutputInterpreter", "IntermediateLayerInterpreter",
     "LIMECVInterpreter", "LIMENLPInterpreter", "NormLIMECVInterpreter",
     "NormLIMENLPInterpreter", "GradCAMInterpreter", "IntGradCVInterpreter",
     "IntGradNLPInterpreter", "SmoothGradInterpreter", "OcclusionInterpreter",

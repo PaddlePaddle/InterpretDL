@@ -35,8 +35,7 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
                 "LIMEPriorInterpreter currently doesn't support paddle version 2.0 or higher"
             )
 
-        LIMECVInterpreter.__init__(self, paddle_model, model_input_shape,
-                                   use_cuda)
+        LIMECVInterpreter.__init__(self, paddle_model, use_cuda, model_input_shape=model_input_shape)
         self.prior_method = prior_method
         self.global_weights = None
 
@@ -99,8 +98,8 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str, optional): The path to save the processed image. If None, the image will not be saved. Default: None
 
-        :return: LIME Prior weights: {interpret_label_i: weights on features}
-        :rtype: dict
+        Returns:
+            [dict]: LIME results: {interpret_label_i: weights on features}
 
         """
         if self.global_weights is None and self.prior_method != "none":

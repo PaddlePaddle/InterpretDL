@@ -1,5 +1,36 @@
+Abstract Interpreter
+===========================
+
+.. autoclass:: interpretdl.Interpreter
+   :members:
+   :private-members:
+
+Sub-abstract Interpreters
+===========================
+
+Input Gradient Interpreter
+--------------------------
+
+.. autoclass:: interpretdl.InputGradientInterpreter
+   :members:
+   :private-members:
+
+Input Output Interpreter
+--------------------------
+
+.. autoclass:: interpretdl.InputOutputInterpreter
+   :members:
+   :private-members:
+
+Intermediate-Layer Interpreter
+------------------------------
+.. autoclass:: interpretdl.IntermediateLayerInterpreter
+   :members:
+   :private-members:
+
+
 Input Feature Interpreters
-=========
+===========================
    
 Smooth Gradients
 ----------------
@@ -54,9 +85,15 @@ NormLIME
 
 .. autoclass:: interpretdl.NormLIMENLPInterpreter
   :members:
+
+LRP
+----------------
+
+.. autoclass:: interpretdl.LRPCVInterpreter
+   :members:
   
 Intermediate-Layer Feature Interpreters
-=========
+=========================================
 
 Grad-CAM
 --------
@@ -76,10 +113,15 @@ Rollout
 .. autoclass:: interpretdl.RolloutInterpreter
    :members:
 
+TAM
+--------
+
+.. autoclass:: interpretdl.TAMInterpreter
+   :members:
 
 
 Dataset & Training-Process Interpreters
-========
+============================================
 
 Forgetting Events
 -----------------
@@ -93,6 +135,6 @@ SGDNoise
 See Tutorials.
 
 TrainIng Data analYzer (TIDY)
------------------
+----------------------------------
 
 See Tutorials.

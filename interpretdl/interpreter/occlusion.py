@@ -24,12 +24,12 @@ class OcclusionInterpreter(InputOutputInterpreter):
                  device='gpu:0',
                  model_input_shape=[3, 224, 224]) -> None:
         """
-        Initialize the OcclusionInterpreter.
 
         Args:
-            paddle_model (callable): A paddle model that outputs predictions.
+            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
+            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
-            use_cuda (bool, optional): Whether or not to use cuda. Default: True
         """
         InputOutputInterpreter.__init__(self, paddle_model, device, use_cuda)
         self.model_input_shape = model_input_shape
@@ -58,8 +58,8 @@ class OcclusionInterpreter(InputOutputInterpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None, the image will not be saved. Default: None
 
-        :return: interpretations for images
-        :rtype: numpy.ndarray
+        Returns:
+            [numpy.ndarray]: interpretations for images
         """
 
         imgs, data = preprocess_inputs(inputs, self.model_input_shape)

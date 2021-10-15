@@ -20,13 +20,12 @@ class IntGradCVInterpreter(InputGradientInterpreter):
                  device='gpu:0',
                  model_input_shape=[3, 224, 224]) -> None:
         """
-        Initialize the IntGradCVInterpreter.
 
         Args:
-            paddle_model (callable): A paddle model that outputs predictions.
-            use_cuda (bool, optional): Whether or not to use cuda. Default: True
+            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
+            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
-
         """
         InputGradientInterpreter.__init__(self, paddle_model, device, use_cuda)
 
@@ -40,8 +39,7 @@ class IntGradCVInterpreter(InputGradientInterpreter):
                   num_random_trials=10,
                   visual=True,
                   save_path=None):
-        """
-        Main function of the interpreter.
+        """Main function of the interpreter.
 
         Args:
             inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy array of read images.
@@ -53,8 +51,8 @@ class IntGradCVInterpreter(InputGradientInterpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None, the image will not be saved. Default: None
 
-        :return: interpretations/gradients for images
-        :rtype: numpy.ndarray
+        Returns:
+            [numpy.ndarray]: interpretations/gradients for images
         """
 
         imgs, data = preprocess_inputs(inputs, self.model_input_shape)
@@ -123,17 +121,16 @@ class IntGradNLPInterpreter(Interpreter):
     https://arxiv.org/abs/1703.01365
     """
 
-    def __init__(self, paddle_model, use_cuda=True) -> None:
+    def __init__(self, paddle_model, use_cuda=True, device='gpu:0') -> None:
         """
-        Initialize the IntGradInterpreter.
 
         Args:
-            paddle_model (callable): A paddle model that outputs predictions.
-            use_cuda (bool, optional): Whether or not to use cuda. Default: True
-            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
+            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
+            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
+            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
 
         """
-        Interpreter.__init__(self, paddle_model, 'gpu:0', use_cuda)
+        Interpreter.__init__(self, paddle_model, device, use_cuda)
         self.paddle_model = paddle_model
         self.use_cuda = use_cuda
         self.paddle_prepared = False
@@ -155,9 +152,9 @@ class IntGradNLPInterpreter(Interpreter):
             return_pred (bool, optional): Whether or not to return predicted labels and probabilities. If True, a tuple of predicted labels, probabilities, and interpretations will be returned.
                                         There are useful for visualization. Else, only interpretations will be returned. Default: False.
             visual (bool, optional): Whether or not to visualize. Default: True.
-
-        :return: interpretations for each word or a tuple of predicted labels, probabilities, and interpretations
-        :rtype: numpy.ndarray or tuple
+        
+        Returns:
+            [numpy.ndarray or tuple]: interpretations for each word or a tuple of predicted labels, probabilities, and interpretations.
         """
 
         if not self.paddle_prepared:
@@ -197,10 +194,7 @@ class IntGradNLPInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            if self.use_cuda:
-                paddle.set_device('gpu:0')
-            else:
-                paddle.set_device('cpu')
+            paddle.set_device(self.device)
 
             self.paddle_model.train()
 

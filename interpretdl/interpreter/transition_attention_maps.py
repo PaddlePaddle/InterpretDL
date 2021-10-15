@@ -13,23 +13,28 @@ class TAMInterpreter(Interpreter):
     Transition Attention Maps Interpreter.
 
     More details regarding the Transition_Attention_Maps method can be found in the original paper:
-    Tingyi Yuan, Xuhong Li, Haoyi Xiong, Hui Cao, Dejing Dou.
-    Explaining Information Flow Inside Vision Transformers Using Markov Chain.
+    
+    .. code-block:: none
+
+        Tingyi Yuan, Xuhong Li, Haoyi Xiong, Hui Cao, Dejing Dou. 2021.
+        Explaining Information Flow Inside Vision Transformers Using Markov Chain. 
+
     """
 
     def __init__(self,
                  paddle_model,
-                 use_cuda=True,
+                 use_cuda=None,
+                 device='gpu:0',
                  model_input_shape=[3, 224, 224]) -> None:
         """
-        Initialize the TAMInterpreter.
 
         Args:
-            paddle_model (callable): A paddle model that outputs predictions.
-            use_cuda (bool, optional): Whether or not to use cuda. Default: True
+            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
+            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
-        Interpreter.__init__(self, paddle_model, 'gpu:0', use_cuda)
+        Interpreter.__init__(self, paddle_model, device, use_cuda)
         self.model_input_shape = model_input_shape
         self.paddle_prepared = False
 
@@ -51,8 +56,8 @@ class TAMInterpreter(Interpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None, the image will not be saved. Default: None
 
-        :return: interpretations/heatmap for each image
-        :rtype: numpy.ndarray
+        Returns:
+            [numpy.ndarray]: interpretations/heatmap for images
         """
 
         imgs, data = preprocess_inputs(inputs, self.model_input_shape)

@@ -19,7 +19,10 @@ class Interpreter(ABC):
     def __init__(self, paddle_model, device, use_cuda, **kwargs):
         """
 
-        :param kwargs:
+        Args:
+            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
+            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
         """
         assert device[:3] in ['cpu', 'gpu']
 
@@ -40,61 +43,22 @@ class Interpreter(ABC):
     def _paddle_prepare(self, predict_fn=None):
         """
         Prepare Paddle program inside of the interpreter. This will be called by interpret().
-        **Should not be called explicitly**.
+        Would be renamed to ``_build_predict_fn``.
 
         Args:
             predict_fn: A defined callable function that defines inputs and outputs.
-                Defaults to None, and each interpreter will generate it.
-                example for LIME:
-                    def get_predict_fn():
-                        startup_prog = fluid.Program()
-                        main_program = fluid.Program()
-                        with fluid.program_guard(main_program, startup_prog):
-                            with fluid.unique_name.guard():
-                                image_op = fluid.data(
-                                    name='image',
-                                    shape=[None] + model_input_shape,
-                                    dtype='float32')
-                                # paddle model
-                                class_num = 1000
-                                model = ResNet101()
-                                logits = model.net(input=image_input, class_dim=class_num)
-                                probs = fluid.layers.softmax(logits, axis=-1)
-                                if isinstance(probs, tuple):
-                                    probs = probs[0]
-                                # end of paddle model
-                                main_program = main_program.clone(for_test=True)
-
-                        gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
-                        place = fluid.CUDAPlace(gpu_id)
-                        exe = fluid.Executor(place)
-
-                        fluid.io.load_persistables(exe, trained_model_path,
-                                                   main_program)
-
-                        def predict_fn(visual_images):
-                            images = preprocess_image(
-                                visual_images
-                            )  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
-                            [result] = exe.run(main_program,
-                                               fetch_list=[probs],
-                                               feed={'image': images})
-
-                            return result
-
-                        return predict_fn
-
+                Defaults to None, and each interpreter should implement it.
         Returns:
+            None
 
         """
         raise NotImplementedError
 
     def interpret(self, **kwargs):
-        """
-        Main function of the interpreter.
+        """Main function of the interpreter. 
 
-        :param kwargs:
-        :return:
+        Raises:
+            NotImplementedError: Should be implemented by interpreters.
         """
         raise NotImplementedError
 
@@ -118,16 +82,55 @@ class InputGradientInterpreter(Interpreter):
         self.predict_fn = None
 
     def _build_predict_fn(self, rebuild=False, gradient_of='probability'):
-        """Build self.predict_fn for input gradients based algorithms.
+        """Build ``self.predict_fn`` for input gradients based algorithms.
         The model is supposed to be a classification model.
 
         Args:
             rebuild (bool, optional): forces to rebuid. Defaults to False.
             gradient_of (str, optional): computes the gradient of 
-                [loss, logit or probability] w.r.t. input data. 
-                Defaults to 'probability'. 
+                [``loss``, ``logit`` or ``probability``] w.r.t. input data. 
+                Defaults to ``probability``. 
                 Other options can get similar results while the absolute 
                 scale might be different.
+        
+        An example of ``predict_fn`` is
+
+        .. code-block:: python
+
+            def predict_fn(data, labels):
+                assert len(data.shape) == 4  # [bs, h, w, 3]
+                assert labels is None or (isinstance(labels, (list, np.ndarray)) and len(labels) == data.shape[0])
+
+                data = paddle.to_tensor(data)
+                data.stop_gradient = False
+                logits = self.paddle_model(data)  # get logits, [bs, num_c]
+                probas = paddle.nn.functional.softmax(logits, axis=1)  # get probabilities.
+                preds = paddle.argmax(probas, axis=1)  # get predictions.
+                if labels is None:
+                    labels = preds.numpy()  # label is an integer.
+                
+                if gradient_of == 'loss':
+                    # loss
+                    loss = paddle.nn.functional.cross_entropy(
+                        logits, paddle.to_tensor(labels), reduction='sum'
+                    )
+                else:
+                    # logits or probas
+                    labels = np.array(labels).reshape((data.shape[0], ))
+                    labels_onehot = paddle.nn.functional.one_hot(
+                        paddle.to_tensor(labels), num_classes=probas.shape[1]
+                    )
+                    if gradient_of == 'logit':
+                        loss = paddle.sum(logits * labels_onehot, axis=1)
+                    else:
+                        loss = paddle.sum(probas * labels_onehot, axis=1)
+
+                loss.backward()
+                gradients = data.grad
+                if isinstance(gradients, paddle.Tensor):
+                    gradients = gradients.numpy()
+                return gradients, labels
+
         """
 
         if self.predict_fn is not None:
@@ -160,11 +163,11 @@ class InputGradientInterpreter(Interpreter):
                     for image classification models only.
 
                 Args:
-                    data ([type]): [description]
+                    data ([type]): scaled input data.
                     labels ([type]): can be None.
 
                 Returns:
-                    [type]: [description]
+                    [type]: gradients, labels
                 """
                 assert len(data.shape) == 4  # [bs, h, w, 3]
                 assert labels is None or \
@@ -219,10 +222,28 @@ class InputOutputInterpreter(Interpreter):
         """Build self.predict_fn for Input-Output based algorithms.
         The model is supposed to be a classification model.
 
+        An example of ``predict_fn`` is
+
+        .. code-block:: python
+
+            def predict_fn(data, labels):
+                assert len(data.shape) == 4  # [bs, h, w, 3]
+
+                logits = self.paddle_model(paddle.to_tensor(data))  # get logits, [bs, num_c]
+                probas = paddle.nn.functional.softmax(logits, axis=1)  # get probabilities.
+                preds = paddle.argmax(probas, axis=1)  # get predictions.
+                if label is None:
+                    label = preds.numpy()  # label is an integer.
+                
+                if output == 'logit':
+                    return logits.numpy(), label
+                else:
+                    return probas.numpy(), label
+
         Args:
             rebuild (bool, optional): forces to rebuid. Defaults to False.
             output (str, optional): computes the logit or probability. 
-                Defaults to 'probability'. Other options can get similar 
+                Defaults to ``probability``. Other options can get similar 
                 results while the absolute scale might be different.
         """
 
@@ -287,6 +308,37 @@ class IntermediateLayerInterpreter(Interpreter):
     def _build_predict_fn(self, rebuild=False, target_layer=None):
         """Build self.predict_fn for IntermediateLayer based algorithms.
         The model is supposed to be a classification model.
+        An example of ``predict_fn`` is
+
+        .. code-block:: python
+
+            def predict_fn(data, labels):
+                target_feature_map = []
+                
+                def hook(layer, input, output):
+                    target_feature_map.append(output)
+
+                hooks = []
+                for name, v in self.paddle_model.named_sublayers():
+                    if name == target_layer:
+                        h = v.register_forward_post_hook(hook)
+                        hooks.append(h)
+
+                assert len(hooks) == 1, f"target_layer `{target_layer}`` does not exist in the given model, \
+                                the list of layer names are \n \
+                                {[n for n, v in self.paddle_model.named_sublayers()]}"
+                
+                with paddle.no_grad():
+                    data = paddle.to_tensor(data)
+                    logits = self.paddle_model(data)
+
+                    # has to be removed.
+                    for h in hooks:
+                        h.remove()
+                    
+                    probas = paddle.nn.functional.softmax(logits, axis=1)
+                    predict_label = paddle.argmax(probas, axis=1)  # get predictions.
+                return target_feature_map[0].numpy(), probas.numpy(), predict_label.numpy()
 
         Args:
             rebuild (bool, optional): forces to rebuid. Defaults to False.

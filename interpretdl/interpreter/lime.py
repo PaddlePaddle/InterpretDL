@@ -25,12 +25,12 @@ class LIMECVInterpreter(InputOutputInterpreter):
                  model_input_shape=[3, 224, 224],
                  random_seed=None) -> None:
         """
-        Initialize the LIMECVInterpreter.
 
         Args:
-            paddle_model (callable): A paddle model that outputs predictions.
+            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
+            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
-            use_cuda (bool, optional): Whether or not to use cuda. Default: True
         """
         InputOutputInterpreter.__init__(self, paddle_model, device, use_cuda)
         self.model_input_shape = model_input_shape
@@ -57,9 +57,8 @@ class LIMECVInterpreter(InputOutputInterpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str, optional): The path to save the processed image. If None, the image will not be saved. Default: None
 
-        :return: LIME Prior weights: {interpret_label_i: weights on features}
-        :rtype: dict
-
+        Returns:
+            [dict]: LIME results: {interpret_label_i: weights on features}
         """
         # preprocess_inputs
         if isinstance(data, str):
@@ -143,15 +142,14 @@ class LIMENLPInterpreter(Interpreter):
     https://arxiv.org/abs/1602.04938
     """
 
-    def __init__(self, paddle_model, use_cuda=True, random_seed=None) -> None:
+    def __init__(self, paddle_model, use_cuda=True, device='gpu:0', random_seed=None) -> None:
         """
-        Initialize the LIMENLPInterpreter.
 
         Args:
-            paddle_model (callable): A paddle model that outputs predictions.
-            trained_model_path (str): The pretrained model directory.
-            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
-            use_cuda (bool, optional): Whether or not to use cuda. Default: True
+            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
+            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
+            random_seed (int): random seed. Defaults to None.
         """
 
         Interpreter.__init__(self, paddle_model, 'gpu:0', use_cuda)
@@ -193,8 +191,8 @@ class LIMENLPInterpreter(Interpreter):
                                             If None, lod levels are all zeros. Default: None.
             visual (bool, optional): Whether or not to visualize. Default: True
 
-        :return: LIME Prior weights: {interpret_label_i: weights on features}
-        :rtype: dict
+        Returns:
+            [dict]: LIME results: {interpret_label_i: weights on features}
         """
 
         model_inputs = preprocess_fn(data)

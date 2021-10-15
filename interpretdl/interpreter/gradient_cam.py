@@ -18,23 +18,19 @@ class GradCAMInterpreter(Interpreter):
     def __init__(self,
                  paddle_model,
                  use_cuda=True,
+                 device='gpu:0',
                  model_input_shape=[3, 224, 224]) -> None:
         """
-        Initialize the GradCAMInterpreter.
 
         Args:
-            paddle_model (callable): A paddle model that outputs predictions.
-            use_cuda (bool, optional): Whether or not to use cuda. Default: True
+            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
+            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
-        Interpreter.__init__(self, paddle, 'gpu:0', use_cuda)
-        self.paddle_model = paddle_model
+        Interpreter.__init__(self, paddle_model, device, use_cuda)
         self.model_input_shape = model_input_shape
         self.paddle_prepared = False
-
-        self.use_cuda = use_cuda
-        if not paddle.is_compiled_with_cuda():
-            self.use_cuda = False
 
         # init for usages during the interpretation.
         self._target_layer_name = None
@@ -56,8 +52,8 @@ class GradCAMInterpreter(Interpreter):
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None, the image will not be saved. Default: None
 
-        :return: interpretations/heatmap for each image
-        :rtype: numpy.ndarray
+        Returns:
+            [numpy.ndarray]: interpretations/heatmap for images
         """
 
         imgs, data = preprocess_inputs(inputs, self.model_input_shape)
@@ -103,7 +99,7 @@ class GradCAMInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
+            paddle.set_device(self.device)
             # to get gradients, the ``train`` mode must be set.
             # we cannot set v.training = False for the same reason.
             self.paddle_model.train()
