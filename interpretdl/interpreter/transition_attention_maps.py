@@ -16,8 +16,8 @@ class TAMInterpreter(Interpreter):
     
     .. code-block:: none
 
-        Tingyi Yuan, Xuhong Li, Haoyi Xiong, Hui Cao, Dejing Dou. 2021.
-        Explaining Information Flow Inside Vision Transformers Using Markov Chain. 
+        Tingyi Yuan, Xuhong Li, Haoyi Xiong, Hui Cao, Dejing Dou. Explaining Information Flow Inside Vision Transformers Using Markov Chain. 
+        In *Neurips 2021 XAI4Debugging Workshop*. https://openreview.net/forum?id=TT-cf6QSDaQ
 
     """
 

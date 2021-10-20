@@ -18,22 +18,41 @@ For researchers working on designing new interpretation algorithms, InterpretDL 
 
 # :fire: :fire: :fire: News :fire: :fire: :fire:
 
-- (2021/07/22) Implemented Rollout Explanations for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas#transformer-series). See the [notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ViT_explanations_rollout.ipynb) for the visualization.
+- (2021/10/20) Implemented the Transition Attention Maps (TAM) explanation method for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/model_zoo/vision_transformer.py). As always, several lines call this interpreter. See details from the [tutorial notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ViT_explanations_tam.ipynb), and the [paper](https://openreview.net/forum?id=TT-cf6QSDaQ):
+
+  * `TAM`: Tingyi Yuan, Xuhong Li, Haoyi Xiong, Hui Cao, Dejing Dou. Explaining Information Flow Inside Vision Transformers Using Markov Chain. In *Neurips 2021 XAI4Debugging Workshop*. 
 
 ```python
 import paddle
 import interpretdl as it
 
-# wget -c https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/ViT_small_patch16_224_pretrained.pdparams -P assets/
-from assets.vision_transformer import ViT_small_patch16_224
-paddle_model = ViT_small_patch16_224()
-MODEL_PATH = 'assets/ViT_small_patch16_224_pretrained.pdparams'
+# load vit model and weights
+# !wget -c https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/ViT_base_patch16_224_pretrained.pdparams -P assets/
+from assets.vision_transformer import ViT_base_patch16_224
+paddle_model = ViT_base_patch16_224()
+MODEL_PATH = 'assets/ViT_base_patch16_224_pretrained.pdparams'
 paddle_model.set_dict(paddle.load(MODEL_PATH))
 
-img_path = 'assets/catdog.png'
-rollout = it.RolloutInterpreter(paddle_model, use_cuda=True)
-heatmap = rollout.interpret(img_path, start_layer=0, visual=True)
+# Call the interpreter.
+tam = it.TAMInterpreter(paddle_model, use_cuda=True)
+img_path = 'samples/el1.png'
+heatmap = tam.interpret(
+        img_path,
+        start_layer=4,
+        label=None,  # elephant
+        visual=True,
+        save_path=None)
+heatmap = tam.interpret(
+        img_path,
+        start_layer=4,
+        label=340,  # zebra
+        visual=True,
+        save_path=None)
 ```
+| elephant | zebra |
+:-----------:|:-----------:
+![elephant](https://user-images.githubusercontent.com/13829174/138049903-8106d879-3c70-437b-a580-cf8e9c17f974.png) | ![zebra](https://user-images.githubusercontent.com/13829174/138049895-6d52b97d-c4fd-40da-be88-f5c956cb9fcb.png)
+
 
 # Demo
 
@@ -68,6 +87,7 @@ For sentiment classfication task, the reason why a model gives positive/negative
   - [Tutorials](#tutorials)
   - [References of Algorithms](#references-of-algorithms)
 - [Copyright and License](#copyright-and-license)
+- [Recent News](#recent-news)
 
 # Installation
 
@@ -78,8 +98,8 @@ It requires the deep learning framework [paddlepaddle](https://www.paddlepaddle.
 ```bash
 pip install interpretdl
 
-# or with baidu mirror
-pip install interpretdl -i https://mirror.baidu.com/pypi/simple
+# or with tsinghua mirror
+pip install interpretdl -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 ## Developer installation
@@ -112,7 +132,6 @@ cd docs
 make html
 open _build/html/index.html
 ```
-
 
 # Usage Guideline
 
@@ -158,6 +177,7 @@ We are planning to implement the algorithms below (categorized by the explaining
     - [x] GradCAM
     - [x] ScoreCAM
     - [x] Rollout
+    - [X] TAM
     - [ ] More ...
 
 ### Dataset-level Interpretation Algorithms
@@ -173,7 +193,7 @@ We plan to provide at least one example for each interpretation algorithm, and h
 
 Current tutorials can be accessed under [tutorials](https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials) folder.
 
-## References of Algorithms
+# References of Algorithms
 
 * `IntegratedGraients`: [Axiomatic Attribution for Deep Networks, Mukund Sundararajan et al. 2017](https://arxiv.org/abs/1703.01365)
 * `GradCAM`: [Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization, Ramprasaath R. Selvaraju et al. 2017](https://arxiv.org/abs/1610.02391.pdf)
@@ -186,7 +206,27 @@ Current tutorials can be accessed under [tutorials](https://github.com/PaddlePad
 * `ForgettingEvents`: [An Empirical Study of Example Forgetting during Deep Neural Network Learning, Mariya Toneva et al. 2019](http://arxiv.org/abs/1812.05159)
 * `LRP`: [On Pixel-Wise Explanations for Non-Linear Classifier Decisions by Layer-Wise Relevance Propagation, Bach et al. 2015](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140)
 * `Rollout`: [Quantifying Attention Flow in Transformers, Abnar et al. 2020](https://arxiv.org/abs/2005.00928)
+* `TAM`: [Explaining Information Flow Inside Vision Transformers Using Markov Chain. Yuan et al. 2021](https://openreview.net/forum?id=TT-cf6QSDaQ)
 
 # Copyright and License
 
 InterpretDL is provided under the [Apache-2.0 license](https://github.com/PaddlePaddle/InterpretDL/blob/master/LICENSE).
+
+# Recent News
+
+- (2021/07/22) Implemented Rollout Explanations for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/model_zoo/vision_transformer.py). See the [notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ViT_explanations_rollout.ipynb) for the visualization.
+
+```python
+import paddle
+import interpretdl as it
+
+# wget -c https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/ViT_small_patch16_224_pretrained.pdparams -P assets/
+from assets.vision_transformer import ViT_small_patch16_224
+paddle_model = ViT_small_patch16_224()
+MODEL_PATH = 'assets/ViT_small_patch16_224_pretrained.pdparams'
+paddle_model.set_dict(paddle.load(MODEL_PATH))
+
+img_path = 'assets/catdog.png'
+rollout = it.RolloutInterpreter(paddle_model, use_cuda=True)
+heatmap = rollout.interpret(img_path, start_layer=0, visual=True)
+```
