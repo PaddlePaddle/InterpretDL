@@ -81,7 +81,7 @@ class IntGradCVInterpreter(InputGradientInterpreter):
 
         # IntGrad.
         gradients_list = []
-        with tqdm(total=num_random_trials * steps, leave=False, position=1) as pbar:
+        with tqdm(total=num_random_trials * steps, leave=True, position=0) as pbar:
             for i in range(num_random_trials):
                 total_gradients = np.zeros_like(data)
                 for alpha in np.linspace(0, 1, steps):

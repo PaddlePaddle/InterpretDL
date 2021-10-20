@@ -97,7 +97,7 @@ class OcclusionInterpreter(InputOutputInterpreter):
         total_interp = np.zeros_like(data)
 
         num_features = np.prod(shift_counts)
-        with tqdm(total=num_features, leave=False, position=1) as pbar:
+        with tqdm(total=num_features, leave=True, position=0) as pbar:
             for (ablated_features, current_mask) in self._ablation_generator(
                     data, sliding_windows, strides, baselines, shift_counts,
                     perturbations_per_eval):

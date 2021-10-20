@@ -69,7 +69,7 @@ class ScoreCAMInterpreter(IntermediateLayerInterpreter):
         feature_map, _, _ = self.predict_fn(data)
         interpretations = np.zeros((b, h, w))
 
-        for i in tqdm(range(feature_map.shape[1]), leave=False, position=1):
+        for i in tqdm(range(feature_map.shape[1]), leave=True, position=0):
             feature_channel = feature_map[:, i, :, :]
             feature_channel = np.concatenate([
                 np.expand_dims(cv2.resize(f, (h, w)), 0)
