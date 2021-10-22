@@ -100,7 +100,7 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
         kmeans_model = load_pickle_file(h_pre_models_kmeans)
 
         # compute lime weights and put in self.all_lime_weights
-        for i in tqdm(range(len(image_paths))):
+        for i in tqdm(range(len(image_paths)), leave=True, position=0):
             image_path = image_paths[i]
             self._get_lime_weights(
                 image_path, num_samples, batch_size, auto_save=(i % 10 == 0))
@@ -277,7 +277,7 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
         """
 
         # compute lime weights and put in self.all_lime_weights
-        for i in tqdm(range(len(data))):
+        for i in tqdm(range(len(data)), leave=True, position=0):
             self._get_lime_weights(
                 data[i],
                 preprocess_fn=preprocess_fn,
