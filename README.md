@@ -165,11 +165,9 @@ We are planning to implement the algorithms below (categorized by the explaining
     - [x] Occlusion
     - [x] GradientSHAP
     - [x] LIME
-    - [x] FastNormLIME
-    - [x] NormLIME
-    - [x] LIMEPrior
+    - [x] GLIME (LIMEPrior)
+    - [x] NormLIME/FastNormLIME
     - [x] LRP
-    - [ ] DeepLIFT
     - [ ] More ...
 
 * Target at Intermediate Features
