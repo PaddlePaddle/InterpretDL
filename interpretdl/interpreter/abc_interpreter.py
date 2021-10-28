@@ -324,7 +324,7 @@ class IntermediateLayerInterpreter(Interpreter):
                         h = v.register_forward_post_hook(hook)
                         hooks.append(h)
 
-                assert len(hooks) == 1, f"target_layer `{target_layer}`` does not exist in the given model, \
+                assert len(hooks) == 1, f"target_layer `{target_layer}`` does not exist in the given model, \n \
                                 the list of layer names are \n \
                                 {[n for n, v in self.paddle_model.named_sublayers()]}"
                 

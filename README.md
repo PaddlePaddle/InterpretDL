@@ -49,9 +49,9 @@ heatmap = tam.interpret(
         visual=True,
         save_path=None)
 ```
-| elephant | zebra |
-:-----------:|:-----------:
-![elephant](https://user-images.githubusercontent.com/13829174/138049903-8106d879-3c70-437b-a580-cf8e9c17f974.png) | ![zebra](https://user-images.githubusercontent.com/13829174/138049895-6d52b97d-c4fd-40da-be88-f5c956cb9fcb.png)
+| image | elephant | zebra |
+:-----------:|:-----------:|:-----------:
+![image](https://user-images.githubusercontent.com/13829174/139223230-66094dbf-cbc8-450c-acd8-0c0ec40c5fef.png) | ![elephant](https://user-images.githubusercontent.com/13829174/138049903-8106d879-3c70-437b-a580-cf8e9c17f974.png) | ![zebra](https://user-images.githubusercontent.com/13829174/138049895-6d52b97d-c4fd-40da-be88-f5c956cb9fcb.png)
 
 
 # Demo
@@ -65,7 +65,7 @@ The following table gives visualizations of several interpretation algorithms ap
 
 For sentiment classfication task, the reason why a model gives positive/negative predictions can be visualized as follows. A quick demo can be found [here](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/int_grad_tutorial_nlp.ipynb).
 
-![](imgs/sentiment.jpg)
+![](imgs/sentiment-en.png)
 
 
 # Contents
