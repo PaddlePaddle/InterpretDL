@@ -3,6 +3,7 @@ import paddle
 import paddle.nn as nn
 import paddle.nn.functional as F
 import paddlenlp as nlp
+from functools import partial
 
 from paddlenlp.data import Stack, Tuple, Pad
 
@@ -123,12 +124,28 @@ def convert_example(example, tokenizer, max_seq_length=512, is_test=False):
         token_type_ids(obj: `list[int]`): List of sequence pair mask.
         label(obj:`numpy.array`, data type of int64, optional): The input label if not is_test.
     """
-    encoded_inputs = tokenizer(text=example["text"], max_seq_len=max_seq_length)
+    possible_encoded_input_names = ["text", "sentence"]
+    possible_label_names = ["label", "labels"]
+    
+    # Search a possible name
+    encoded_input_name = None
+    for n in possible_encoded_input_names:
+        if n in example:
+            encoded_input_name = n
+            break
+    
+    encoded_label_name = None
+    for n in possible_label_names:
+        if n in example:
+            encoded_label_name = n
+            break
+    
+    encoded_inputs = tokenizer(text=example[encoded_input_name], max_seq_len=max_seq_length)
     input_ids = encoded_inputs["input_ids"]
     token_type_ids = encoded_inputs["token_type_ids"]
 
     if not is_test:
-        label = np.array([example["label"]], dtype="int64")
+        label = np.array([example[encoded_label_name]], dtype="int64")
         return input_ids, token_type_ids, label
     else:
         return input_ids, token_type_ids
@@ -156,3 +173,111 @@ def create_dataloader(dataset,
         collate_fn=batchify_fn,
         return_list=True)
 
+
+def training_model(model, tokenizer, train_ds, dev_ds, save_dir='assets/sst-2-ernie-2.0-en'):
+    """
+    An example of training an NLP model.
+    """
+    from paddlenlp.transformers import LinearDecayWithWarmup
+    
+    print('dataset labels:', train_ds.label_list)
+
+    print('dataset examples:')
+    for data in train_ds.data[:5]:
+        print(data)
+
+    # 模型运行批处理大小
+    batch_size = 32
+    max_seq_length = 128
+    # 训练过程中的最大学习率
+    learning_rate = 5e-5 
+    # 训练轮次
+    epochs = 1 #3
+    # 学习率预热比例
+    warmup_proportion = 0.1
+    # 权重衰减系数，类似模型正则项策略，避免模型过拟合
+    weight_decay = 0.01
+
+    trans_func = partial(
+        convert_example,
+        tokenizer=tokenizer,
+        max_seq_length=max_seq_length,
+        encoded_input_name="sentence",
+        label_name="labels"
+    )
+
+    batchify_fn = lambda samples, fn=Tuple(
+        Pad(axis=0, pad_val=tokenizer.pad_token_id),  # input
+        Pad(axis=0, pad_val=tokenizer.pad_token_type_id),  # segment
+        Stack(dtype="int64")  # label
+    ): [data for data in fn(samples)]
+
+    train_data_loader = create_dataloader(
+        train_ds,
+        mode='train',
+        batch_size=batch_size,
+        batchify_fn=batchify_fn,
+        trans_fn=trans_func)
+
+    dev_data_loader = create_dataloader(
+        dev_ds,
+        mode='dev',
+        batch_size=batch_size,
+        batchify_fn=batchify_fn,
+        trans_fn=trans_func)
+    
+    num_training_steps = len(train_data_loader) * epochs
+    lr_scheduler = LinearDecayWithWarmup(learning_rate, num_training_steps, warmup_proportion)
+    optimizer = paddle.optimizer.AdamW(
+        learning_rate=lr_scheduler,
+        parameters=model.parameters(),
+        weight_decay=weight_decay,
+        apply_decay_param_fun=lambda x: x in [
+            p.name for n, p in model.named_parameters()
+            if not any(nd in n for nd in ["bias", "norm"])
+        ])
+
+    criterion = paddle.nn.loss.CrossEntropyLoss()
+    metric = paddle.metric.Accuracy()
+
+    global_step = 0
+    print("Training Starts:")
+    for epoch in range(1, epochs + 1):
+        for step, batch in enumerate(train_data_loader, start=1):
+            input_ids, segment_ids, labels = batch
+            logits = model(input_ids, segment_ids)
+            loss = criterion(logits, labels)
+            probs = F.softmax(logits, axis=1)
+            correct = metric.compute(probs, labels)
+            metric.update(correct)
+            acc = metric.accumulate()
+
+            global_step += 1
+            if global_step % 100 == 0 :
+                print("global step %d, epoch: %d, batch: %d, loss: %.5f, acc: %.5f" % (global_step, epoch, step, loss, acc))
+            loss.backward()
+            optimizer.step()
+            lr_scheduler.step()
+            optimizer.clear_grad()
+        evaluate(model, criterion, metric, dev_data_loader)
+        
+    model.save_pretrained(save_dir)
+    tokenizer.save_pretrained(save_dir)
+    
+    
+def aggregate_subwords_and_importances(subwords, subword_importances):
+    # words
+    agg_words = []
+    agg_word_importances = []
+    # subwords to word
+    for j, w in enumerate(subwords):
+        if '##' == w[:2]:
+            agg_words[-1] = agg_words[-1] + w[2:]
+            agg_word_importances[-1] = agg_word_importances[-1] + subword_importances[j]
+        else:
+            agg_words.append(w)
+            agg_word_importances.append(subword_importances[j])
+    
+    words = agg_words
+    word_importances = agg_word_importances
+    return words, word_importances

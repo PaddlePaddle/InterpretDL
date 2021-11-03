@@ -39,6 +39,7 @@ class Interpreter(ABC):
 
         self.device = device
         self.paddle_model = paddle_model
+        self.predict_fn = None
 
     def _paddle_prepare(self, predict_fn=None):
         """
@@ -72,6 +73,9 @@ class Interpreter(ABC):
 class InputGradientInterpreter(Interpreter):
     """Input Gradient based Interpreter.
 
+    Interpreters that are derived from InputGradientInterpreter:
+    GradShapCVInterpreter, IntGradCVInterpreter, SmoothGradInterpreter
+
     """
 
     def __init__(self, paddle_model, device, use_cuda, **kwargs):
@@ -79,7 +83,6 @@ class InputGradientInterpreter(Interpreter):
         assert hasattr(paddle_model, 'forward') and hasattr(paddle_model, 'backward'), \
             "paddle_model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
-        self.predict_fn = None
 
     def _build_predict_fn(self, rebuild=False, gradient_of='probability'):
         """Build ``self.predict_fn`` for input gradients based algorithms.
@@ -209,6 +212,9 @@ class InputGradientInterpreter(Interpreter):
 class InputOutputInterpreter(Interpreter):
     """Input-Output Correlation based Interpreter.
 
+    Interpreters that are derived from InputOutputInterpreter:
+    OcclusionInterpreter, LIMECVInterpreter
+
     """
 
     def __init__(self, paddle_model, device, use_cuda, **kwargs):
@@ -216,7 +222,6 @@ class InputOutputInterpreter(Interpreter):
         assert hasattr(paddle_model, 'forward'), \
             "paddle_model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
-        self.predict_fn = None
 
     def _build_predict_fn(self, rebuild=False, output='probability'):
         """Build self.predict_fn for Input-Output based algorithms.
@@ -296,6 +301,9 @@ class IntermediateLayerInterpreter(Interpreter):
     """Interpreter that exhibits features from intermediate layers to produce explanations.
     This interpreter extracts one layer's feature.
 
+    Interpreters that are derived from IntermediateLayerInterpreter:
+    ScoreCAMInterpreter
+
     """
 
     def __init__(self, paddle_model, device, use_cuda, **kwargs):
@@ -303,7 +311,6 @@ class IntermediateLayerInterpreter(Interpreter):
         assert hasattr(paddle_model, 'forward'), \
             "paddle_model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
-        self.predict_fn = None
 
     def _build_predict_fn(self, rebuild=False, target_layer=None):
         """Build self.predict_fn for IntermediateLayer based algorithms.

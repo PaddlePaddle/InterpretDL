@@ -228,6 +228,9 @@ class LIMENLPInterpreter(Interpreter):
             weights_new = [(data_array[tup[0]], tup[1]) for tup in weights_c]
             lime_weights[c] = weights_new
 
+        # Visualization is currently not supported here.
+        # See the tutorial for more information:
+        # https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-tutorials.ipynb
         if return_pred:
             return (interpret_class, probability[interpret_class],
                     lime_weights)
