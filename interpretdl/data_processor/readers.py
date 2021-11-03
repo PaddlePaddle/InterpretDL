@@ -1,10 +1,7 @@
 import os
 import sys
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import cv2
 import numpy as np
-import six
 import glob
 from PIL import Image
 import pickle
@@ -35,7 +32,16 @@ def load_pickle_file(fname):
         return None
 
 
-def resize_image(img: np.ndarray, target_size: int, interpolation=None) -> np.ndarray:
+def read_image_to_np(img_path: str) -> np.ndarray:
+    img = cv2.imread(img_path, cv2.IMREAD_COLOR)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # convert BGR to RGB.
+    # h, w, c = img.shape
+    # assert c in [1, 3]
+    # assert c.dytpe == np.unit8
+    return img
+
+
+def resize_image(img: np.ndarray, target_size: int, interpolation=cv2.INTER_LINEAR) -> np.ndarray:
     """resize image with shorter edge equal to target_size.
 
     Args:
@@ -46,14 +52,16 @@ def resize_image(img: np.ndarray, target_size: int, interpolation=None) -> np.nd
     Returns:
         resized image data
     """
-    percent = float(target_size) / min(img.shape[0], img.shape[1])
-    resized_width = int(round(img.shape[1] * percent))
-    resized_height = int(round(img.shape[0] * percent))
-    if interpolation:
-        resized = cv2.resize(
-            img, (resized_width, resized_height), interpolation=interpolation)
-    else:
-        resized = cv2.resize(img, (resized_width, resized_height))
+
+    h, w, c = img.shape
+    assert c in [1, 3]
+
+    percent = float(target_size) / min(h, w)
+    resized_width = int(round(w * percent))
+    resized_height = int(round(h * percent))
+
+    resized = cv2.resize(img, (resized_width, resized_height), interpolation=interpolation)
+    # assert resized.dytpe == np.float32
     return resized
 
 
@@ -86,13 +94,13 @@ def preprocess_image(img: np.ndarray, random_mirror=False) -> np.ndarray:
     """
     image(uint8) to tensor(float32). scaled by 1/255, centered, standarized.
     :param img: np.ndarray: shape: [ns, h, w, 3], color order: rgb.
-    :return: np.ndarray: shape: [ns, c, h, w]
+    :return: np.ndarray: shape: [ns, 3, h, w]
     """
     # ImageNet stats.
     mean = [0.485, 0.456, 0.406]
     std = [0.229, 0.224, 0.225]
 
-    # transpose to [ns, c, h, w]
+    # transpose from [ns, h, w, 3] to [ns, c, h, w], and scaled by 1/255
     img = img.astype('float32').transpose((0, 3, 1, 2)) / 255
 
     img_mean = np.array(mean).reshape((3, 1, 1))
@@ -123,7 +131,6 @@ def read_image(img_path, target_size=256, crop_size=224, crop=True) -> np.ndarra
             img = resize_image(img, target_size, interpolation=None)
             if crop:
                 img = crop_image(img, target_size=crop_size, center=True)
-            # img = img[:, :, ::-1]
             img = np.expand_dims(img, axis=0)
             return img
     elif isinstance(img_path, np.ndarray):
@@ -228,7 +235,7 @@ def preprocess_inputs(inputs, model_input_shape):
     """[summary]
 
     Args:
-        inputs ([type]): [description]
+        inputs ([type]): can be a str, a list of str, or np.ndarray.
         model_input_shape ([type]): [description]
 
     Returns:
@@ -238,7 +245,7 @@ def preprocess_inputs(inputs, model_input_shape):
     if isinstance(inputs, str):
         imgs = read_image(inputs, crop_size=model_input_shape[1])
         data = preprocess_image(imgs)
-    elif bool(list) and isinstance(inputs, list) and all(
+    elif isinstance(inputs, list) and all(
             isinstance(elem, str) for elem in inputs):
         imgs = []
         for fp in inputs:
