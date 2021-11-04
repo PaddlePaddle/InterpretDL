@@ -186,24 +186,17 @@ def training_model(model, tokenizer, train_ds, dev_ds, save_dir='assets/sst-2-er
     for data in train_ds.data[:5]:
         print(data)
 
-    # 模型运行批处理大小
     batch_size = 32
     max_seq_length = 128
-    # 训练过程中的最大学习率
     learning_rate = 5e-5 
-    # 训练轮次
     epochs = 1 #3
-    # 学习率预热比例
     warmup_proportion = 0.1
-    # 权重衰减系数，类似模型正则项策略，避免模型过拟合
     weight_decay = 0.01
 
     trans_func = partial(
         convert_example,
         tokenizer=tokenizer,
-        max_seq_length=max_seq_length,
-        encoded_input_name="sentence",
-        label_name="labels"
+        max_seq_length=max_seq_length
     )
 
     batchify_fn = lambda samples, fn=Tuple(

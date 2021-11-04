@@ -136,23 +136,25 @@ class IntGradNLPInterpreter(Interpreter):
                   data,
                   labels=None,
                   steps=50,
+                  embedding_name='word_embeddings',
                   return_pred=True):
-        """
-        Main function of the interpreter.
+        """Main function of the interpreter.
 
         Args:
-            data (tuple or paddle.tensor): The inputs to the NLP model.
-            label (list or numpy.ndarray, optional): The target label to analyze. If None, the most likely label will be used. Default: None.
-            noise_amount (float, optional): Noise level of added noise to the embeddings.
-                                            The std of Guassian random noise is noise_amount * (x_max - x_min). Default: 0.1
-            return_pred (bool, optional): Whether or not to return predicted labels and probabilities. If True, a tuple of predicted labels, probabilities, and interpretations will be returned.
-                                        There are useful for visualization. Else, only interpretations will be returned. Default: False.
-        
+            data ([type]): [description]
+            labels ([type], optional): The target label to analyze. If None, the most likely label will be used. Default: None.
+            steps (int, optional): number of steps in the Riemman approximation of the integral. Default: 50
+            embedding_name (str, optional): name of the embedding layer at which the steps will be applied. 
+                Defaults to 'word_embeddings'. The correct name of embedding can be found through `print(model)`.
+            return_pred (bool, optional): Whether or not to return predicted labels and probabilities. 
+                If True, a tuple of predicted labels, probabilities, and interpretations will be returned.
+                There are useful for visualization. Else, only interpretations will be returned. Default: True.
+
         Returns:
             [numpy.ndarray or tuple]: interpretations for each word or a tuple of predicted labels, probabilities, and interpretations.
         """
 
-        self._build_predict_fn(gradient_of='probability')
+        self._build_predict_fn(embedding_name=embedding_name, gradient_of='probability')
 
         if isinstance(data, tuple):
             bs = data[0].shape[0]
@@ -174,11 +176,11 @@ class IntGradNLPInterpreter(Interpreter):
         
         # Visualization is currently not supported here.
         # See the tutorial for more information:
-        # https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-tutorials.ipynb
+        # https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2-tutorials.ipynb
 
         return ig_gradients
 
-    def _build_predict_fn(self, rebuild=False, gradient_of='probability'):
+    def _build_predict_fn(self, rebuild=False, embedding_name='word_embeddings', gradient_of='probability'):
         
         if self.predict_fn is not None:
             assert callable(self.predict_fn), "predict_fn is predefined before, but is not callable." \
@@ -226,7 +228,7 @@ class IntGradNLPInterpreter(Interpreter):
                     return output
                 hooks = []
                 for name, v in self.paddle_model.named_sublayers():
-                    if 'word_embeddings' in name:
+                    if embedding_name in name:
                         h = v.register_forward_post_hook(hook)
                         hooks.append(h)
                         

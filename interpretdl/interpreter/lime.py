@@ -230,7 +230,7 @@ class LIMENLPInterpreter(Interpreter):
 
         # Visualization is currently not supported here.
         # See the tutorial for more information:
-        # https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-tutorials.ipynb
+        # https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2-tutorials.ipynb
         if return_pred:
             return (interpret_class, probability[interpret_class],
                     lime_weights)
