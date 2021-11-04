@@ -16,7 +16,7 @@ class Interpreter(ABC):
 
     """
 
-    def __init__(self, paddle_model, device, use_cuda, **kwargs):
+    def __init__(self, paddle_model: callable, device: str, use_cuda: bool, **kwargs):
         """
 
         Args:
@@ -41,7 +41,7 @@ class Interpreter(ABC):
         self.paddle_model = paddle_model
         self.predict_fn = None
 
-    def _paddle_prepare(self, predict_fn=None):
+    def _paddle_prepare(self, predict_fn: callable or None=None):
         """
         Prepare Paddle program inside of the interpreter. This will be called by interpret().
         Would be renamed to ``_build_predict_fn``.
@@ -78,13 +78,13 @@ class InputGradientInterpreter(Interpreter):
 
     """
 
-    def __init__(self, paddle_model, device, use_cuda, **kwargs):
+    def __init__(self, paddle_model: callable, device: str, use_cuda: bool, **kwargs):
         Interpreter.__init__(self, paddle_model, device, use_cuda, **kwargs)
         assert hasattr(paddle_model, 'forward') and hasattr(paddle_model, 'backward'), \
             "paddle_model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
 
-    def _build_predict_fn(self, rebuild=False, gradient_of='probability'):
+    def _build_predict_fn(self, rebuild: bool=False, gradient_of: str='probability'):
         """Build ``self.predict_fn`` for input gradients based algorithms.
         The model is supposed to be a classification model.
 
@@ -217,13 +217,13 @@ class InputOutputInterpreter(Interpreter):
 
     """
 
-    def __init__(self, paddle_model, device, use_cuda, **kwargs):
+    def __init__(self, paddle_model: callable, device: str, use_cuda: bool, **kwargs):
         Interpreter.__init__(self, paddle_model, device, use_cuda, **kwargs)
         assert hasattr(paddle_model, 'forward'), \
             "paddle_model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
 
-    def _build_predict_fn(self, rebuild=False, output='probability'):
+    def _build_predict_fn(self, rebuild: bool=False, output: str='probability'):
         """Build self.predict_fn for Input-Output based algorithms.
         The model is supposed to be a classification model.
 
@@ -306,13 +306,13 @@ class IntermediateLayerInterpreter(Interpreter):
 
     """
 
-    def __init__(self, paddle_model, device, use_cuda, **kwargs):
+    def __init__(self, paddle_model: callable, device: str, use_cuda: bool, **kwargs):
         Interpreter.__init__(self, paddle_model, device, use_cuda, **kwargs)
         assert hasattr(paddle_model, 'forward'), \
             "paddle_model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
 
-    def _build_predict_fn(self, rebuild=False, target_layer=None):
+    def _build_predict_fn(self, rebuild: bool=False, target_layer: str=None):
         """Build self.predict_fn for IntermediateLayer based algorithms.
         The model is supposed to be a classification model.
         An example of ``predict_fn`` is

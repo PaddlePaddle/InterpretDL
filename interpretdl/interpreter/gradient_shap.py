@@ -15,11 +15,13 @@ class GradShapCVInterpreter(InputGradientInterpreter):
     http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions
     """
 
-    def __init__(self,
-                 paddle_model,
-                 use_cuda=None,
-                 device='gpu:0',
-                 model_input_shape=[3, 224, 224]) -> None:
+    def __init__(
+        self, 
+        paddle_model: callable,
+        use_cuda: bool=None,
+        device: str='gpu:0',
+        model_input_shape: list=[3, 224, 224]
+    ):
         """
 
         Args:
@@ -31,14 +33,16 @@ class GradShapCVInterpreter(InputGradientInterpreter):
         InputGradientInterpreter.__init__(self, paddle_model, device, use_cuda)
         self.model_input_shape = model_input_shape
 
-    def interpret(self,
-                  inputs,
-                  labels=None,
-                  baselines=None,
-                  n_samples=5,
-                  noise_amount=0.1,
-                  visual=True,
-                  save_path=None):
+    def interpret(
+        self,
+        inputs: str or list(str) or np.ndarray,
+        labels: list or np.ndarray=None,
+        baselines: np.ndarray=None,
+        n_samples: int=5,
+        noise_amount: float=0.1,
+        visual: bool=True,
+        save_path=None
+    ) -> np.ndarray:
         """
         Main function of the interpreter.
 
@@ -127,7 +131,9 @@ class GradShapNLPInterpreter(Interpreter):
     http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions
     """
 
-    def __init__(self, paddle_model, use_cuda=True, device='gpu:0') -> None:
+    def __init__(
+        self, paddle_model: callable, use_cuda: bool=True, device: str='gpu:0'
+    ) -> None:
         """
 
         Args:
@@ -138,13 +144,15 @@ class GradShapNLPInterpreter(Interpreter):
         """
         Interpreter.__init__(self, paddle_model, device, use_cuda)
 
-    def interpret(self,
-                  data,
-                  labels=None,
-                  n_samples=5,
-                  noise_amount=0.1,
-                  embedding_name='word_embeddings',
-                  return_pred=True):
+    def interpret(
+        self,
+        data,
+        labels=None,
+        n_samples=5,
+        noise_amount=0.1,
+        embedding_name='word_embeddings',
+        return_pred=True
+    ):
         """Main function of the interpreter.
 
         Args:
@@ -152,9 +160,9 @@ class GradShapNLPInterpreter(Interpreter):
             labels ([type], optional): The target label to analyze. If None, the most likely label will be used. Default: None.
             n_samples (int, optional): [description]. Defaults to 5.
             noise_amount (float, optional): Noise level of added noise to the embeddings. 
-                The std of Guassian random noise is noise_amount * embedding.mean() * (x_max - x_min). Default: 0.1
+                The std of Guassian random noise is ``noise_amount * embedding.mean() * (x_max - x_min)``. Default: 0.1
             embedding_name (str, optional): name of the embedding layer at which the noises will be applied. 
-                Defaults to 'word_embeddings'. The correct name of embedding can be found through `print(model)`.
+                Defaults to 'word_embeddings'. The correct name of embedding can be found through ``print(model)``.
             return_pred (bool, optional): Whether or not to return predicted labels and probabilities. 
                 If True, a tuple of predicted labels, probabilities, and interpretations will be returned.
                 There are useful for visualization. Else, only interpretations will be returned. Default: True.

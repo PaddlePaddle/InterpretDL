@@ -107,7 +107,7 @@ pip install interpretdl -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```bash
 git clone https://github.com/PaddlePaddle/InterpretDL.git
 # ... fix bugs or add new features
-python setup.py install
+cd InterpretDL && pip install -e .
 # welcome to propose pull request and contribute
 ```
 

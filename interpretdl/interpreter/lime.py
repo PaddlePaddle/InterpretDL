@@ -18,12 +18,14 @@ class LIMECVInterpreter(InputOutputInterpreter):
     https://arxiv.org/abs/1602.04938
     """
 
-    def __init__(self,
-                 paddle_model,
-                 use_cuda=None,
-                 device='gpu:0',
-                 model_input_shape=[3, 224, 224],
-                 random_seed=None) -> None:
+    def __init__(
+        self,
+        paddle_model: callable,
+        use_cuda: bool=True,
+        device: str='gpu:0',
+        model_input_shape: list=[3, 224, 224],
+        random_seed: int or None=None
+    ):
         """
 
         Args:
@@ -39,13 +41,15 @@ class LIMECVInterpreter(InputOutputInterpreter):
         self.lime_base = LimeBase(random_state=random_seed)
         self.lime_results = {}
 
-    def interpret(self,
-                  data,
-                  interpret_class=None,
-                  num_samples=1000,
-                  batch_size=50,
-                  visual=True,
-                  save_path=None):
+    def interpret(
+        self,
+        data: str,
+        interpret_class=None,
+        num_samples=1000,
+        batch_size=50,
+        visual=True,
+        save_path=None
+    ):
         """
         Main function of the interpreter.
 

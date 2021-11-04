@@ -14,11 +14,13 @@ class IntGradCVInterpreter(InputGradientInterpreter):
     https://arxiv.org/abs/1703.01365
     """
 
-    def __init__(self,
-                 paddle_model,
-                 use_cuda=None,
-                 device='gpu:0',
-                 model_input_shape=[3, 224, 224]) -> None:
+    def __init__(
+        self,
+        paddle_model: callable,
+        use_cuda: bool=True,
+        device: str='gpu:0',
+        model_input_shape: list=[3, 224, 224]
+    ):
         """
 
         Args:
@@ -31,14 +33,16 @@ class IntGradCVInterpreter(InputGradientInterpreter):
 
         self.model_input_shape = model_input_shape
 
-    def interpret(self,
-                  inputs,
-                  labels=None,
-                  baselines=None,
-                  steps=50,
-                  num_random_trials=10,
-                  visual=True,
-                  save_path=None):
+    def interpret(
+        self,
+        inputs: str or list(str) or np.ndarray,
+        labels: list or tuple or np.ndarray or None=None,
+        baselines: np.ndarray or None=None,
+        steps: int=50,
+        num_random_trials: int=10,
+        visual: bool=True,
+        save_path=None
+    ):
         """Main function of the interpreter.
 
         Args:
@@ -145,7 +149,7 @@ class IntGradNLPInterpreter(Interpreter):
             labels ([type], optional): The target label to analyze. If None, the most likely label will be used. Default: None.
             steps (int, optional): number of steps in the Riemman approximation of the integral. Default: 50
             embedding_name (str, optional): name of the embedding layer at which the steps will be applied. 
-                Defaults to 'word_embeddings'. The correct name of embedding can be found through `print(model)`.
+                Defaults to 'word_embeddings'. The correct name of embedding can be found through ``print(model)``.
             return_pred (bool, optional): Whether or not to return predicted labels and probabilities. 
                 If True, a tuple of predicted labels, probabilities, and interpretations will be returned.
                 There are useful for visualization. Else, only interpretations will be returned. Default: True.

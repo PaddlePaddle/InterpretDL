@@ -15,11 +15,13 @@ class GradCAMInterpreter(Interpreter):
     https://arxiv.org/abs/1610.02391
     """
 
-    def __init__(self,
-                 paddle_model,
-                 use_cuda=True,
-                 device='gpu:0',
-                 model_input_shape=[3, 224, 224]) -> None:
+    def __init__(
+        self,
+        paddle_model: callable,
+        use_cuda: bool=True,
+        device: str='gpu:0',
+        model_input_shape: list=[3, 224, 224]
+    ):
         """
 
         Args:
@@ -37,20 +39,22 @@ class GradCAMInterpreter(Interpreter):
         self._feature_maps = {}
 
     def interpret(self,
-                  inputs,
-                  target_layer_name,
-                  label=None,
-                  visual=True,
-                  save_path=None):
+                  inputs: str or list(str) or np.ndarray,
+                  target_layer_name: str,
+                  label: list or np.ndarray=None,
+                  visual: bool=True,
+                  save_path=None) -> np.ndarray:
         """
         Main function of the interpreter.
 
         Args:
             inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy array of read images.
             target_layer_name (str): The target layer to calculate gradients.
-            labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels should be equal to the number of images. If None, the most likely label for each image will be used. Default: None
+            labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. 
+                The number of labels should be equal to the number of images. If None, the most likely label for each image will be used. Default: None
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
-            save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None, the image will not be saved. Default: None
+            save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). 
+                If None, the image will not be saved. Default: None
 
         Returns:
             [numpy.ndarray]: interpretations/heatmap for images
