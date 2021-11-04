@@ -126,9 +126,9 @@ class IntGradNLPInterpreter(Interpreter):
 
         Args:
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
-            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-
+            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
+            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
         Interpreter.__init__(self, paddle_model, device, use_cuda)
 
