@@ -95,19 +95,16 @@ class SmoothGradInterpreterV2(InputGradientInterpreter):
         # print(data_i.shape, labels.shape)
         # print(data_noised.shape)  # n_samples, 3, 224, 224
 
-        # 2 splits, to avoid large GPU memory usage.
-        if split == 2:
-            split = n_samples // 2
-            gradients_1, _ = self.predict_fn(data_noised[:split], np.repeat(labels, n_samples//2))
-            gradients_2, _ = self.predict_fn(data_noised[split:], np.repeat(labels, n_samples - split))
-            gradients = np.concatenate([gradients_1, gradients_2], axis=0)
-        elif split == 3:
-            split = n_samples // 3
-            split2 = split * 2
-            gradients_1, _ = self.predict_fn(data_noised[:split], np.repeat(labels, split))
-            gradients_2, _ = self.predict_fn(data_noised[split:split2], np.repeat(labels, split))
-            gradients_3, _ = self.predict_fn(data_noised[split2:], np.repeat(labels, n_samples - split2))
-            gradients = np.concatenate([gradients_1, gradients_2, gradients_3], axis=0)
+        # splits, to avoid large GPU memory usage.
+        if split > 1:
+            chunk = n_samples // split
+            gradient_chunks = []
+            for i in range(split-1):
+                gradients_i, _ = self.predict_fn(data_noised[i*chunk: (i+1) * chunk], np.repeat(labels, chunk))
+                gradient_chunks.append(gradients_i)
+            gradients_s, _ = self.predict_fn(data_noised[chunk*(split-1):], np.repeat(labels, n_samples - chunk*(split-1)))
+            gradient_chunks.append(gradients_s)
+            gradients = np.concatenate(gradient_chunks, axis=0)
         else:
             # one split.
             gradients, _ = self.predict_fn(data_noised, np.repeat(labels, n_samples))
