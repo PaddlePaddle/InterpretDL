@@ -212,7 +212,7 @@ gradients = sg.interpret("test.jpg", visual=True, save_path=None)
 
 # Copyright and License
 
-InterpretDL is provided under the [Apache-2.0 license](https://github.com/PaddlePaddle/InterpretDL/blob/master/LICENSE).
+InterpretDL 基于 [Apache-2.0 license](https://github.com/PaddlePaddle/InterpretDL/blob/master/LICENSE) 提供。
 
 # Recent News
 
