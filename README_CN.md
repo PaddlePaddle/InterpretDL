@@ -6,7 +6,7 @@
 
 InterpretDL(全称*interpretations of deep learning models*), 是基于[飞桨](https://github.com/PaddlePaddle/Paddle) 的模型可解释性算法库，其中集成了许多可解释性算法，包括LIME, Grad-CAM, Integrated Gradients等等，还添加和更新许多SOTA算法和最新的可解释性算法。
 
-*InterpretDL持续更新中，欢迎所有贡献*
+*InterpretDL持续更新中，欢迎所有贡献。*
 
 # 为什么选择InterpretDL
 
@@ -56,7 +56,7 @@ heatmap = tam.interpret(
 
 # Demo
 
-可解释性算法对“黑盒”的预测做出了解释
+可解释性算法对“黑盒”的预测做出了解释。
 
 下表是使用一些可解释性算法对原始图片的可视化展示，告诉我们为什么模型做出了"bull_mastiff"的预测。
 
@@ -92,7 +92,7 @@ heatmap = tam.interpret(
 
 # Installation
 
-安装百度「飞桨」深度学习框架 [paddlepaddle](https://www.paddlepaddle.org.cn/install/quick), versions with CUDA support are recommended.
+安装百度「飞桨」深度学习框架 [paddlepaddle](https://www.paddlepaddle.org.cn/install/quick), 建议选择CUDA支持版本。
 
 ## Pip installation
 
@@ -136,7 +136,7 @@ open _build/html/index.html
 
 # Usage Guideline
 
-所有解释器都继承Class [`Interpreter`](https://github.com/PaddlePaddle/InterpretDL/blob/4f7444160981e99478c26e2a52f8e40bd06bf644/interpretdl/interpreter/abc_interpreter.py), 借助 `interpret(**kwargs)` 
+所有解释器都继承类 [`Interpreter`](https://github.com/PaddlePaddle/InterpretDL/blob/4f7444160981e99478c26e2a52f8e40bd06bf644/interpretdl/interpreter/abc_interpreter.py), 借助 `interpret(**kwargs)` 
 以调用。
 ```python
 # an example of SmoothGradient Interpreter.
@@ -158,7 +158,7 @@ gradients = sg.interpret("test.jpg", visual=True, save_path=None)
 
 我们计划添加以下算法 (按解释对象分类):
 
-### 以特征层面为解释对象的可解释性算法
+### 特征层面的可解释性算法
 
 * 以输入特征为解释对象
     - [x] SmoothGrad
@@ -179,7 +179,7 @@ gradients = sg.interpret("test.jpg", visual=True, save_path=None)
     - [X] TAM
     - [ ] More ...
 
-### 以数据层面为解释对象的可解释性算法
+### 数据层面的可解释性算法
 - [x] Forgetting Event
 - [x] SGDNoise
 - [x] TrainIng Data analYzer (TIDY)
