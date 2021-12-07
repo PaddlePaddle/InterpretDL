@@ -61,13 +61,13 @@ heatmap = tam.interpret(
 
 可解释性算法对“黑盒”的预测做出了解释
 
-The following table gives visualizations of several interpretation algorithms applied to the original image to tell us why the model predicts "bull_mastiff."
 下表是使用一些可解释性算法对原始图片的可视化展示，告诉我们为什么模型做出了"bull_mastiff"的预测。
+
 | Original Image | IntGrad ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/int_grad_tutorial_cv.ipynb)) | SG ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/smooth_grad_tutorial_cv.ipynb)) | LIME ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/lime_tutorial_cv.ipynb)) | Grad-CAM ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/grad_cam_tutorial_cv.ipynb)) |
 :-----------:|:-----------:|:-----------:|:-----------:|:-----------:
 ![](imgs/catdog.jpg)|![](imgs/catdog_ig_overlay.jpeg)|![](imgs/catdog_sg_overlay.jpeg)|![](imgs/catdog_lime_overlay.jpeg)|![](imgs/catdog_gradcam_overlay.jpeg)
 
-文本情感分类任务中模型给出积极或消极预测的原因也可以被可视化。 这里是一个demo [here](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2-tutorials.ipynb). 对中文的样本数据也同样适用。 [here](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-1.0-zh-chnsenticorp-tutorials.ipynb).
+文本情感分类任务中模型给出积极或消极预测的原因也可以被可视化。 这里是[demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2-tutorials.ipynb). 对中文的样本数据也同样适用。 这里是[demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-1.0-zh-chnsenticorp-tutorials.ipynb).
 
 ![](imgs/sentiment-en.png)
 
