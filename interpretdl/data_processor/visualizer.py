@@ -68,7 +68,7 @@ def explanation_to_vis(batched_image: np.ndarray, explanation: np.ndarray, style
         return overlay_heatmap(image, explanation)
     elif style == 'overlay_threshold':
         # usually for LIME etc, which originally shows positive and negative parts.
-        return overlay_heatmap(image, explanation)
+        return overlay_threshold(image, explanation)
     else:
         raise KeyError("Unknown visualization style.")
 
