@@ -1,4 +1,4 @@
-[**ENGLISH**](./README.md)
+中文 | [**ENGLISH**](./README.md)
 
 ![](preview.png)
 
