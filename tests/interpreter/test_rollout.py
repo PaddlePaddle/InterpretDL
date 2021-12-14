@@ -23,7 +23,7 @@ class TestRollout(unittest.TestCase):
 
         img_path = 'tutorials/assets/catdog.png'
         algo = it.RolloutInterpreter(paddle_model, use_cuda=False)
-        exp = algo.interpret(img_path, visual=False)
+        exp = algo.interpret(img_path, resize_to=256, crop_to=224, visual=False)
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
         desired = np.array([0.00429746, 0.00077522, 0.00285467, 0.00699459])
 
@@ -35,7 +35,7 @@ class TestRollout(unittest.TestCase):
 
         img_path = 'tutorials/assets/catdog.png'
         algo = it.RolloutInterpreter(paddle_model, use_cuda=False)
-        exp = algo.interpret(img_path, start_layer=1, visual=False)
+        exp = algo.interpret(img_path, start_layer=1, resize_to=256, crop_to=224, visual=False)
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
         desired = np.array([0.00487551, 0.00092406, 0.00239019, 0.00717532])
 
@@ -46,7 +46,7 @@ class TestRollout(unittest.TestCase):
 
         img_path = ['tutorials/assets/catdog.png', 'tutorials/assets/catdog.png']
         algo = it.RolloutInterpreter(paddle_model, use_cuda=False)
-        exp = algo.interpret(img_path, visual=False)
+        exp = algo.interpret(img_path, resize_to=256, crop_to=224, visual=False)
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max(), *exp.shape])
         desired = np.array([4.29746090e-03, 7.75220629e-04, 2.85467086e-03, 6.99458644e-03,
         2.00000000e+00, 1.40000000e+01, 1.40000000e+01])

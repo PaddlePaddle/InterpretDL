@@ -14,7 +14,7 @@ class TestOCC(unittest.TestCase):
         img_path = 'imgs/catdog.jpg'
         algo = it.OcclusionInterpreter(paddle_model, use_cuda=False)
         exp = algo.interpret(
-            img_path, sliding_window_shapes=(1, 20, 20), strides=(1, 20, 20), visual=False
+            img_path, sliding_window_shapes=(1, 20, 20), strides=(1, 20, 20), resize_to=256, crop_to=224, visual=False
         )
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max(), *exp.shape])
         desired = np.array([ 1.19814882e-02,  5.36160879e-02, -1.64756835e-01,  1.99667364e-01,
@@ -28,7 +28,7 @@ class TestOCC(unittest.TestCase):
         img_path = 'imgs/catdog.jpg'
         algo = it.OcclusionInterpreter(paddle_model, use_cuda=False)
         exp = algo.interpret(
-            img_path, labels=282, sliding_window_shapes=(1, 20, 20), strides=(1, 20, 20), visual=False
+            img_path, labels=282, sliding_window_shapes=(1, 20, 20), strides=(1, 20, 20), resize_to=256, crop_to=224, visual=False
         )
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max(), *exp.shape])
         desired = np.array([ 9.92860179e-03,  4.55657057e-02, -1.00801319e-01,  2.11558089e-01,
@@ -41,7 +41,7 @@ class TestOCC(unittest.TestCase):
 
         img_path = ['imgs/catdog.jpg', 'imgs/catdog.jpg']
         algo = it.OcclusionInterpreter(paddle_model, use_cuda=False)
-        exp = algo.interpret(img_path, sliding_window_shapes=(1, 20, 20), strides=(1, 20, 20), visual=False)
+        exp = algo.interpret(img_path, sliding_window_shapes=(1, 20, 20), strides=(1, 20, 20), resize_to=256, crop_to=224, visual=False)
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max(), *exp.shape])
         desired = np.array([ 1.19814882e-02,  5.36160879e-02, -1.64756835e-01,  1.99667364e-01,
             2.00000000e+00,  3.00000000e+00,  2.24000000e+02,  2.24000000e+02])

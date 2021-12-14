@@ -1,8 +1,7 @@
 import numpy as np
-import paddle
 from tqdm import tqdm
 from .abc_interpreter import InputGradientInterpreter, Interpreter
-from ..data_processor.readers import preprocess_inputs, preprocess_save_path
+from ..data_processor.readers import images_transform_pipeline, preprocess_save_path
 from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
 
 
@@ -18,8 +17,7 @@ class IntGradCVInterpreter(InputGradientInterpreter):
         self,
         paddle_model: callable,
         use_cuda: bool=True,
-        device: str='gpu:0',
-        model_input_shape: list=[3, 224, 224]
+        device: str='gpu:0'
     ):
         """
 
@@ -27,11 +25,8 @@ class IntGradCVInterpreter(InputGradientInterpreter):
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
             use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
-            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
         InputGradientInterpreter.__init__(self, paddle_model, device, use_cuda)
-
-        self.model_input_shape = model_input_shape
 
     def interpret(
         self,
@@ -40,6 +35,8 @@ class IntGradCVInterpreter(InputGradientInterpreter):
         baselines: np.ndarray or None=None,
         steps: int=50,
         num_random_trials: int=10,
+        resize_to=224, 
+        crop_to=None,
         visual: bool=True,
         save_path=None
     ):
@@ -52,6 +49,9 @@ class IntGradCVInterpreter(InputGradientInterpreter):
                                                         If None, the baselines of all zeros will be used. Default: None.
             steps (int, optional): number of steps in the Riemman approximation of the integral. Default: 50
             num_random_trials (int, optional): number of random initializations to take average in the end. Default: 10
+            resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`. Defaults to 224.
+            crop_to ([type], optional): [description]. After resize, images will be center cropped to a square image with the size `crop_to`. 
+                If None, no crop will be performed. Defaults to None.
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None, the image will not be saved. Default: None
 
@@ -59,7 +59,7 @@ class IntGradCVInterpreter(InputGradientInterpreter):
             [numpy.ndarray]: interpretations/gradients for images
         """
 
-        imgs, data = preprocess_inputs(inputs, self.model_input_shape)
+        imgs, data = images_transform_pipeline(inputs, resize_to, crop_to)
 
         self.data_type = np.array(data).dtype
         self.input_type = type(data)
@@ -132,7 +132,6 @@ class IntGradNLPInterpreter(Interpreter):
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
             use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
-            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
         Interpreter.__init__(self, paddle_model, device, use_cuda)
 

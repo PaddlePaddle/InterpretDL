@@ -12,7 +12,7 @@ class TestLRP(unittest.TestCase):
 
         img_path = 'imgs/catdog.jpg'
         algo = it.LRPCVInterpreter(paddle_model, use_cuda=False)
-        exp = algo.interpret(img_path, visual=False)
+        exp = algo.interpret(img_path, resize_to=256, crop_to=224, visual=False)
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
         desired = np.array([1.8663127e-04, 2.1888215e-04, 1.7363816e-06, 3.2938947e-03])
 
@@ -24,7 +24,7 @@ class TestLRP(unittest.TestCase):
 
         img_path = 'imgs/catdog.jpg'
         algo = it.LRPCVInterpreter(paddle_model, use_cuda=False)
-        exp = algo.interpret(img_path, label=282, visual=False)
+        exp = algo.interpret(img_path, label=282, resize_to=256, crop_to=224, visual=False)
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
         desired = np.array([1.5382419e-04, 1.4931166e-04, 2.2044858e-06, 2.2588256e-03])
 
@@ -36,7 +36,7 @@ class TestLRP(unittest.TestCase):
 
         img_path = ['imgs/catdog.jpg', 'imgs/catdog.jpg']
         algo = it.LRPCVInterpreter(paddle_model, use_cuda=False)
-        exp = algo.interpret(img_path, visual=False)
+        exp = algo.interpret(img_path, resize_to=256, crop_to=224, visual=False)
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
         desired = np.array([1.8663125e-04, 2.1888215e-04, 1.7363816e-06, 3.2938947e-03])
 

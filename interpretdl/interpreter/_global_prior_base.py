@@ -23,7 +23,7 @@ def data_labels(file_path_list, predict_fn, batch_size):
     tmp_imgs = []
 
     for each_data_ in tqdm.tqdm(file_path_list):
-        image_show = read_image(each_data_)
+        image_show = read_image(each_data_)  # todo: whether add resize_to, crop_to?
         tmp_imgs.append(image_show)
 
         feature = fextractor.forward(image_show).transpose((1, 2, 0))

@@ -118,9 +118,9 @@ def preprocess_image(img: np.ndarray, random_mirror=False) -> np.ndarray:
 
 def read_image(img_path, target_size=256, crop_size=224, crop=True) -> np.ndarray:
     """
-    resize_short to 256, then center crop to 224.
+    resize_short to target_size, then center crop to crop_size or not crop.
     :param img_path: one image path
-    :return: np.ndarray: shape: [1, h, w, 3], color order: rgb.
+    :return: np.ndarray: shape: [1, h, w, 3], dtype: uint8, color order: rgb.
     """
 
     if isinstance(img_path, str):
@@ -128,7 +128,7 @@ def read_image(img_path, target_size=256, crop_size=224, crop=True) -> np.ndarra
             img = Image.open(f)
             img = img.convert('RGB')
             img = np.array(img)
-            img = resize_image(img, target_size, interpolation=None)
+            img = resize_image(img, target_size)
             if crop:
                 img = crop_image(img, target_size=crop_size, center=True)
             img = np.expand_dims(img, axis=0)
@@ -140,16 +140,16 @@ def read_image(img_path, target_size=256, crop_size=224, crop=True) -> np.ndarra
         ValueError(f"Not recognized data type {type(img_path)}.")
 
 
-def restore_image(img: np.ndarray) -> np.ndarray:
+def restore_image(float_input_data: np.ndarray) -> np.ndarray:
     mean = [0.485, 0.456, 0.406]
     std = [0.229, 0.224, 0.225]
     img_mean = np.array(mean).reshape((3, 1, 1))
     img_std = np.array(std).reshape((3, 1, 1))
-    img *= img_std
-    img += img_mean
-    img *= 255
-    img += 0.5  # for float to integer
-    img = np.uint8(img.transpose((0, 2, 3, 1)))
+    float_input_data *= img_std
+    float_input_data += img_mean
+    float_input_data *= 255
+    float_input_data += 0.5  # for float to integer
+    img = np.uint8(float_input_data.transpose((0, 2, 3, 1)))
     return img
 
 
@@ -229,6 +229,53 @@ def extract_img_paths(directory):
             img_paths.append(os.path.join(directory, file))
             img_names.append(file)
     return img_paths, img_names
+
+
+
+def images_transform_pipeline(array_or_path, resize_to=224, crop_to=None):
+    """[summary]
+
+    Args:
+        array_or_path ([type]): [description]
+        resize_to (int, optional): [description]. Defaults to 224.
+        crop_to ([type], optional): [description]. Defaults to None.
+    """
+    if crop_to is not None:
+        assert isinstance(crop_to, int)
+        def read_image_func(path):
+            return read_image(path, target_size=resize_to, crop_size=crop_to)
+    else:
+        def read_image_func(path):
+            read_image(path, target_size=resize_to, crop=False)
+
+    if isinstance(array_or_path, str):
+        # one single image path.
+        uint8_imgs = read_image_func(array_or_path)
+        float_input_data = preprocess_image(uint8_imgs)
+    elif isinstance(array_or_path, list) and all(
+            isinstance(elem, str) for elem in array_or_path):
+        # a list of image paths.
+        uint8_imgs = []
+        for fp in array_or_path:
+            uint8_img = read_image_func(fp)
+            uint8_imgs.append(uint8_img)
+        uint8_imgs = np.concatenate(uint8_imgs)
+        float_input_data = preprocess_image(uint8_imgs)
+    else:
+        # an array.
+        if len(array_or_path.shape) == 3:
+            uint8_imgs = np.expand_dims(array_or_path, axis=0)
+
+        if np.issubdtype(array_or_path.dtype, np.integer):
+            # array_or_path is an image.
+            uint8_imgs = uint8_imgs.copy()
+            float_input_data = preprocess_image(uint8_imgs)
+        else:
+            # array_or_path is float input data.
+            uint8_imgs = restore_image(array_or_path.copy())
+            float_input_data = array_or_path
+
+    return uint8_imgs, float_input_data
 
 
 def preprocess_inputs(inputs, model_input_shape):

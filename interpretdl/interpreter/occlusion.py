@@ -1,9 +1,10 @@
+from paddle.fluid.layers.nn import crop
 from tqdm import tqdm
 import numpy as np
 import paddle
 
 from .abc_interpreter import Interpreter, InputOutputInterpreter
-from ..data_processor.readers import preprocess_inputs, preprocess_save_path
+from ..data_processor.readers import images_transform_pipeline, preprocess_save_path
 from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
 
 
@@ -21,18 +22,15 @@ class OcclusionInterpreter(InputOutputInterpreter):
     def __init__(self,
                  paddle_model,
                  use_cuda=None,
-                 device='gpu:0',
-                 model_input_shape=[3, 224, 224]) -> None:
+                 device='gpu:0') -> None:
         """
 
         Args:
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
             use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
-            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
         InputOutputInterpreter.__init__(self, paddle_model, device, use_cuda)
-        self.model_input_shape = model_input_shape
 
     def interpret(self,
                   inputs,
@@ -41,6 +39,8 @@ class OcclusionInterpreter(InputOutputInterpreter):
                   strides=1,
                   baselines=None,
                   perturbations_per_eval=1,
+                  resize_to=224, 
+                  crop_to=None,
                   visual=True,
                   save_path=None):
         """
@@ -55,6 +55,9 @@ class OcclusionInterpreter(InputOutputInterpreter):
             baselines (numpy.ndarray or None, optional): The baseline images to compare with. It should have the same shape as images.
                                                         If None, the baselines of all zeros will be used. Default: None.
             perturbations_per_eval (int, optional): number of occlusions in each batch. Default: 1
+            resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`. Defaults to 224.
+            crop_to ([type], optional): [description]. After resize, images will be center cropped to a square image with the size `crop_to`. 
+                If None, no crop will be performed. Defaults to None.
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None, the image will not be saved. Default: None
 
@@ -62,7 +65,7 @@ class OcclusionInterpreter(InputOutputInterpreter):
             [numpy.ndarray]: interpretations for images
         """
 
-        imgs, data = preprocess_inputs(inputs, self.model_input_shape)
+        imgs, data = images_transform_pipeline(inputs, resize_to, crop_to)
 
         bsz = len(data)
         save_path = preprocess_save_path(save_path, bsz)
@@ -71,7 +74,7 @@ class OcclusionInterpreter(InputOutputInterpreter):
 
         if baselines is None:
             baselines = np.zeros_like(data)
-        elif np.array(baselines).ndim == len(self.model_input_shape):
+        elif np.array(baselines).ndim == 3:
             baselines = np.repeat(np.expand_dims(baselines, 0), len(data), 0)
         if len(baselines) == 1:
             baselines = np.repeat(baselines, len(data), 0)
@@ -85,8 +88,9 @@ class OcclusionInterpreter(InputOutputInterpreter):
         elif isinstance(labels, int):
             labels = [labels]
 
+        img_size = [3, crop_to, crop_to] if crop_to is not None else [3, imgs.shape[1], imgs.shape[2]]
         current_shape = np.subtract(
-            self.model_input_shape, sliding_window_shapes
+            img_size, sliding_window_shapes
         )
         shift_counts = tuple(
             np.add(np.ceil(np.divide(current_shape, strides)).astype(int), 1)

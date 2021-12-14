@@ -17,13 +17,11 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
 
     def __init__(self,
                  paddle_model: Callable,
-                 model_input_shape=[3, 224, 224],
                  prior_method="none",
                  use_cuda=True) -> None:
         """
         Args:
             paddle_model (callable): A paddle model that outputs predictions.
-            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
             prior_method: Prior method. Can be chosen from ``{"none", "ridge"}``.
                 Defaults to ``"none"``, which is equivalent to LIME.
                 If ``"none"``, ``interpret()`` will use zeros as prior;
@@ -35,7 +33,7 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
                 "LIMEPriorInterpreter currently doesn't support paddle version 2.0 or higher"
             )
 
-        LIMECVInterpreter.__init__(self, paddle_model, use_cuda, model_input_shape=model_input_shape)
+        LIMECVInterpreter.__init__(self, paddle_model, use_cuda)
         self.prior_method = prior_method
         self.global_weights = None
 
@@ -84,6 +82,8 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
                   prior_reg_force=1.0,
                   num_samples=1000,
                   batch_size=50,
+                  resize_to=256, 
+                  crop_to=224,
                   visual=True,
                   save_path=None):
         """
@@ -95,6 +95,9 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
             prior_reg_force (float, optional): The regularization force to apply. Default: 1.0
             num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate interpretation. Default: 1000
             batch_size (int, optional): Number of samples to forward each time. Default: 50
+            resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`. Defaults to 224.
+            crop_to ([type], optional): [description]. After resize, images will be center cropped to a square image with the size `crop_to`. 
+                If None, no crop will be performed. Defaults to None.
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str, optional): The path to save the processed image. If None, the image will not be saved. Default: None
 
@@ -107,7 +110,7 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
                 "The interpreter is not prepared. Call prepare() before interpretation."
             )
 
-        data_instance = read_image(data_path)
+        data_instance = read_image(data_path, resize_to, crop_to)
 
         # only one example here
         probability = self.predict_fn_for_lime(data_instance)[0]

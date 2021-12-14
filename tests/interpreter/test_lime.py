@@ -12,8 +12,8 @@ class TestLIME(unittest.TestCase):
         paddle_model = mobilenet_v2(pretrained=True)
 
         img_path = 'imgs/catdog.jpg'
-        algo = it.LIMECVInterpreter(paddle_model, model_input_shape=[3, 64, 64], use_cuda=False, random_seed=42)
-        exp = algo.interpret(img_path, num_samples=200, batch_size=50, visual=False)
+        algo = it.LIMECVInterpreter(paddle_model, use_cuda=False, random_seed=42)
+        exp = algo.interpret(img_path, num_samples=200, batch_size=50, resize_to=73, crop_to=64, visual=False)
         result = np.zeros(len(exp[537]))
         for sp_id, v in exp[537]:
             result[sp_id] = v
@@ -27,8 +27,8 @@ class TestLIME(unittest.TestCase):
         interpret_class = 282
 
         img_path = 'imgs/catdog.jpg'
-        algo = it.LIMECVInterpreter(paddle_model, model_input_shape=[3, 64, 64], use_cuda=False, random_seed=42)
-        exp = algo.interpret(img_path, interpret_class=interpret_class, num_samples=200, batch_size=50, visual=False)
+        algo = it.LIMECVInterpreter(paddle_model, use_cuda=False, random_seed=42)
+        exp = algo.interpret(img_path, interpret_class=interpret_class, num_samples=200, batch_size=50, resize_to=73, crop_to=64, visual=False)
         result = np.zeros(len(exp[interpret_class]))
         for sp_id, v in exp[interpret_class]:
             result[sp_id] = v

@@ -23,7 +23,6 @@ class LIMECVInterpreter(InputOutputInterpreter):
         paddle_model: callable,
         use_cuda: bool=True,
         device: str='gpu:0',
-        model_input_shape: list=[3, 224, 224],
         random_seed: int or None=None
     ):
         """
@@ -32,10 +31,8 @@ class LIMECVInterpreter(InputOutputInterpreter):
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
             use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
-            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
         InputOutputInterpreter.__init__(self, paddle_model, device, use_cuda)
-        self.model_input_shape = model_input_shape
 
         # use the default LIME setting
         self.lime_base = LimeBase(random_state=random_seed)
@@ -47,6 +44,8 @@ class LIMECVInterpreter(InputOutputInterpreter):
         interpret_class=None,
         num_samples=1000,
         batch_size=50,
+        resize_to=256, 
+        crop_to=224,
         visual=True,
         save_path=None
     ):
@@ -58,6 +57,9 @@ class LIMECVInterpreter(InputOutputInterpreter):
             interpret_class (int, optional): The index of class to interpret. If None, the most likely label will be used. Default: None
             num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate interpretation. Default: 1000
             batch_size (int, optional): Number of samples to forward each time. Default: 50
+            resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`. Defaults to 224.
+            crop_to ([type], optional): [description]. After resize, images will be center cropped to a square image with the size `crop_to`. 
+                If None, no crop will be performed. Defaults to None.
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str, optional): The path to save the processed image. If None, the image will not be saved. Default: None
 
@@ -66,8 +68,8 @@ class LIMECVInterpreter(InputOutputInterpreter):
         """
         # preprocess_inputs
         if isinstance(data, str):
-            crop_size = self.model_input_shape[1]
-            target_size = int(self.model_input_shape[1] * 1.143)
+            crop_size = crop_to
+            target_size = resize_to
             img = read_image(data, target_size, crop_size)
         else:
             if len(data.shape) == 3:

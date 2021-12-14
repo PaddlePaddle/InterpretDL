@@ -1,10 +1,8 @@
 from .abc_interpreter import Interpreter, InputGradientInterpreter
-from .integrated_gradients import IntGradNLPInterpreter
-from ..data_processor.readers import preprocess_inputs, preprocess_save_path
+from ..data_processor.readers import images_transform_pipeline, preprocess_save_path
 from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
 
 import numpy as np
-import paddle
 
 
 class GradShapCVInterpreter(InputGradientInterpreter):
@@ -19,8 +17,7 @@ class GradShapCVInterpreter(InputGradientInterpreter):
         self, 
         paddle_model: callable,
         use_cuda: bool=None,
-        device: str='gpu:0',
-        model_input_shape: list=[3, 224, 224]
+        device: str='gpu:0'
     ):
         """
 
@@ -28,10 +25,8 @@ class GradShapCVInterpreter(InputGradientInterpreter):
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
             use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
-            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
         InputGradientInterpreter.__init__(self, paddle_model, device, use_cuda)
-        self.model_input_shape = model_input_shape
 
     def interpret(
         self,
@@ -40,6 +35,8 @@ class GradShapCVInterpreter(InputGradientInterpreter):
         baselines: np.ndarray=None,
         n_samples: int=5,
         noise_amount: float=0.1,
+        resize_to=224, 
+        crop_to=None,
         visual: bool=True,
         save_path=None
     ) -> np.ndarray:
@@ -54,6 +51,9 @@ class GradShapCVInterpreter(InputGradientInterpreter):
             n_samples (int, optional): The number of randomly generated samples. Default: 5.
             noise_amount (float, optional): Noise level of added noise to each image.
                                             The std of Guassian random noise is noise_amount * (x_max - x_min). Default: 0.1
+            resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`. Defaults to 224.
+            crop_to ([type], optional): [description]. After resize, images will be center cropped to a square image with the size `crop_to`. 
+                If None, no crop will be performed. Defaults to None.
             visual (bool, optional): Whether or not to visualize the processed image. Default: True.
             save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None, the image will not be saved. Default: None
 
@@ -61,7 +61,7 @@ class GradShapCVInterpreter(InputGradientInterpreter):
             [numpy.ndarray]: interpretations for images
         """
 
-        imgs, data = preprocess_inputs(inputs, self.model_input_shape)
+        imgs, data = images_transform_pipeline(inputs, resize_to, crop_to)
         bsz = len(data)
         self.data_type = np.array(data).dtype
 
@@ -140,7 +140,6 @@ class GradShapNLPInterpreter(Interpreter):
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
             use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
-            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
         Interpreter.__init__(self, paddle_model, device, use_cuda)
 
