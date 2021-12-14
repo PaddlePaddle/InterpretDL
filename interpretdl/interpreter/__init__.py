@@ -13,6 +13,7 @@ from .score_cam import ScoreCAMInterpreter
 from .lrp import LRPCVInterpreter
 from .rollout import RolloutInterpreter
 from .transition_attention_maps import TAMInterpreter
+from .consensus import ConsensusInterpreter
 
 __all__ = [
     "Interpreter",
@@ -22,7 +23,7 @@ __all__ = [
     "IntGradNLPInterpreter", "SmoothGradInterpreter", "OcclusionInterpreter",
     "GradShapCVInterpreter", "GradShapNLPInterpreter", "ScoreCAMInterpreter",
     "LRPCVInterpreter", "RolloutInterpreter", "TAMInterpreter",
-    "SmoothGradInterpreterV2"
+    "SmoothGradInterpreterV2", 'ConsensusInterpreter'
 ]
 
 try:
