@@ -1,6 +1,7 @@
 # visual studio code
 .vscode/
 .idea/
+.lh/
 
 # python
 venv/
@@ -13,6 +14,7 @@ dist/
 *.egg-info/
 docs/_build/
 tutorials/assets/ResNet101_pretrained
+*.pyc
 
 # misc
 .DS_Store
