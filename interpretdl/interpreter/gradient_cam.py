@@ -1,6 +1,5 @@
 
 import numpy as np
-import paddle
 
 from .abc_interpreter import Interpreter
 from ..data_processor.readers import images_transform_pipeline, preprocess_save_path
@@ -105,6 +104,7 @@ class GradCAMInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
+            import paddle
             paddle.set_device(self.device)
             # to get gradients, the ``train`` mode must be set.
             # we cannot set v.training = False for the same reason.
