@@ -246,7 +246,7 @@ def images_transform_pipeline(array_or_path, resize_to=224, crop_to=None):
             return read_image(path, target_size=resize_to, crop_size=crop_to)
     else:
         def read_image_func(path):
-            read_image(path, target_size=resize_to, crop=False)
+            return read_image(path, target_size=resize_to, crop=False)
 
     if isinstance(array_or_path, str):
         # one single image path.
