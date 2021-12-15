@@ -41,12 +41,17 @@ class ConsensusInterpreter(object):
             import interpretdl as it
             from paddle.vision.models import resnet34, resnet50, resnet101, mobilenet_v2
 
-            list_models = {'resnet34': resnet34, 'resnet50': resnet50, 'resnet101': resnet101, 'mobilenet_v2': mobilenet_v2}
+            list_models = {
+                'resnet34': resnet34(pretrained=True), 
+                'resnet50': resnet50(pretrained=True),
+                'resnet101': resnet101(pretrained=True), 
+                'mobilenet_v2': mobilenet_v2(pretrained=True)
+            }
             consensus = ConsensusInterpreter(it.SmoothGradInterpreter, list_models.values(), device='gpu:0')
 
             import matplotlib.pyplot as plt
             import numpy as np
-            
+
             cols = len(list_models) + 1
             psize = 4
             fig, ax = plt.subplots(1, cols, figsize=(cols*psize, 1*psize))
@@ -70,8 +75,7 @@ class ConsensusInterpreter(object):
         
         exps = []
         for model in self.list_of_models:
-            model_instance = model(pretrained=True)
-            interpreter = self.InterpreterClass(model_instance, self.use_cuda, self.device, **self.other_args)
+            interpreter = self.InterpreterClass(model, self.use_cuda, self.device, **self.other_args)
             raw_explanation = interpreter.interpret(inputs, visual=False, save_path=None, **kwargs)
             exps.append(raw_explanation)
         
