@@ -182,9 +182,12 @@ gradients = sg.interpret("test.jpg", visual=True, save_path=None)
 ### 数据层面的可解释性算法
 - [x] Forgetting Event
 - [x] SGDNoise
-- [x] TrainIng Data analYzer (TIDY)
+- [x] TrainIng Data analYzer (TIDY)
 - [ ] Influence Function
 - [ ] More ...
+
+### 跨模型的解释
+- [x] Consensus
 
 ## Tutorials
 
@@ -206,6 +209,7 @@ gradients = sg.interpret("test.jpg", visual=True, save_path=None)
 * `LRP`: [On Pixel-Wise Explanations for Non-Linear Classifier Decisions by Layer-Wise Relevance Propagation, Bach et al. 2015](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140)
 * `Rollout`: [Quantifying Attention Flow in Transformers, Abnar et al. 2020](https://arxiv.org/abs/2005.00928)
 * `TAM`: [Explaining Information Flow Inside Vision Transformers Using Markov Chain. Yuan et al. 2021](https://openreview.net/forum?id=TT-cf6QSDaQ)
+* `Consensus`: [Cross-Model Consensus of Explanations and Beyond for Image Classification Models: An Empirical Study. Li et al 2021](https://arxiv.org/abs/2109.00707)
 
 # Copyright and License
 

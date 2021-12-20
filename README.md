@@ -181,9 +181,12 @@ We are planning to implement the algorithms below (categorized by the explaining
 ### Dataset-level Interpretation Algorithms
 - [x] Forgetting Event
 - [x] SGDNoise
-- [x] TrainIng Data analYzer (TIDY)
+- [x] TrainIng Data analYzer (TIDY)
 - [ ] Influence Function
 - [ ] More ...
+
+### Cross-Model Explanation
+- [x] Consensus
 
 ## Tutorials
 
@@ -205,6 +208,7 @@ Current tutorials can be accessed under [tutorials](https://github.com/PaddlePad
 * `LRP`: [On Pixel-Wise Explanations for Non-Linear Classifier Decisions by Layer-Wise Relevance Propagation, Bach et al. 2015](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140)
 * `Rollout`: [Quantifying Attention Flow in Transformers, Abnar et al. 2020](https://arxiv.org/abs/2005.00928)
 * `TAM`: [Explaining Information Flow Inside Vision Transformers Using Markov Chain. Yuan et al. 2021](https://openreview.net/forum?id=TT-cf6QSDaQ)
+* `Consensus`: [Cross-Model Consensus of Explanations and Beyond for Image Classification Models: An Empirical Study. Li et al 2021](https://arxiv.org/abs/2109.00707)
 
 # Copyright and License
 
