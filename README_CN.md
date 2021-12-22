@@ -150,15 +150,14 @@ gradients = sg.interpret("test.jpg", visual=True, save_path=None)
 
 使用细节在 [tutorials](https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials) 文件夹。
 
+
 # Roadmap
 
-我门希望构建一个强大的模型解释工具库。
+我门希望构建一个强大的模型解释工具库，并提供评估方式。
+以下是我们已实现的算法，我们也将继续加入新的算法。
+欢迎贡献算法，或者告诉我们想用的算法，我们将尽可能地实现。
 
-## Algorithms
-
-我们计划添加以下算法 (按解释对象分类):
-
-### 特征层面的可解释性算法
+## 已实现的算法
 
 * 以输入特征为解释对象
     - [x] SmoothGrad
@@ -169,7 +168,6 @@ gradients = sg.interpret("test.jpg", visual=True, save_path=None)
     - [x] GLIME (LIMEPrior)
     - [x] NormLIME/FastNormLIME
     - [x] LRP
-    - [ ] More ...
 
 * 以中间过程特征为解释对象
     - [x] CAM
@@ -177,17 +175,23 @@ gradients = sg.interpret("test.jpg", visual=True, save_path=None)
     - [x] ScoreCAM
     - [x] Rollout
     - [X] TAM
-    - [ ] More ...
 
-### 数据层面的可解释性算法
-- [x] Forgetting Event
-- [x] SGDNoise
-- [x] TrainIng Data analYzer (TIDY)
-- [ ] Influence Function
-- [ ] More ...
+* 数据层面的可解释性算法
+    - [x] Forgetting Event
+    - [x] SGDNoise
+    - [x] TrainIng Data analYzer (TIDY)
 
-### 跨模型的解释
-- [x] Consensus
+* 跨模型的解释
+    - [x] Consensus
+
+## 计划中的算法
+
+* 数据层面的可解释性算法
+    - [ ] Influence Function
+
+* 评估方式
+    - [ ] Deletion & Insertion
+    - [ ] Local Fidelity
 
 ## Tutorials
 

@@ -151,13 +151,11 @@ Details of the usage can be found under [tutorials](https://github.com/PaddlePad
 
 # Roadmap
 
-We are planning to create a useful toolkit for offering the model interpretation.
+We are planning to create a useful toolkit for offering the model interpretations as well as evaluations.
+We have now implemented the interpretation algorithms as follows, and we are planning to add more algorithms that are desired.
+Welcome to contribute or just tell us which algorithms are desired.
 
-## Algorithms
-
-We are planning to implement the algorithms below (categorized by the explaining target):
-
-### Feature-level Interpretation Algorithms
+## Implemented Algorithms
 
 * Target at Input Features
     - [x] SmoothGrad
@@ -168,7 +166,6 @@ We are planning to implement the algorithms below (categorized by the explaining
     - [x] GLIME (LIMEPrior)
     - [x] NormLIME/FastNormLIME
     - [x] LRP
-    - [ ] More ...
 
 * Target at Intermediate Features
     - [x] CAM
@@ -176,17 +173,23 @@ We are planning to implement the algorithms below (categorized by the explaining
     - [x] ScoreCAM
     - [x] Rollout
     - [X] TAM
-    - [ ] More ...
 
-### Dataset-level Interpretation Algorithms
-- [x] Forgetting Event
-- [x] SGDNoise
-- [x] TrainIng Data analYzer (TIDY)
-- [ ] Influence Function
-- [ ] More ...
+* Dataset-level Interpretation Algorithms
+    - [x] Forgetting Event
+    - [x] SGDNoise
+    - [x] TrainIng Data analYzer (TIDY)
 
-### Cross-Model Explanation
-- [x] Consensus
+* Cross-Model Explanation
+    - [x] Consensus
+
+## Planning Alorithms
+
+* Dataset-level Interpretation Algorithms
+    - [ ] Influence Function
+
+* Evaluations
+    - [ ] Deletion & Insertion
+    - [ ] Local Fidelity
 
 ## Tutorials
 
