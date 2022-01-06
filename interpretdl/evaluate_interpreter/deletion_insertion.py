@@ -1,6 +1,4 @@
-
 import numpy as np
-from tqdm import tqdm
 from .abc_evaluator import InterpreterEvaluator
 from interpretdl.data_processor.readers import images_transform_pipeline, preprocess_image
 
