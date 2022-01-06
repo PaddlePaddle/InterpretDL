@@ -1,3 +1,5 @@
+# Files within this path, contain the interpretation algorithms.
+
 from .abc_interpreter import Interpreter
 from .abc_interpreter import InputGradientInterpreter, InputOutputInterpreter, IntermediateLayerInterpreter
 
