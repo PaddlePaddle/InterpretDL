@@ -31,3 +31,7 @@ tutorials/assets/ResNet101_pretrained
 
 # pretrained weights
 *.pdparams
+
+# coverage
+coverage.xml
+.coverage

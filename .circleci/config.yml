@@ -1,0 +1,32 @@
+version: 2.1
+
+commands:
+  pip_install:
+    description: "Install dependencies via pip"
+    parameters:
+      args:
+        type: string
+        default: ""
+    steps:
+      - run:
+          name: "Install dependencies via pip"
+          command: ./scripts/install_from_scratch.sh << parameters.args >>
+
+  unit_tests:
+    description: "Run unit tests"
+    steps:
+      - run:
+          name: "Run unit tests"
+          command: |
+            pip install coverage
+            coverage run --source=interpretdl -m unittest
+            coverage report -m
+
+jobs:
+  test_py37_cpu:
+    docker:
+      - image: circleci/python:3.7
+    steps:
+      - checkout
+      - pip_install
+      - unit_tests
