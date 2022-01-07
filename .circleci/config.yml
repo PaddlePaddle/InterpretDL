@@ -30,3 +30,8 @@ jobs:
       - checkout
       - pip_install
       - unit_tests
+
+workflows:
+  tests:
+    jobs:
+      - test_py37_cpu
