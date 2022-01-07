@@ -1,4 +1,5 @@
 import os
+import paddle
 import paddle.fluid as fluid
 import numpy as np
 import os.path as osp
@@ -103,6 +104,7 @@ class FeatureExtractor(object):
         self.h_pre_model_path, _ = get_pre_models()
 
     def session_prepare(self):
+        paddle.enable_static()
         self._check_files()
 
         def conv_bn_layer(input,
@@ -173,8 +175,11 @@ class FeatureExtractor(object):
 
                 prog = prog.clone(for_test=True)
 
-        gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
-        place = fluid.CUDAPlace(gpu_id)
+        if paddle.is_compiled_with_cuda():
+            gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
+            place = fluid.CUDAPlace(gpu_id)
+        else:
+            place = fluid.CPUPlace()
         # place = fluid.CPUPlace()
         exe = fluid.Executor(place)
         fluid.io.load_persistables(exe, self.h_pre_model_path, prog)
