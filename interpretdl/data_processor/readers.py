@@ -32,13 +32,13 @@ def load_pickle_file(fname):
         return None
 
 
-def read_image_to_np(img_path: str) -> np.ndarray:
-    img = cv2.imread(img_path, cv2.IMREAD_COLOR)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # convert BGR to RGB.
-    # h, w, c = img.shape
-    # assert c in [1, 3]
-    # assert c.dytpe == np.unit8
-    return img
+# def read_image_to_np(img_path: str) -> np.ndarray:
+#     img = cv2.imread(img_path, cv2.IMREAD_COLOR)
+#     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # convert BGR to RGB.
+#     # h, w, c = img.shape
+#     # assert c in [1, 3]
+#     # assert c.dytpe == np.unit8
+#     return img
 
 
 def resize_image(img: np.ndarray, target_size: int, interpolation=cv2.INTER_LINEAR) -> np.ndarray:
@@ -153,82 +153,82 @@ def restore_image(float_input_data: np.ndarray) -> np.ndarray:
     return img
 
 
-def _find_classes(dir):
-    # Faster and available in Python 3.5 and above
-    classes = [d.name for d in os.scandir(dir) if d.is_dir()]
-    classes.sort()
-    class_to_idx = {classes[i]: i for i in range(len(classes))}
-    return classes, class_to_idx
+# def _find_classes(dir):
+#     # Faster and available in Python 3.5 and above
+#     classes = [d.name for d in os.scandir(dir) if d.is_dir()]
+#     classes.sort()
+#     class_to_idx = {classes[i]: i for i in range(len(classes))}
+#     return classes, class_to_idx
 
 
-def get_typical_dataset_info(dataset_dir,
-                             subset="test",
-                             shuffle=False,
-                             random_seed=None):
-    """
-    where {dataset_dir}/{train,test,segmentations}}/{class1, class2, ...}/*.png exists.
+# def get_typical_dataset_info(dataset_dir,
+#                              subset="test",
+#                              shuffle=False,
+#                              random_seed=None):
+#     """
+#     where {dataset_dir}/{train,test,segmentations}}/{class1, class2, ...}/*.png exists.
 
-    segmentations are optional.
+#     segmentations are optional.
 
-    Args:
-        dataset_dir:
-        shuffle:
-        random_seed:
+#     Args:
+#         dataset_dir:
+#         shuffle:
+#         random_seed:
 
-    Returns:
+#     Returns:
 
-    """
-    IMG_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif',
-                      '.tiff', '.webp')
+#     """
+#     IMG_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif',
+#                       '.tiff', '.webp')
 
-    # read
-    set_dir = os.path.join(dataset_dir, subset)
-    seg_dir = os.path.join(dataset_dir, 'segmentations')
+#     # read
+#     set_dir = os.path.join(dataset_dir, subset)
+#     seg_dir = os.path.join(dataset_dir, 'segmentations')
 
-    class_names, class_to_idx = _find_classes(set_dir)
-    # num_classes = len(class_names)
-    image_paths = []
-    seg_paths = []
-    labels = []
-    for class_name in sorted(class_names):
-        classes_dir = os.path.join(set_dir, class_name)
-        for img_path in sorted(glob.glob(os.path.join(classes_dir, '*'))):
-            if not img_path.lower().endswith(IMG_EXTENSIONS):
-                continue
+#     class_names, class_to_idx = _find_classes(set_dir)
+#     # num_classes = len(class_names)
+#     image_paths = []
+#     seg_paths = []
+#     labels = []
+#     for class_name in sorted(class_names):
+#         classes_dir = os.path.join(set_dir, class_name)
+#         for img_path in sorted(glob.glob(os.path.join(classes_dir, '*'))):
+#             if not img_path.lower().endswith(IMG_EXTENSIONS):
+#                 continue
 
-            image_paths.append(img_path)
-            seg_paths.append(
-                os.path.join(seg_dir,
-                             img_path.split('test/')[-1].replace('jpg',
-                                                                 'png')))
-            labels.append(class_to_idx[class_name])
+#             image_paths.append(img_path)
+#             seg_paths.append(
+#                 os.path.join(seg_dir,
+#                              img_path.split('test/')[-1].replace('jpg',
+#                                                                  'png')))
+#             labels.append(class_to_idx[class_name])
 
-            assert os.path.exists(seg_paths[-1]), seg_paths[-1]
+#             assert os.path.exists(seg_paths[-1]), seg_paths[-1]
 
-    image_paths = np.array(image_paths)
-    seg_paths = np.array(seg_paths)
-    labels = np.array(labels)
+#     image_paths = np.array(image_paths)
+#     seg_paths = np.array(seg_paths)
+#     labels = np.array(labels)
 
-    if shuffle:
-        np.random.seed(random_seed)
-        random_per = np.random.permutation(range(len(image_paths)))
-        image_paths = image_paths[random_per]
-        seg_paths = seg_paths[random_per]
-        labels = labels[random_per]
+#     if shuffle:
+#         np.random.seed(random_seed)
+#         random_per = np.random.permutation(range(len(image_paths)))
+#         image_paths = image_paths[random_per]
+#         seg_paths = seg_paths[random_per]
+#         labels = labels[random_per]
 
-    return image_paths, seg_paths, labels, len(class_names)
+#     return image_paths, seg_paths, labels, len(class_names)
 
 
-def extract_img_paths(directory):
-    IMG_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif',
-                      '.tiff', '.webp')
-    img_paths = []
-    img_names = []
-    for file in os.listdir(directory):
-        if file.lower().endswith(IMG_EXTENSIONS):
-            img_paths.append(os.path.join(directory, file))
-            img_names.append(file)
-    return img_paths, img_names
+# def extract_img_paths(directory):
+#     IMG_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif',
+#                       '.tiff', '.webp')
+#     img_paths = []
+#     img_names = []
+#     for file in os.listdir(directory):
+#         if file.lower().endswith(IMG_EXTENSIONS):
+#             img_paths.append(os.path.join(directory, file))
+#             img_names.append(file)
+#     return img_paths, img_names
 
 
 
@@ -278,38 +278,38 @@ def images_transform_pipeline(array_or_path, resize_to=224, crop_to=None):
     return uint8_imgs, float_input_data
 
 
-def preprocess_inputs(inputs, model_input_shape):
-    """[summary]
+# def preprocess_inputs(inputs, model_input_shape):
+#     """[summary]
 
-    Args:
-        inputs ([type]): can be a str, a list of str, or np.ndarray.
-        model_input_shape ([type]): [description]
+#     Args:
+#         inputs ([type]): can be a str, a list of str, or np.ndarray.
+#         model_input_shape ([type]): [description]
 
-    Returns:
-        imgs: uint8 images, used for visualization. [ns, h, w, 3]
-        data: float scaled image data, used for computation. [ns, 3, h, w]
-    """
-    if isinstance(inputs, str):
-        imgs = read_image(inputs, crop_size=model_input_shape[1])
-        data = preprocess_image(imgs)
-    elif isinstance(inputs, list) and all(
-            isinstance(elem, str) for elem in inputs):
-        imgs = []
-        for fp in inputs:
-            img = read_image(fp, crop_size=model_input_shape[1])
-            imgs.append(img)
-        imgs = np.concatenate(imgs)
-        data = preprocess_image(imgs)
-    else:
-        if len(inputs.shape) == 3:
-            inputs = np.expand_dims(inputs, axis=0)
-        if np.issubdtype(inputs.dtype, np.integer):
-            imgs = inputs.copy()
-            data = preprocess_image(inputs)
-        else:
-            imgs = restore_image(inputs.copy())
-            data = inputs
-    return imgs, data
+#     Returns:
+#         imgs: uint8 images, used for visualization. [ns, h, w, 3]
+#         data: float scaled image data, used for computation. [ns, 3, h, w]
+#     """
+#     if isinstance(inputs, str):
+#         imgs = read_image(inputs, crop_size=model_input_shape[1])
+#         data = preprocess_image(imgs)
+#     elif isinstance(inputs, list) and all(
+#             isinstance(elem, str) for elem in inputs):
+#         imgs = []
+#         for fp in inputs:
+#             img = read_image(fp, crop_size=model_input_shape[1])
+#             imgs.append(img)
+#         imgs = np.concatenate(imgs)
+#         data = preprocess_image(imgs)
+#     else:
+#         if len(inputs.shape) == 3:
+#             inputs = np.expand_dims(inputs, axis=0)
+#         if np.issubdtype(inputs.dtype, np.integer):
+#             imgs = inputs.copy()
+#             data = preprocess_image(inputs)
+#         else:
+#             imgs = restore_image(inputs.copy())
+#             data = inputs
+#     return imgs, data
 
 
 def preprocess_save_path(save_path, bsz):

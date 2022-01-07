@@ -3,7 +3,7 @@ import numpy as np
 from numpy.lib.arraysetops import isin
 import paddle
 
-from ..data_processor.readers import preprocess_inputs, preprocess_image, read_image, restore_image
+from ..data_processor.readers import preprocess_image, read_image, restore_image
 from ..data_processor.visualizer import sp_weights_to_image_explanation, overlay_threshold, save_image, show_vis_explanation
 
 from ._lime_base import LimeBase
