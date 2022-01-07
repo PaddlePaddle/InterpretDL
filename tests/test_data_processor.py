@@ -20,6 +20,25 @@ class TestBasicMethods(unittest.TestCase):
 
 class TestImageProcessingMethods(unittest.TestCase):
 
+    def test_read_image(self):
+        img_path = 'imgs/catdog.jpg'
+        uint8_img = read_image(img_path)
+        desired = np.array([[155, 152, 152, 151, 152, 152, 151, 137, 115,  96],
+            [159, 154, 151, 152, 154, 153, 151, 139, 116,  97],
+            [159, 154, 150, 152, 154, 153, 151, 140, 118,  98],
+            [158, 153, 150, 152, 154, 152, 151, 140, 119, 101],
+            [157, 153, 150, 152, 153, 151, 151, 141, 122, 104],
+            [157, 153, 150, 152, 153, 151, 151, 143, 125, 107],
+            [158, 152, 149, 151, 152, 150, 150, 144, 128, 110],
+            [159, 151, 149, 151, 152, 149, 150, 144, 129, 112],
+            [161, 151, 149, 151, 151, 148, 150, 145, 131, 114],
+            [161, 151, 147, 149, 151, 148, 149, 145, 132, 116]], dtype=np.int32)
+        assert_arrays_almost_equal(self, 
+            uint8_img[0, 20:30, 20:30, 0].astype(np.int32),
+            desired, 
+            limit=3  # in case jpeg decoder has slight difference.
+        )
+        
     def test_resize_image(self):
         img = np.array(range(6*4*3), dtype=np.float32).reshape((6, 4, 3))
         result = resize_image(img, 2)
