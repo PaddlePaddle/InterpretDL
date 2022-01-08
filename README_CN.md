@@ -2,6 +2,11 @@
 
 ![](preview.png)
 
+[![Release](https://img.shields.io/github/release/PaddlePaddle/InterpretDL.svg)](https://github.com/PaddlePaddle/InterpretDL/releases)
+[![PyPI](https://img.shields.io/pypi/v/interpretdl.svg)]((https://pypi.org/project/interpretdl))
+[![CircleCI](https://circleci.com/gh/PaddlePaddle/InterpretDL.svg?style=shield)](https://circleci.com/gh/PaddlePaddle/InterpretDL)
+[![Documentation Status](https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat)](https://interpretdl.readthedocs.io/en/latest/index.html)
+
 # InterpretDL: 基于『飞桨』的模型可解释性算法库
 
 InterpretDL(全称*interpretations of deep learning models*), 是基于[飞桨](https://github.com/PaddlePaddle/Paddle) 的模型可解释性算法库，其中集成了许多可解释性算法，包括LIME, Grad-CAM, Integrated Gradients等等，还添加和更新许多SOTA算法和最新的可解释性算法。
