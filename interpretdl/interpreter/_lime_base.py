@@ -94,12 +94,12 @@ class LimeBase(object):
         local_pred = easy_model.predict(neighborhood_data[0, used_features]
                                         .reshape(1, -1))
 
-        if self.verbose:
-            print('Intercept', easy_model.intercept_)
-            print(
-                'Prediction_local',
-                local_pred, )
-            print('Right:', neighborhood_labels[0, label])
+        # if self.verbose:
+        #     print('Intercept', easy_model.intercept_)
+        #     print(
+        #         'Prediction_local',
+        #         local_pred, )
+        #     print('Right:', neighborhood_labels[0, label])
 
         if ordered:
             return (easy_model.intercept_, sorted(
@@ -137,21 +137,21 @@ class LimeBase(object):
             for x in np.unique(segments):
                 mx = np.mean(image[segments == x], axis=0)
                 fudged_image[segments == x] = mx
-        elif hide_color == 'avg_from_neighbor':
-            from scipy.spatial.distance import cdist
+        # elif hide_color == 'avg_from_neighbor':
+        #     from scipy.spatial.distance import cdist
 
-            n_features = np.unique(segments).shape[0]
-            regions = regionprops(segments + 1)
-            centroids = np.zeros((n_features, 2))
-            for i, x in enumerate(regions):
-                centroids[i] = np.array(x.centroid)
+        #     n_features = np.unique(segments).shape[0]
+        #     regions = regionprops(segments + 1)
+        #     centroids = np.zeros((n_features, 2))
+        #     for i, x in enumerate(regions):
+        #         centroids[i] = np.array(x.centroid)
 
-            d = cdist(centroids, centroids, 'sqeuclidean')
+        #     d = cdist(centroids, centroids, 'sqeuclidean')
 
-            for x in np.unique(segments):
-                a = [image[segments == i] for i in np.argsort(d[x])[1:6]]
-                mx = np.mean(np.concatenate(a), axis=0)
-                fudged_image[segments == x] = mx
+        #     for x in np.unique(segments):
+        #         a = [image[segments == i] for i in np.argsort(d[x])[1:6]]
+        #         mx = np.mean(np.concatenate(a), axis=0)
+        #         fudged_image[segments == x] = mx
         else:
             fudged_image[:] = 0
 
@@ -249,9 +249,9 @@ class LimeBase(object):
             sample_weight=weights,
             multioutput='variance_weighted')
 
-        if self.verbose:
-            print('Intercept', easy_model.intercept_)
-            print('Right:', neighborhood_labels[0, label])
+        # if self.verbose:
+        #     print('Intercept', easy_model.intercept_)
+        #     print('Right:', neighborhood_labels[0, label])
         return (easy_model.intercept_, sorted(
             zip(used_features, easy_model.coef_),
             key=lambda x: np.abs(x[1]),
@@ -381,6 +381,6 @@ class LimeBase(object):
 
 def compute_segments(image):
     assert len(image.shape) == 3 and image.shape[
-        -1] == 3, "Shape Error when computing superpixels."
+        -1] == 3, "Shape Error when computing superpixels. " + str(image.shape)
     segments = quickshift(image, sigma=1)
     return segments

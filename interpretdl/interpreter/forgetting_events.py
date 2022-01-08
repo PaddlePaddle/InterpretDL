@@ -18,7 +18,7 @@ class ForgettingEventsInterpreter(Interpreter):
     https://arxiv.org/pdf/1812.05159.pdf
     """
 
-    def __init__(self, paddle_model, use_cuda=True):
+    def __init__(self, paddle_model, device='gpu:0', use_cuda=True):
         """
         Initialize the ForgettingEventsInterpreter.
         Args:
@@ -26,10 +26,7 @@ class ForgettingEventsInterpreter(Interpreter):
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
             model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
         """
-        Interpreter.__init__(self)
-        self.paddle_model = paddle_model
-        self.use_cuda = use_cuda
-        self.paddle_prepared = False
+        Interpreter.__init__(self, paddle_model, device, use_cuda)
 
     def interpret(self,
                   train_reader,
@@ -55,10 +52,7 @@ class ForgettingEventsInterpreter(Interpreter):
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 
-        if self.use_cuda:
-            paddle.set_device('gpu:0')
-        else:
-            paddle.set_device('cpu')
+        paddle.set_device(self.device)
 
         for i in range(epochs):
             counter = 0

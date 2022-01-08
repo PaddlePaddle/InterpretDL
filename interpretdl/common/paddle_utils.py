@@ -9,15 +9,15 @@ from ..data_processor.readers import preprocess_image
 from .file_utils import download_and_decompress, gen_user_home
 
 
-def paddle_get_fc_weights(var_name="fc_0.w_0"):
-    fc_weights = fluid.global_scope().find_var(var_name).get_tensor()
-    return np.array(fc_weights)
+# def paddle_get_fc_weights(var_name="fc_0.w_0"):
+#     fc_weights = fluid.global_scope().find_var(var_name).get_tensor()
+#     return np.array(fc_weights)
 
 
-def paddle_resize(extracted_features, outsize):
-    resized_features = fluid.layers.resize_bilinear(extracted_features,
-                                                    outsize)
-    return resized_features
+# def paddle_resize(extracted_features, outsize):
+#     resized_features = fluid.layers.resize_bilinear(extracted_features,
+#                                                     outsize)
+#     return resized_features
 
 
 def get_pre_models():
@@ -60,35 +60,35 @@ def extract_superpixel_features(feature_map, segments):
     return x
 
 
-def init_checkpoint(exe, init_checkpoint_path, main_program):
-    """
-    Init CheckPoint
-    """
-    import paddle.fluid as fluid
-    assert os.path.exists(
-        init_checkpoint_path), "[%s] cann't be found." % init_checkpoint_path
-    try:
-        checkpoint_path = os.path.join(init_checkpoint_path, "checkpoint")
-        fluid.load(main_program, checkpoint_path, exe)
-    except:
-        fluid.load(main_program, init_checkpoint_path, exe)
+# def init_checkpoint(exe, init_checkpoint_path, main_program):
+#     """
+#     Init CheckPoint
+#     """
+#     import paddle.fluid as fluid
+#     assert os.path.exists(
+#         init_checkpoint_path), "[%s] cann't be found." % init_checkpoint_path
+#     try:
+#         checkpoint_path = os.path.join(init_checkpoint_path, "checkpoint")
+#         fluid.load(main_program, checkpoint_path, exe)
+#     except:
+#         fluid.load(main_program, init_checkpoint_path, exe)
 
-    print("Load model from {}".format(init_checkpoint_path))
+#     print("Load model from {}".format(init_checkpoint_path))
 
 
-def to_lodtensor(data, place):
-    seq_lens = [len(seq) for seq in data]
-    cur_len = 0
-    lod = [cur_len]
-    for l in seq_lens:
-        cur_len += l
-        lod.append(cur_len)
-    flattened_data = np.concatenate(data, axis=0)
-    flattened_data = flattened_data.reshape([len(flattened_data), ])
-    res = fluid.LoDTensor()
-    res.set(flattened_data, place)
-    res.set_lod([lod])
-    return res
+# def to_lodtensor(data, place):
+#     seq_lens = [len(seq) for seq in data]
+#     cur_len = 0
+#     lod = [cur_len]
+#     for l in seq_lens:
+#         cur_len += l
+#         lod.append(cur_len)
+#     flattened_data = np.concatenate(data, axis=0)
+#     flattened_data = flattened_data.reshape([len(flattened_data), ])
+#     res = fluid.LoDTensor()
+#     res.set(flattened_data, place)
+#     res.set_lod([lod])
+#     return res
 
 
 class FeatureExtractor(object):
@@ -104,7 +104,6 @@ class FeatureExtractor(object):
         self.h_pre_model_path, _ = get_pre_models()
 
     def session_prepare(self):
-        paddle.enable_static()
         self._check_files()
 
         def conv_bn_layer(input,
@@ -146,7 +145,7 @@ class FeatureExtractor(object):
         with fluid.program_guard(prog, startup_prog):
             with fluid.unique_name.guard():
                 image_op = fluid.data(
-                    name='image', shape=[None, 3, 224, 224], dtype='float32')
+                    name='image', shape=[None, 3, None, None], dtype='float32')
 
                 conv = conv_bn_layer(
                     input=image_op,
@@ -170,8 +169,6 @@ class FeatureExtractor(object):
                     act='relu',
                     name='conv1_3')
                 extracted_features = conv
-                resized_features = fluid.layers.resize_bilinear(
-                    extracted_features, image_op.shape[2:])
 
                 prog = prog.clone(for_test=True)
 
@@ -188,11 +185,11 @@ class FeatureExtractor(object):
             images = preprocess_image(
                 data_content)  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
             result = exe.run(prog,
-                             fetch_list=[resized_features],
+                             fetch_list=[extracted_features],
                              feed={'image': images})
             return result[0][0]
 
-        self.output = resized_features
+        self.output = extracted_features
         self.forward_fn = forward_fn
 
     def forward(self, data_content):

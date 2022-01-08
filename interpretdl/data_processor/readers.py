@@ -262,9 +262,11 @@ def images_transform_pipeline(array_or_path, resize_to=224, crop_to=None):
         uint8_imgs = np.concatenate(uint8_imgs)
         float_input_data = preprocess_image(uint8_imgs)
     else:
-        # an array.
+        # an array. will not resize nor crop.
         if len(array_or_path.shape) == 3:
             uint8_imgs = np.expand_dims(array_or_path, axis=0)
+        elif len(array_or_path.shape) == 4:
+            uint8_imgs = array_or_path
 
         if np.issubdtype(array_or_path.dtype, np.integer):
             # array_or_path is an image.

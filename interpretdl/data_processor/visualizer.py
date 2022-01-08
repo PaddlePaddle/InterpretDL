@@ -87,7 +87,6 @@ def _grayscale(explanation: np.ndarray, percentile=99) -> np.ndarray:
                                         "Currently support 2D explanation results for visualization. " \
                                         "Reduce higher dimensions to 2D for visualization."
 
-    assert np.max(explanation) <= 1.0
     assert isinstance(percentile, int)
     assert 0 <= percentile <= 100                       
 

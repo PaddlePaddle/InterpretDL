@@ -1,75 +1,55 @@
 import unittest
 from paddle.vision.models import mobilenet_v2, resnet50
 import numpy as np
-
+import os
 import interpretdl as it
 from tests.utils import assert_arrays_almost_equal
 
 
 class TestScoreCAM(unittest.TestCase):
     
-    def test_cv(self):
+    def test_shape(self):
         paddle_model = mobilenet_v2(pretrained=True)
 
         img_path = 'imgs/catdog.jpg'
-        algo = it.ScoreCAMInterpreter(paddle_model, use_cuda=False)
-        exp = algo.interpret(img_path, 'features.18.2', resize_to=256, crop_to=224, visual=False)
+        algo = it.ScoreCAMInterpreter(paddle_model, device='cpu')
+        exp = algo.interpret(img_path, 'features.18.2', resize_to=64, crop_to=64, visual=False)
 
-        result = np.array([exp.mean(), exp.std(), exp.min(), exp.max(), *exp.shape])
-        desired = np.array([ 67.57363816,  39.71009002,   3.64695652, 144.3522944 ,
-         1.        , 224.        , 224.        ])
+        result = np.array([*exp.shape])
+        desired = np.array([1.        , 64.        , 64.        ])
 
         assert_arrays_almost_equal(self, result, desired)
-    
-    def test_cv_class(self):
+
+    def test_algo(self):
         paddle_model = mobilenet_v2(pretrained=True)
 
-        img_path = 'imgs/catdog.jpg'
-        algo = it.ScoreCAMInterpreter(paddle_model, use_cuda=False)
-        exp = algo.interpret(img_path, 'features.18.2', labels=282, resize_to=256, crop_to=224, visual=False)
+        np.random.seed(42)
+        img_path = np.random.randint(0, 255, size=(1, 64, 64, 3), dtype=np.uint8)
+        algo = it.ScoreCAMInterpreter(paddle_model, device='cpu')
+        exp = algo.interpret(img_path, 'features.16.conv.3', resize_to=64, crop_to=64, visual=False)
 
-        result = np.array([exp.mean(), exp.std(), exp.min(), exp.max(), *exp.shape])
-        desired = np.array([ 48.47917838,  27.82020997,   3.85096038, 116.12830776,
-         1.        , 224.        , 224.        ])
+        result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
+        desired = np.array([ 2.3779001 ,  1.80234987, -0.33591489,  5.09665543])
 
         assert_arrays_almost_equal(self, result, desired)
 
-    def test_cv_layer(self):
+    def test_save(self):
+        import matplotlib
+        matplotlib.use('agg')  # non-GUI, for skipping.
+
         paddle_model = mobilenet_v2(pretrained=True)
 
-        img_path = 'imgs/catdog.jpg'
-        algo = it.ScoreCAMInterpreter(paddle_model, use_cuda=False)
-        exp = algo.interpret(img_path, 'features.16.conv.3', resize_to=256, crop_to=224, visual=False)
-        result = np.array([exp.mean(), exp.std(), exp.min(), exp.max(), *exp.shape])
-        desired = np.array([  0.45457669,   1.73647004,  -3.54019404,   3.77973473,
-         1.        , 224.        , 224.        ])
+        np.random.seed(42)
+        img_path = np.random.randint(0, 255, size=(1, 64, 64, 3), dtype=np.uint8)
+        algo = it.ScoreCAMInterpreter(paddle_model, device='cpu')
+        exp = algo.interpret(img_path, 'features.16.conv.3', resize_to=64, crop_to=64, 
+            visual=True, save_path='tmp.jpg')
+
+        result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
+        desired = np.array([ 2.3779001 ,  1.80234987, -0.33591489,  5.09665543])
 
         assert_arrays_almost_equal(self, result, desired)
-
-    def test_cv_layer_2(self):
-        paddle_model = mobilenet_v2(pretrained=True)
-
-        img_path = 'imgs/catdog.jpg'
-        algo = it.ScoreCAMInterpreter(paddle_model, use_cuda=False)
-        exp = algo.interpret(img_path, 'features.8.conv.3', resize_to=256, crop_to=224, visual=False)
-        result = np.array([exp.mean(), exp.std(), exp.min(), exp.max(), *exp.shape])
-        desired = np.array([ 1.04185688e-01,  1.23888987e+00, -4.07477156e+00,  2.84238683e+00,
-        1.00000000e+00,  2.24000000e+02,  2.24000000e+02])
-
-        assert_arrays_almost_equal(self, result, desired)
-
-    def test_cv_multiple_inputs(self):
-        paddle_model = mobilenet_v2(pretrained=True)
-
-        img_path = ['imgs/catdog.jpg', 'imgs/catdog.jpg']
-        algo = it.ScoreCAMInterpreter(paddle_model, use_cuda=False)
-        exp = algo.interpret(img_path, 'features.18.2', resize_to=256, crop_to=224, visual=False)
-        result = np.array([exp.mean(), exp.std(), exp.min(), exp.max(), *exp.shape])
-        desired = np.array([ 67.57363816,  39.71009002,   3.64695652, 144.3522944 ,
-         2.        , 224.        , 224.        ])
-
-        assert_arrays_almost_equal(self, result, desired)
-
+        os.remove('tmp.jpg')
 
 if __name__ == '__main__':
     unittest.main()

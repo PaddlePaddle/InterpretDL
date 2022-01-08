@@ -2,6 +2,7 @@ import numpy as np
 import os, sys
 from tqdm import tqdm
 import paddle
+from paddle.vision.transforms import functional as F
 
 from ..common.paddle_utils import FeatureExtractor, extract_superpixel_features, get_pre_models
 from ..data_processor.readers import load_pickle_file
@@ -18,7 +19,7 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
 
     def __init__(self,
                  paddle_model,
-                 model_input_shape=[3, 224, 224],
+                 device='gpu:0',
                  use_cuda=True,
                  temp_data_file='all_lime_weights.npz'):
         """
@@ -38,12 +39,7 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
             Default: 'all_lime_weights.npz'
         :type temp_data_file: str, optional
         """
-        if int(paddle.__version__[0]) > 1:
-            raise NotImplementedError(
-                "NormLIMECVInterpreter currently doesn't support paddle version 2.0 or higher"
-            )
-        LIMECVInterpreter.__init__(self, paddle_model, model_input_shape=model_input_shape,
-                                   use_cuda=use_cuda)
+        LIMECVInterpreter.__init__(self, paddle_model, use_cuda=use_cuda, device=device)
         self.lime_interpret = super().interpret
 
         if temp_data_file.endswith('.npz'):
@@ -115,8 +111,13 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
                 temp = temp.item()
 
             fextractor = FeatureExtractor()
-            f = fextractor.forward(temp['input'][np.newaxis, ...]).transpose(
-                (1, 2, 0))
+            img_to_show = temp['input'][np.newaxis, ...]
+            paddle.enable_static()
+            f = fextractor.forward(img_to_show).transpose((1, 2, 0))
+            paddle.disable_static()
+
+            img_size = (img_to_show.shape[1], img_to_show.shape[2])
+            f = F.resize(f, img_size)
 
             X = extract_superpixel_features(f, temp['segmentation'])
             try:
@@ -186,6 +187,7 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
 
     def __init__(self,
                  paddle_model,
+                 device='gpu:0',
                  use_cuda=True,
                  temp_data_file='all_lime_weights.npz'):
         """
@@ -201,7 +203,7 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
             temp_data_file (str, optinal): The .npz file to save/load the dictionary where key is word ids joined by '-' and value is another dictionary with lime weights. Default: 'all_lime_weights.npz'
         """
-        LIMENLPInterpreter.__init__(self, paddle_model, use_cuda)
+        LIMENLPInterpreter.__init__(self, paddle_model, use_cuda, device)
         self.lime_interpret = super().interpret
 
         if temp_data_file.endswith('.npz'):

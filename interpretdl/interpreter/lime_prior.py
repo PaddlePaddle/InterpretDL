@@ -6,9 +6,8 @@ import paddle
 from .lime import LIMECVInterpreter
 from ._lime_base import compute_segments
 from ._global_prior_base import precompute_global_prior, use_fast_normlime_as_prior
-from ..data_processor.readers import read_image, load_npy_dict_file
+from ..data_processor.readers import images_transform_pipeline, preprocess_image, load_npy_dict_file
 from ..data_processor.visualizer import sp_weights_to_image_explanation, overlay_threshold, save_image, show_vis_explanation
-
 
 class LIMEPriorInterpreter(LIMECVInterpreter):
     """
@@ -18,7 +17,8 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
     def __init__(self,
                  paddle_model: Callable,
                  prior_method="none",
-                 use_cuda=True) -> None:
+                 use_cuda=True,
+                 device='gpu:0') -> None:
         """
         Args:
             paddle_model (callable): A paddle model that outputs predictions.
@@ -28,12 +28,8 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
                 Otherwise, the loaded prior will be used.
             use_cuda: Whether to use CUDA. Defaults to ``True``.
         """
-        if int(paddle.__version__[0]) > 1:
-            raise NotImplementedError(
-                "LIMEPriorInterpreter currently doesn't support paddle version 2.0 or higher"
-            )
 
-        LIMECVInterpreter.__init__(self, paddle_model, use_cuda)
+        LIMECVInterpreter.__init__(self, paddle_model, use_cuda, device)
         self.prior_method = prior_method
         self.global_weights = None
 
@@ -65,6 +61,14 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
             "Cannot prepare without anything. "
 
         self._build_predict_fn(rebuild=True, output='probability')
+        def predict_fn_for_lime(_imgs):
+            _data = preprocess_image(
+                _imgs
+            )  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
+            
+            output, _ = self.predict_fn(_data, None)
+            return output
+        self.predict_fn_for_lime = predict_fn_for_lime
 
         precomputed_weights = load_npy_dict_file(weights_file_path)
         if precomputed_weights is not None:
@@ -77,7 +81,7 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
                 np.save(weights_file_path, self.global_weights)
 
     def interpret(self,
-                  data_path,
+                  inputs,
                   interpret_class=None,
                   prior_reg_force=1.0,
                   num_samples=1000,
@@ -90,7 +94,7 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
         Note that for LIME prior interpreter, ``interpreter_init()`` needs to be called before calling ``interpret()``.
 
         Args:
-            data_path (str): The input file path.
+            inputs (str): The input file path.
             interpret_class (int, optional): The index of class to interpret. If None, the most likely label will be used. Default: None
             prior_reg_force (float, optional): The regularization force to apply. Default: 1.0
             num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate interpretation. Default: 1000
@@ -109,27 +113,44 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
             raise ValueError(
                 "The interpreter is not prepared. Call prepare() before interpretation."
             )
+        imgs, data = images_transform_pipeline(inputs, resize_to, crop_to)
 
-        data_instance = read_image(data_path, resize_to, crop_to)
+        self._build_predict_fn(output='probability')
 
+        probability, _ = self.predict_fn(data, None)
         # only one example here
-        probability = self.predict_fn_for_lime(data_instance)[0]
+        probability = probability[0]
 
-        # only interpret top 1
         if interpret_class is None:
+            # only interpret top 1 if not provided.
             pred_label = np.argsort(probability)
             interpret_class = pred_label[-1:]
+            interpret_class = np.array(interpret_class)
+        elif isinstance(interpret_class, list):
+            interpret_class = np.array(interpret_class)
+        else:
+            interpret_class = np.array([interpret_class])
+        
+        # def predict_fn_for_lime(_imgs):
+        #     _data = preprocess_image(
+        #         _imgs
+        #     )  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
+            
+        #     output, _ = self.predict_fn(_data, None)
+        #     return output
 
-        segments = compute_segments(data_instance[0])
+        # self.predict_fn_for_lime = predict_fn_for_lime
+
+        segments = compute_segments(imgs[0])
         if self.prior_method == "none":
             prior = np.zeros(len(np.unique(segments)))
         else:
-            prior = use_fast_normlime_as_prior(data_instance, segments,
+            prior = use_fast_normlime_as_prior(imgs, segments,
                                                interpret_class[0],
                                                self.global_weights)
 
         lime_weights, r2_scores = self.lime_base.interpret_instance(
-            data_instance[0],
+            imgs[0],
             self.predict_fn_for_lime,
             interpret_class,
             num_samples=num_samples,
@@ -139,16 +160,16 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
 
         # visualization and save image.
         explanation_mask = sp_weights_to_image_explanation(
-            data_instance[0], lime_weights, interpret_class[0], self.lime_base.segments
+            imgs[0], lime_weights, interpret_class[0], self.lime_base.segments
         )
-        explanation_vis = overlay_threshold(data_instance[0], explanation_mask)
+        explanation_vis = overlay_threshold(imgs[0], explanation_mask)
         if visual:
             show_vis_explanation(explanation_vis)
         if save_path is not None:
             save_image(save_path, explanation_vis)
 
         self.lime_results['probability'] = probability
-        self.lime_results['input'] = data_instance[0]
+        self.lime_results['input'] = imgs[0]
         self.lime_results['segmentation'] = self.lime_base.segments
         self.lime_results['r2_scores'] = r2_scores
         self.lime_results['lime_weights'] = lime_weights

@@ -2,7 +2,9 @@ import os
 import os.path as osp
 import numpy as np
 import tqdm
+import paddle
 from sklearn.linear_model import Ridge
+from paddle.vision.transforms import functional as F
 
 from ..data_processor.readers import read_image, load_pickle_file
 from ..common.paddle_utils import FeatureExtractor, extract_superpixel_features, get_pre_models
@@ -26,10 +28,14 @@ def data_labels(file_path_list, predict_fn, batch_size):
         image_show = read_image(each_data_)  # todo: whether add resize_to, crop_to?
         tmp_imgs.append(image_show)
 
+        paddle.enable_static()
         feature = fextractor.forward(image_show).transpose((1, 2, 0))
-        # print(time.time() - end)  # 40 % time.
-        segments = np.zeros((image_show.shape[1], image_show.shape[2]),
-                            np.int32)
+        paddle.disable_static()
+
+        img_size = (image_show.shape[1], image_show.shape[2])
+        feature = F.resize(feature, img_size)
+
+        segments = np.zeros(img_size, np.int32)
         num_blocks = 10
         height_per_i = segments.shape[0] // num_blocks + 1
         width_per_i = segments.shape[1] // num_blocks + 1
@@ -124,7 +130,13 @@ def use_fast_normlime_as_prior(image_show, segments, label_index,
             "pre_models/kmeans_model.pkl.")
 
     fextractor = FeatureExtractor()
+    paddle.enable_static()
     feature = fextractor.forward(image_show).transpose((1, 2, 0))
+    paddle.disable_static()
+
+    img_size = (image_show.shape[1], image_show.shape[2])
+    feature = F.resize(feature, img_size)
+
     X = extract_superpixel_features(feature, segments)
 
     try:

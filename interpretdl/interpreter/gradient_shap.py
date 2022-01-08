@@ -170,7 +170,7 @@ class GradShapNLPInterpreter(Interpreter):
             [type]: [description]
         """
 
-        self._build_predict_fn(embedding_name=embedding_name, gradient_of='probability')
+        self._build_predict_fn(embedding_name=embedding_name)
 
         if isinstance(data, tuple):
             bs = data[0].shape[0]
@@ -198,7 +198,7 @@ class GradShapNLPInterpreter(Interpreter):
 
         return interpretations
 
-    def _build_predict_fn(self, rebuild=False, embedding_name='word_embeddings', gradient_of='probability'):
+    def _build_predict_fn(self, rebuild=False, embedding_name='word_embeddings'):
         
         if self.predict_fn is not None:
             assert callable(self.predict_fn), "predict_fn is predefined before, but is not callable." \
@@ -207,7 +207,6 @@ class GradShapNLPInterpreter(Interpreter):
         
         import paddle
         if self.predict_fn is None or rebuild:
-            assert gradient_of in ['loss', 'logit', 'probability']
 
             if not paddle.is_compiled_with_cuda() and self.device[:3] == 'gpu':
                 print("Paddle is not installed with GPU support. Change to CPU version now.")
@@ -221,8 +220,8 @@ class GradShapNLPInterpreter(Interpreter):
             
             # later version will be simplied.
             for n, v in self.paddle_model.named_sublayers():
-                if "batchnorm" in v.__class__.__name__.lower():
-                    v._use_global_stats = True
+                # if "batchnorm" in v.__class__.__name__.lower():
+                #     v._use_global_stats = True
                 if "dropout" in v.__class__.__name__.lower():
                     v.p = 0
                     
@@ -266,21 +265,13 @@ class GradShapNLPInterpreter(Interpreter):
                 if labels is None:
                     labels = preds.numpy()  # label is an integer.
                 
-                if gradient_of == 'loss':
-                    # loss
-                    loss = paddle.nn.functional.cross_entropy(
-                        logits, paddle.to_tensor(labels), reduction='sum'
-                    )
-                else:
-                    # logits or probas
-                    labels = np.array(labels).reshape((bs, ))
-                    labels_onehot = paddle.nn.functional.one_hot(
-                        paddle.to_tensor(labels), num_classes=probas.shape[1]
-                    )
-                    if gradient_of == 'logit':
-                        loss = paddle.sum(logits * labels_onehot, axis=1)
-                    else:
-                        loss = paddle.sum(probas * labels_onehot, axis=1)
+                
+                # logits or probas
+                labels = np.array(labels).reshape((bs, ))
+                labels_onehot = paddle.nn.functional.one_hot(
+                    paddle.to_tensor(labels), num_classes=probas.shape[1]
+                )
+                loss = paddle.sum(probas * labels_onehot, axis=1)
 
                 loss.backward()
                 gradients = target_feature_map[0].grad  # get gradients of "embedding".

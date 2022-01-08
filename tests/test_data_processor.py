@@ -1,6 +1,5 @@
 import unittest
 import numpy as np
-from numpy.core.fromnumeric import size
 
 import interpretdl as it
 from interpretdl.data_processor.readers import *
@@ -10,6 +9,21 @@ from tests.utils import assert_arrays_almost_equal
 
 
 class TestBasicMethods(unittest.TestCase):
+
+    def test_load_files(self):
+        load_npy_dict_file('tmp.npy')
+        np.save('tmp.npy', {'a': 1, 'b': 2})
+        load_npy_dict_file('tmp.npy')
+        os.remove('tmp.npy')
+
+    def test_load_pickle_file(self):
+        load_pickle_file(None)
+        with open('tmp.pkl', 'wb') as handle:
+            pickle.dump({'a': 1, 'b': 2}, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        load_pickle_file('tmp.pkl')
+        os.remove('tmp.pkl')
+
     def test_random_seed(self):
         np.random.seed(42)
 
@@ -38,7 +52,39 @@ class TestImageProcessingMethods(unittest.TestCase):
             desired, 
             limit=3  # in case jpeg decoder has slight difference.
         )
-        
+
+    def test_read_image_array(self):
+        img_path = 'imgs/catdog.jpg'
+        uint8_img = read_image(img_path)
+        uint8_img = read_image(uint8_img)
+        desired = np.array([[155, 152, 152, 151, 152, 152, 151, 137, 115,  96],
+            [159, 154, 151, 152, 154, 153, 151, 139, 116,  97],
+            [159, 154, 150, 152, 154, 153, 151, 140, 118,  98],
+            [158, 153, 150, 152, 154, 152, 151, 140, 119, 101],
+            [157, 153, 150, 152, 153, 151, 151, 141, 122, 104],
+            [157, 153, 150, 152, 153, 151, 151, 143, 125, 107],
+            [158, 152, 149, 151, 152, 150, 150, 144, 128, 110],
+            [159, 151, 149, 151, 152, 149, 150, 144, 129, 112],
+            [161, 151, 149, 151, 151, 148, 150, 145, 131, 114],
+            [161, 151, 147, 149, 151, 148, 149, 145, 132, 116]], dtype=np.int32)
+        assert_arrays_almost_equal(self, 
+            uint8_img[0, 20:30, 20:30, 0].astype(np.int32),
+            desired, 
+            limit=3  # in case jpeg decoder has slight difference.
+        )
+
+    def test_transform(self):
+        img_path = 'imgs/catdog.jpg'
+        uint8_img = read_image(img_path)
+        images_transform_pipeline(uint8_img[0])
+
+    def test_read_image_wrong(self):
+        img_path = {'a': 'imgs/catdog.jpg'}
+        try:
+            read_image(img_path)
+        except ValueError:
+            pass
+
     def test_resize_image(self):
         img = np.array(range(6*4*3), dtype=np.float32).reshape((6, 4, 3))
         result = resize_image(img, 2)
@@ -87,6 +133,9 @@ class TestImageProcessingMethods(unittest.TestCase):
 
         assert_arrays_almost_equal(self, result, desired, 1e-6)
 
+    def test_preprocess_image_mirror(self):
+        img = np.array(range(1*6*4*3), dtype=np.float32).reshape((1, 6, 4, 3))
+        result = preprocess_image(img, True)
 
     def test_restore_image(self):
         f_img = np.array([[[[-2.117904,   -2.0665295,  -2.0151553,  -1.9637811 ],
@@ -211,6 +260,41 @@ class TestVisualizeMethods(unittest.TestCase):
 
         assert_arrays_almost_equal(self, result, desired)
 
+    def test_overlay_threshold_2(self):
+        img = np.array(range(3*3*3), dtype=np.uint8).reshape((3, 3, 3))
+        exp = np.array(range(3*3), dtype=np.float32).reshape((3, 3)) / 9.0
+        result = explanation_to_vis(img, exp, 'overlay_threshold')
+
+    def test_sp_weights_to_image_explanation(self):
+        np.random.seed(42)
+        img = np.random.randint(0, 255, size=(64, 64, 3), dtype=np.uint8)
+        sp_weights = {0: [(0, 1.0)]}
+        exp = sp_weights_to_image_explanation(img, sp_weights)
+        result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
+        desired = np.array([0., 0., 0., 0.])
+        assert_arrays_almost_equal(self, result, desired)
+
+    def test_show_vis_explanation_vis(self):
+        import matplotlib
+        matplotlib.use('agg')  # non-GUI, for skipping.
+
+        img_path = 'imgs/catdog.jpg'
+        uint8_img = read_image(img_path)
+        show_vis_explanation(uint8_img[0])
+    
+    def test_show_vis_explanation(self):
+        import matplotlib
+        matplotlib.use('agg')  # non-GUI, for skipping.
+
+        img_path = 'imgs/catdog.jpg'
+        uint8_img = read_image(img_path)
+        explanation_to_vis(uint8_img, uint8_img[0, :, :, 0])
+
+    def test_text_vis(self):
+        words = ['the', 'movie']
+        word_importances = [0.1, -0.5]
+        rec = VisualizationTextRecord(words, word_importances, 1, 1, 0.8, 1)
+        visualize_text([rec])
 
 if __name__ == '__main__':
     unittest.main()
