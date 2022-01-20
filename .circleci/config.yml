@@ -32,6 +32,7 @@ jobs:
       - checkout
       - pip_install
       - unit_tests
+    parallelism: 4
 
 workflows:
   tests:
