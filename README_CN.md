@@ -3,9 +3,10 @@
 ![](preview.png)
 
 [![Release](https://img.shields.io/github/release/PaddlePaddle/InterpretDL.svg)](https://github.com/PaddlePaddle/InterpretDL/releases)
-[![PyPI](https://img.shields.io/pypi/v/interpretdl.svg)]((https://pypi.org/project/interpretdl))
+[![PyPI](https://img.shields.io/pypi/v/interpretdl.svg)](https://pypi.org/project/interpretdl)
 [![CircleCI](https://circleci.com/gh/PaddlePaddle/InterpretDL.svg?style=shield)](https://circleci.com/gh/PaddlePaddle/InterpretDL)
 [![Documentation Status](https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat)](https://interpretdl.readthedocs.io/en/latest/index.html)
+[![Downloads](https://static.pepy.tech/personalized-badge/interpretdl?period=total&units=abbreviation&left_color=grey&right_color=green&left_text=Downloads%20Total)](https://pepy.tech/project/interpretdl)
 
 # InterpretDL: 基于『飞桨』的模型可解释性算法库
 
@@ -100,7 +101,7 @@ cd InterpretDL && pip install -e .
 
 ### Unit Tests
 
-```
+```bash
 # run gradcam unit tests
 python -m unittest -v tests.interpreter.test_gradcam
 # run all unit tests
@@ -176,8 +177,9 @@ gradients = sg.interpret("test.jpg", visual=True, save_path=None)
     - [ ] Influence Function
 
 * 评估方式
-    - [ ] Deletion & Insertion
+    - [x] Deletion & Insertion
     - [ ] Local Fidelity
+    - [ ] Sensitivity
 
 ## Tutorials
 
@@ -187,8 +189,9 @@ gradients = sg.interpret("test.jpg", visual=True, save_path=None)
 
 # References of Algorithms
 
+* `SGDNoise`: [On the Noisy Gradient Descent that Generalizes as SGD, Wu et al 2019](https://arxiv.org/abs/1906.07405)
 * `IntegratedGraients`: [Axiomatic Attribution for Deep Networks, Mukund Sundararajan et al. 2017](https://arxiv.org/abs/1703.01365)
-* `GradCAM`: [Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization, Ramprasaath R. Selvaraju et al. 2017](https://arxiv.org/abs/1610.02391.pdf)
+* `CAM`, `GradCAM`: [Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization, Ramprasaath R. Selvaraju et al. 2017](https://arxiv.org/abs/1610.02391.pdf)
 * `SmoothGrad`: [SmoothGrad: removing noise by adding noise, Daniel Smilkov et al. 2017](https://arxiv.org/abs/1706.03825)
 * `GradientShap`: [A Unified Approach to Interpreting Model Predictions, Scott M. Lundberg et al. 2017](http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions)
 * `Occlusion`: [Visualizing and Understanding Convolutional Networks, Matthew D Zeiler and Rob Fergus 2013](https://arxiv.org/abs/1311.2901)
