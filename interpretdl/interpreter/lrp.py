@@ -16,7 +16,7 @@ class LRPCVInterpreter(Interpreter):
 
     def __init__(self,
                  paddle_model,
-                 use_cuda=True,
+                 use_cuda=None,
                  device='gpu:0') -> None:
         """
 

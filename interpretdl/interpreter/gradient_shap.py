@@ -16,8 +16,8 @@ class GradShapCVInterpreter(InputGradientInterpreter):
     def __init__(
         self, 
         paddle_model: callable,
-        use_cuda: bool=None,
-        device: str='gpu:0'
+        device: str='gpu:0',
+        use_cuda: bool=None
     ):
         """
 
@@ -132,7 +132,7 @@ class GradShapNLPInterpreter(Interpreter):
     """
 
     def __init__(
-        self, paddle_model: callable, use_cuda: bool=True, device: str='gpu:0'
+        self, paddle_model: callable, device: str='gpu:0', use_cuda: bool=None
     ) -> None:
         """
 

@@ -188,7 +188,7 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
     def __init__(self,
                  paddle_model,
                  device='gpu:0',
-                 use_cuda=True,
+                 use_cuda=None,
                  temp_data_file='all_lime_weights.npz'):
         """
 
@@ -203,7 +203,7 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
             use_cuda (bool, optional): Whether or not to use cuda. Default: True
             temp_data_file (str, optinal): The .npz file to save/load the dictionary where key is word ids joined by '-' and value is another dictionary with lime weights. Default: 'all_lime_weights.npz'
         """
-        LIMENLPInterpreter.__init__(self, paddle_model, use_cuda, device)
+        LIMENLPInterpreter.__init__(self, paddle_model, device, use_cuda)
         self.lime_interpret = super().interpret
 
         if temp_data_file.endswith('.npz'):

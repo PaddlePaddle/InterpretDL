@@ -10,7 +10,7 @@ class DeletionInsertion(InterpreterEvaluator):
     https://arxiv.org/abs/1806.07421
     """
     
-    def __init__(self, paddle_model: callable, device: str, use_cuda: bool, compute_deletion=True, compute_insertion=True, **kwargs):
+    def __init__(self, paddle_model: callable, device: str, use_cuda: bool=None, compute_deletion=True, compute_insertion=True, **kwargs):
         super().__init__(paddle_model, device, use_cuda, **kwargs)
 
         if (not compute_deletion) or (not compute_insertion):

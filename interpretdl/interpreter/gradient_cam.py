@@ -17,8 +17,8 @@ class GradCAMInterpreter(Interpreter):
     def __init__(
         self,
         paddle_model: callable,
-        use_cuda: bool=True,
-        device: str='gpu:0'
+        device: str='gpu:0',
+        use_cuda: bool=None
     ):
         """
 

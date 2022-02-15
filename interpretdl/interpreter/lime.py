@@ -148,7 +148,7 @@ class LIMENLPInterpreter(Interpreter):
     https://arxiv.org/abs/1602.04938
     """
 
-    def __init__(self, paddle_model, use_cuda=True, device='gpu:0', random_seed=None) -> None:
+    def __init__(self, paddle_model, device='gpu:0', use_cuda=None, random_seed=None) -> None:
         """
 
         Args:
@@ -158,7 +158,7 @@ class LIMENLPInterpreter(Interpreter):
             random_seed (int): random seed. Defaults to None.
         """
 
-        Interpreter.__init__(self, paddle_model, 'gpu:0', use_cuda)
+        Interpreter.__init__(self, paddle_model, device, use_cuda)
         self.paddle_model = paddle_model
         self.use_cuda = use_cuda
         if not paddle.is_compiled_with_cuda():

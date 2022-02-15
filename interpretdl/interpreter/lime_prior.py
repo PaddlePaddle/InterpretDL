@@ -17,8 +17,8 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
     def __init__(self,
                  paddle_model: Callable,
                  prior_method="none",
-                 use_cuda=True,
-                 device='gpu:0') -> None:
+                 device='gpu:0',
+                 use_cuda=None) -> None:
         """
         Args:
             paddle_model (callable): A paddle model that outputs predictions.

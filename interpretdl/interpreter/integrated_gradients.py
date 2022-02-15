@@ -16,7 +16,7 @@ class IntGradCVInterpreter(InputGradientInterpreter):
     def __init__(
         self,
         paddle_model: callable,
-        use_cuda: bool=True,
+        use_cuda: bool=None,
         device: str='gpu:0'
     ):
         """
@@ -125,7 +125,7 @@ class IntGradNLPInterpreter(Interpreter):
     https://arxiv.org/abs/1703.01365
     """
 
-    def __init__(self, paddle_model, use_cuda=True, device='gpu:0') -> None:
+    def __init__(self, paddle_model, use_cuda=None, device='gpu:0') -> None:
         """
 
         Args:

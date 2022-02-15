@@ -3,12 +3,8 @@ import sys
 import numpy as np
 import warnings
 
-
 # Ensure compatibility with Python 2/3
-if sys.version_info >= (3, 4):
-    ABC = abc.ABC
-else:
-    ABC = abc.ABCMeta(str('ABC'), (), {})
+ABC = abc.ABC if sys.version_info >= (3, 4) else abc.ABCMeta(str('ABC'), (), {})
 
 
 class InterpreterEvaluator(ABC):
@@ -25,10 +21,8 @@ class InterpreterEvaluator(ABC):
                 'Use ``device`` directly.',
                 stacklevel=2
             )
-            if use_cuda and device[:3] == 'gpu':
-                device = device
-            else:
-                device = 'cpu'
+            device = 'gpu' if use_cuda and device[:3] == 'gpu' else 'cpu'
+
         self.device = device
         self.paddle_model = paddle_model
         self.predict_fn = None
