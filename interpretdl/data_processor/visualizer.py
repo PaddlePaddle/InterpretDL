@@ -157,7 +157,29 @@ def overlay_threshold(image, explanation_mask) -> np.ndarray:
     return np.uint8(overlay_vis)
 
 
+def sp_to_array(segments, sp_weights_list):
+    explanation_mask = np.zeros(segments.shape, np.float32)
+    for sp_i, sp_w in sp_weights_list:
+        explanation_mask[segments == sp_i] = sp_w
+    return explanation_mask
+
+
 def sp_weights_to_image_explanation(image, sp_weights, label=None, segments=None, ratio_superpixels=0.2):
+    """Convert lime superpixel weights to an array, with thresholding.
+
+    Args:
+        image (numpy.ndarray): _description_
+        sp_weights (dict): a dict of tuples {class_index: [(sp_index, sp_weight)]}.
+        label (int, optional): _description_. Defaults to None.
+        segments (numpy.ndarray, optional): _description_. Defaults to None.
+        ratio_superpixels (float, optional): _description_. Defaults to 0.2.
+
+    Raises:
+        KeyError: _description_
+
+    Returns:
+        numpy.ndarray: _description_
+    """
     if label is None:
         label = list(sp_weights.keys())[0]
 

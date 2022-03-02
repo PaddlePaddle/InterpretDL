@@ -4,3 +4,4 @@
 from .abc_evaluator import InterpreterEvaluator
 from .deletion_insertion import DeletionInsertion
 from .perturbation import Perturbation
+from .pointgame import PointGame
