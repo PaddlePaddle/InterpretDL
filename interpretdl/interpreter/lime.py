@@ -1,6 +1,5 @@
 
 import numpy as np
-from numpy.lib.arraysetops import isin
 import paddle
 
 from ..data_processor.readers import preprocess_image, read_image, restore_image

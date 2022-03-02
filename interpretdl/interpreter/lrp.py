@@ -1,4 +1,3 @@
-import paddle
 import numpy as np
 
 from .abc_interpreter import Interpreter
@@ -75,6 +74,7 @@ class LRPCVInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
+            import paddle
             paddle.set_device(self.device)
             self.paddle_model.eval()
 

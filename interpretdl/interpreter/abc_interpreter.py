@@ -81,7 +81,7 @@ class InputGradientInterpreter(Interpreter):
 
     def __init__(self, paddle_model: callable, device: str, use_cuda: bool=None, **kwargs):
         Interpreter.__init__(self, paddle_model, device, use_cuda, **kwargs)
-        assert hasattr(paddle_model, 'forward') and hasattr(paddle_model, 'backward'), \
+        assert hasattr(paddle_model, 'forward'), \
             "paddle_model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
 

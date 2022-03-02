@@ -1,7 +1,5 @@
-from paddle.fluid.layers.nn import crop
 from tqdm import tqdm
 import numpy as np
-import paddle
 
 from .abc_interpreter import Interpreter, InputOutputInterpreter
 from ..data_processor.readers import images_transform_pipeline, preprocess_save_path
