@@ -15,7 +15,7 @@ class PointGame():
     def __init__(self):
         pass
 
-    def evaluate(self, bbox: tuple(int), exp_array: np.ndarray, threshold=0.25):
+    def evaluate(self, bbox: tuple, exp_array: np.ndarray, threshold=0.25):
         """Main function, to evaluate whether the explanation is aligned with 
         the annotated bounding box.
 
