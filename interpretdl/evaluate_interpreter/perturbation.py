@@ -3,8 +3,8 @@ from .abc_evaluator import InterpreterEvaluator
 from interpretdl.data_processor.readers import images_transform_pipeline, preprocess_image
 
 
-class Pertubation(InterpreterEvaluator):
-    """Pertubation based Evaluations. 
+class Perturbation(InterpreterEvaluator):
+    """Perturbation based Evaluations. 
 
     More details of the Most Relevant First (MoRF) can be found in the original paper:
     https://arxiv.org/abs/1509.06321. 

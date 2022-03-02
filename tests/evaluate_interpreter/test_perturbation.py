@@ -20,7 +20,7 @@ class TestDelIns(unittest.TestCase):
             visual=False, 
             labels=None, 
             save_path=None)
-        evaluator = it.Pertubation(paddle_model, 'cpu')
+        evaluator = it.Perturbation(paddle_model, 'cpu')
         r = evaluator.evaluate(img_path, exp)
         # test ends if no errors
 
@@ -35,7 +35,7 @@ class TestDelIns(unittest.TestCase):
             visual=False,
             save_path=None
         )
-        evaluator = it.Pertubation(paddle_model, 'cpu')
+        evaluator = it.Perturbation(paddle_model, 'cpu')
         r = evaluator.evaluate(img_path, lime.lime_results)
         # test ends if no errors
 
