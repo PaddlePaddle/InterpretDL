@@ -174,7 +174,7 @@ class Perturbation(InterpreterEvaluator):
             # class of interest
             if coi is None:
                 # probas.shape = [n_samples, n_classes]
-                coi = np.argmax(probas[-1], axis=0)
+                coi = np.argmax(probas[0], axis=0)
             
             results['LeRF_probas'] = probas[:, coi]
             results['LeRF_score'] = np.mean(results['LeRF_probas'])            
