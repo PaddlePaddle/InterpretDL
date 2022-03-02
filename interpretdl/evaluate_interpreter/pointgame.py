@@ -9,12 +9,30 @@ class PointGame():
     https://arxiv.org/abs/1608.00507.
 
     Note that the bounding box of annotations is required for the evaluation.
-    This method does not need models either.
+    This method does not need models either. For API compatibility, we implement
+    it within the same functions as other evaluators.
     """
     def __init__(self):
         pass
 
-    def evaluate(self, bbox, exp_array, threshold=0.25):
+    def evaluate(self, bbox: tuple(int), exp_array: np.ndarray, threshold=0.25):
+        """Main function, to evaluate whether the explanation is aligned with 
+        the annotated bounding box.
+
+        Args:
+            bbox (tuple): A tuple of four integers: (x1, y1, x2, y2), where 
+                (x1, y1) is the coordinates of the top-left point w.r.t. 
+                width and height respectively;
+                (x2, y2) is the coordinates of the bottom-right point w.r.t. 
+                width and height respectively;
+            exp_array (np.ndarray): An explanation of type np.ndarray. 
+            threshold (float, optional): _description_. Defaults to 0.25.
+
+        Returns:
+            dict: containing 'precision', 'recall', 'f1_score' and 'auc_score', 
+                'ap_score', where the first three depend on the threshold and the
+                last two do not.
+        """
         ret = np.max(exp_array) * threshold
         binary_exp_array = exp_array > ret
         

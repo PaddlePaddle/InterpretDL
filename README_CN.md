@@ -177,7 +177,9 @@ gradients = sg.interpret("test.jpg", visual=True, save_path=None)
     - [ ] Influence Function
 
 * 评估方式
+    - [x] Perturbation Tests
     - [x] Deletion & Insertion
+    - [x] Localization Ablity
     - [ ] Local Fidelity
     - [ ] Sensitivity
 
@@ -203,6 +205,9 @@ gradients = sg.interpret("test.jpg", visual=True, save_path=None)
 * `Rollout`: [Quantifying Attention Flow in Transformers, Abnar et al. 2020](https://arxiv.org/abs/2005.00928)
 * `TAM`: [Explaining Information Flow Inside Vision Transformers Using Markov Chain. Yuan et al. 2021](https://openreview.net/forum?id=TT-cf6QSDaQ)
 * `Consensus`: [Cross-Model Consensus of Explanations and Beyond for Image Classification Models: An Empirical Study. Li et al 2021](https://arxiv.org/abs/2109.00707)
+* `Perturbation`: [Evaluating the visualization of what a deep neural network has learned.](https://arxiv.org/abs/1509.06321)
+* `Deletion&Insertion`: [RISE: Randomized Input Sampling for Explanation of Black-box Models.](https://arxiv.org/abs/1806.07421)
+* `PointGame`: [Top-down Neural Attention by Excitation Backprop.](https://arxiv.org/abs/1608.00507)
 
 # Copyright and License
 
