@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import f1_score, roc_auc_score, average_precision_score
+from sklearn.metrics import roc_auc_score, average_precision_score
 
 
 def compute_scores_thresholding(gt, exp, threshold):
