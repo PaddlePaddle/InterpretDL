@@ -1,6 +1,5 @@
 import abc
 import sys
-import numpy as np
 import warnings
 
 # Ensure compatibility with Python 2/3
