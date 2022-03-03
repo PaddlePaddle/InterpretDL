@@ -36,8 +36,14 @@ jobs:
     steps:
       - checkout
       - check-changed-files-or-halt
+      - restore_cache: # https://circleci.com/docs/2.0/caching/
+          key: deps1-{{ .Branch }}-{{ checksum "requirements.txt" }}-{{ checksum "./scripts/install_from_scratch.sh"}}
       - pip_install
       - unit_tests
+      - save_cache: # https://circleci.com/docs/2.0/caching/
+          key: deps1-{{ .Branch }}-{{ checksum "requirements.txt" }}-{{ checksum "./scripts/install_from_scratch.sh"}}
+          paths:
+            - "venv"
     parallelism: 4
 
 workflows:
