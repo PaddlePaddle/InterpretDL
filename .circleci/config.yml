@@ -1,6 +1,13 @@
 version: 2.1
 
 commands:
+  check-changed-files-or-halt:
+    parameters:
+      pattern:
+        type: string
+    steps:
+      - run: git show -m HEAD --name-only --pretty="" | grep -E 'interpretdl/|tests/' || circleci step halt
+
   pip_install:
     description: "Install dependencies via pip"
     parameters:
@@ -30,6 +37,7 @@ jobs:
       - image: circleci/python:3.7
     steps:
       - checkout
+      - check-changed-files-or-halt
       - pip_install
       - unit_tests
     parallelism: 4
