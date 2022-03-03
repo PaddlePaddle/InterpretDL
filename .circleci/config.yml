@@ -2,9 +2,7 @@ version: 2.1
 
 commands:
   check-changed-files-or-halt:
-    parameters:
-      pattern:
-        type: string
+    description: "Check code changes"
     steps:
       - run: git show -m HEAD --name-only --pretty="" | grep -E 'interpretdl/|tests/' || circleci step halt
 
