@@ -5,9 +5,6 @@ import os, sys
 import pickle
 import paddle
 
-import typing
-from typing import Any, Callable, List, Tuple, Union
-
 from .abc_interpreter import Interpreter
 
 

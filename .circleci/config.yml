@@ -44,7 +44,7 @@ jobs:
           key: deps1-{{ .Branch }}-{{ checksum "requirements.txt" }}-{{ checksum "./scripts/install_from_scratch.sh"}}
           paths:
             - "venv"
-    parallelism: 4
+    # parallelism: 4
 
 workflows:
   tests:
