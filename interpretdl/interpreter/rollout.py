@@ -1,6 +1,5 @@
 
 import numpy as np
-import paddle
 import re
 
 from .abc_interpreter import Interpreter
@@ -75,6 +74,7 @@ class RolloutInterpreter(Interpreter):
             avg_heads = (attn_heads.sum(axis=1) / attn_heads.shape[1]).detach()
             all_layer_attentions.append(avg_heads)
 
+        import paddle  # TODO: change outputs to numpy.ndarray.
         # compute rollout between attention layers
         # adding residual consideration- code adapted from https://github.com/samiraabnar/attention_flow
         num_tokens = all_layer_attentions[0].shape[1]
@@ -102,6 +102,7 @@ class RolloutInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
+            import paddle
             paddle.set_device(self.device)
             # to get gradients, the ``train`` mode must be set.
             # we cannot set v.training = False for the same reason.

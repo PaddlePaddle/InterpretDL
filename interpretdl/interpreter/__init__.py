@@ -10,7 +10,6 @@ from .smooth_grad import SmoothGradInterpreter
 from .smooth_grad_v2 import SmoothGradInterpreterV2
 from .occlusion import OcclusionInterpreter
 from .gradient_shap import GradShapCVInterpreter, GradShapNLPInterpreter
-from ._normlime_base import NormLIMECVInterpreter, NormLIMENLPInterpreter
 from .score_cam import ScoreCAMInterpreter
 from .lrp import LRPCVInterpreter
 from .rollout import RolloutInterpreter
@@ -20,8 +19,7 @@ from .consensus import ConsensusInterpreter
 __all__ = [
     "Interpreter",
     "InputGradientInterpreter", "InputOutputInterpreter", "IntermediateLayerInterpreter",
-    "LIMECVInterpreter", "LIMENLPInterpreter", "NormLIMECVInterpreter",
-    "NormLIMENLPInterpreter", "GradCAMInterpreter", "IntGradCVInterpreter",
+    "LIMECVInterpreter", "LIMENLPInterpreter", "GradCAMInterpreter", "IntGradCVInterpreter",
     "IntGradNLPInterpreter", "SmoothGradInterpreter", "OcclusionInterpreter",
     "GradShapCVInterpreter", "GradShapNLPInterpreter", "ScoreCAMInterpreter",
     "LRPCVInterpreter", "RolloutInterpreter", "TAMInterpreter",
@@ -33,9 +31,10 @@ try:
     from . import lime_prior
     from .lime_prior import LIMEPriorInterpreter
     from .forgetting_events import ForgettingEventsInterpreter
-    __all__.append("LIMEPriorInterpreter")
-    __all__.append("ForgettingEventsInterpreter")
+    from ._normlime_base import NormLIMECVInterpreter, NormLIMENLPInterpreter
+    __all__ += ["LIMEPriorInterpreter", "ForgettingEventsInterpreter", 
+                "NormLIMECVInterpreter", "NormLIMENLPInterpreter"]
 except ModuleNotFoundError:
     print(
-        "Warning: Paddle should be installed before using LIMEPriorInterpreter or ForgettingEventsInterpreter."
+        "Warning: Paddle should be installed before using some Interpreters."
     )

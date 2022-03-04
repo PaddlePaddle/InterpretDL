@@ -1,6 +1,5 @@
 
 import numpy as np
-import paddle
 
 from ..data_processor.readers import preprocess_image, read_image, restore_image
 from ..data_processor.visualizer import sp_weights_to_image_explanation, overlay_threshold, save_image, show_vis_explanation
@@ -159,10 +158,6 @@ class LIMENLPInterpreter(Interpreter):
 
         Interpreter.__init__(self, paddle_model, device, use_cuda)
         self.paddle_model = paddle_model
-        self.use_cuda = use_cuda
-        if not paddle.is_compiled_with_cuda():
-            self.use_cuda = False
-
         self.paddle_prepared = False
 
         # use the default LIME setting
@@ -210,7 +205,6 @@ class LIMENLPInterpreter(Interpreter):
             self._paddle_prepare()
         # only one example here
         probability = self.predict_fn(*self.model_inputs)[0]
-        probability = paddle.nn.functional.softmax(paddle.to_tensor(probability)).numpy()
         
         # only interpret top 1
         if interpret_class is None:
@@ -243,12 +237,17 @@ class LIMENLPInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
-            paddle.set_device('gpu:0' if self.use_cuda else 'cpu')
+            import paddle
+            if not paddle.is_compiled_with_cuda() and self.device[:3] == 'gpu':
+                print("Paddle is not installed with GPU support. Change to CPU version now.")
+                self.device = 'cpu'
+            paddle.set_device(self.device)
             self.paddle_model.eval()
 
             def predict_fn(*params):
                 params = tuple(paddle.to_tensor(inp) for inp in params)
-                probs = self.paddle_model(*params)
+                logits = self.paddle_model(*params)
+                probs = paddle.nn.functional.softmax(logits)
                 return probs.numpy()
 
         self.predict_fn = predict_fn

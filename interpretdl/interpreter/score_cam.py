@@ -1,7 +1,6 @@
 
 import cv2
 import numpy as np
-import paddle
 from tqdm import tqdm
 
 from .abc_interpreter import IntermediateLayerInterpreter

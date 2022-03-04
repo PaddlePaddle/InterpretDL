@@ -28,7 +28,7 @@ class Interpreter(ABC):
                 '``use_cuda`` would be deprecated soon. Use ``device`` directly.',
                 stacklevel=2
             )
-            self.device = 'gpu' if use_cuda and device[:3] == 'gpu' else 'cpu'
+            self.device = 'gpu:0' if use_cuda and device[:3] == 'gpu' else 'cpu'
 
         assert self.device[:3] in ['cpu', 'gpu']
 
@@ -102,7 +102,6 @@ class InputGradientInterpreter(Interpreter):
             assert callable(self.predict_fn), "predict_fn is predefined before, but is not callable." \
                 "Check it again."
 
-        import paddle
         if self.predict_fn is None or rebuild:
             assert gradient_of in ['loss', 'logit', 'probability']
 
@@ -119,6 +118,7 @@ class InputGradientInterpreter(Interpreter):
                 Returns:
                     [type]: gradients, labels
                 """
+                import paddle
                 assert len(data.shape) == 4  # [bs, h, w, 3]
                 assert labels is None or \
                     (isinstance(labels, (list, np.ndarray)) and len(labels) == data.shape[0])
@@ -204,7 +204,6 @@ class InputOutputInterpreter(Interpreter):
             assert callable(self.predict_fn), "predict_fn is predefined before, but is not callable." \
                 "Check it again."
 
-        import paddle
         if self.predict_fn is None or rebuild:
             assert output in ['logit', 'probability']
 
@@ -221,6 +220,7 @@ class InputOutputInterpreter(Interpreter):
                 Returns:
                     [type]: [description]
                 """
+                import paddle
                 assert len(data.shape) == 4  # [bs, h, w, 3]
 
                 logits = self.paddle_model(paddle.to_tensor(data))  # get logits, [bs, num_c]
@@ -277,14 +277,13 @@ class IntermediateLayerInterpreter(Interpreter):
             assert callable(self.predict_fn), "predict_fn is predefined before, but is not callable." \
                 "Check it again."
 
-        import paddle
         if self.predict_fn is None or rebuild:
             assert target_layer is not None, '``target_layer`` has to be given.'
 
             self._paddle_env_set()
 
             def predict_fn(data):
-
+                import paddle
                 target_feature_map = []
                 def hook(layer, input, output):
                     target_feature_map.append(output)

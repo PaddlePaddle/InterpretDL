@@ -1,6 +1,5 @@
 
 import numpy as np
-import paddle
 import re
 
 from .abc_interpreter import Interpreter
@@ -109,6 +108,7 @@ class TAMInterpreter(Interpreter):
 
     def _paddle_prepare(self, predict_fn=None):
         if predict_fn is None:
+            import paddle
             paddle.set_device(self.device)
             # to get gradients, the ``train`` mode must be set.
             # we cannot set v.training = False for the same reason.
