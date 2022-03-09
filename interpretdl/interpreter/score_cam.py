@@ -57,10 +57,8 @@ class ScoreCAMInterpreter(IntermediateLayerInterpreter):
 
         imgs, data = images_transform_pipeline(inputs, resize_to, crop_to)
 
-        bsz = len(data)
+        bsz, c, h, w = data.shape
         save_path = preprocess_save_path(save_path, bsz)
-
-        b, c, h, w = data.shape
 
         self._build_predict_fn(target_layer=target_layer_name)
 
@@ -68,8 +66,9 @@ class ScoreCAMInterpreter(IntermediateLayerInterpreter):
             _, probs, labels = self.predict_fn(data)
 
         labels = np.array(labels).reshape((bsz, ))
-        feature_map, _, _ = self.predict_fn(data)
-        interpretations = np.zeros((b, h, w))
+        feature_maps, _, _ = self.predict_fn(data)
+        feature_map = feature_maps[0]
+        interpretations = np.zeros((bsz, h, w))
 
         for i in tqdm(range(feature_map.shape[1]), leave=True, position=0):
             feature_channel = feature_map[:, i, :, :]
@@ -79,11 +78,11 @@ class ScoreCAMInterpreter(IntermediateLayerInterpreter):
             ])
             norm_feature_channel = np.array(
                 [(f - f.min()) / (f.max() - f.min()) if f.max() - f.min() > 0.0 else f
-                 for f in feature_channel]).reshape((b, 1, h, w))
+                 for f in feature_channel]).reshape((bsz, 1, h, w))
             _, probs, _ = self.predict_fn(data * norm_feature_channel)
             scores = [p[labels[i]] for i, p in enumerate(probs)]
             interpretations += feature_channel * np.array(scores).reshape((
-                b, ) + (1, ) * (interpretations.ndim - 1))
+                bsz, ) + (1, ) * (interpretations.ndim - 1))
 
         # interpretations = np.maximum(interpretations, 0)
         # interpretations_min, interpretations_max = interpretations.min(
@@ -100,7 +99,7 @@ class ScoreCAMInterpreter(IntermediateLayerInterpreter):
         #                             for interp in interpretations])
 
         # visualization and save image.
-        for i in range(b):
+        for i in range(bsz):
             vis_explanation = explanation_to_vis(imgs[i], interpretations[i], style='overlay_heatmap')
             if visual:
                 show_vis_explanation(vis_explanation)

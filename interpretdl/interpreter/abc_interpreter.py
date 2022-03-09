@@ -239,10 +239,10 @@ class InputOutputInterpreter(Interpreter):
 
 class IntermediateLayerInterpreter(Interpreter):
     """Interpreter that exhibits features from intermediate layers to produce explanations.
-    This interpreter extracts one layer's feature.
+    This interpreter extracts intermediate layers' features, but no gradients involved.
 
     Interpreters that are derived from IntermediateLayerInterpreter:
-    ScoreCAMInterpreter
+    RolloutInterpreter, ScoreCAMInterpreter
 
     """
 
@@ -264,13 +264,18 @@ class IntermediateLayerInterpreter(Interpreter):
         # does not need gradients at all.
         self.paddle_model.eval()
 
-    def _build_predict_fn(self, rebuild: bool=False, target_layer: str=None):
+    def _build_predict_fn(self, rebuild: bool=False, target_layer: str=None, target_layer_pattern: str=None):
         """Build self.predict_fn for IntermediateLayer based algorithms.
         The model is supposed to be a classification model.
+        target_layer and target_layer_pattern cannot be set at the same time.
+
         Args:
-            rebuild (bool, optional): forces to rebuid. Defaults to False.
-            target_layer (str, optional): given the name of the target layer at which
-                the explanation is computed.
+            rebuild (bool, optional): _description_. Defaults to False.
+            target_layer (str, optional): _description_. Defaults to None.
+            target_layer_pattern (str, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
         """
 
         if self.predict_fn is not None:
@@ -278,23 +283,31 @@ class IntermediateLayerInterpreter(Interpreter):
                 "Check it again."
 
         if self.predict_fn is None or rebuild:
-            assert target_layer is not None, '``target_layer`` has to be given.'
+            assert not (target_layer is None and target_layer_pattern is None), 'one of them must be given.'
+            assert target_layer is None or target_layer_pattern is None, 'they cannot be given at the same time.'
 
             self._paddle_env_set()
 
             def predict_fn(data):
                 import paddle
-                target_feature_map = []
-                def hook(layer, input, output):
-                    target_feature_map.append(output)
+                import re
 
+                def target_layer_pattern_match(layer_name):
+                    return re.match(target_layer_pattern, layer_name)
+                def target_layer_match(layer_name):
+                    return layer_name == target_layer
+                match_func = target_layer_match if target_layer is not None else target_layer_pattern_match
+
+                target_feature_maps = []
+                def hook(layer, input, output):
+                    target_feature_maps.append(output.numpy())
                 hooks = []
                 for name, v in self.paddle_model.named_sublayers():
-                    if name == target_layer:
+                    if match_func(name):
                         h = v.register_forward_post_hook(hook)
                         hooks.append(h)
 
-                assert len(hooks) == 1, f"target_layer `{target_layer}`` does not exist in the given model, \
+                assert len(hooks) > 0, f"No target layers are found in the given model, \
                                 the list of layer names are \n \
                                 {[n for n, v in self.paddle_model.named_sublayers()]}"
                 
@@ -302,13 +315,13 @@ class IntermediateLayerInterpreter(Interpreter):
                     data = paddle.to_tensor(data)
                     logits = self.paddle_model(data)
 
-                    # has to be removed.
+                    # hooks has to be removed.
                     for h in hooks:
                         h.remove()
                     
                     probas = paddle.nn.functional.softmax(logits, axis=1)
                     predict_label = paddle.argmax(probas, axis=1)  # get predictions.
 
-                return target_feature_map[0].numpy(), probas.numpy(), predict_label.numpy()
+                return target_feature_maps, probas.numpy(), predict_label.numpy()
 
             self.predict_fn = predict_fn
