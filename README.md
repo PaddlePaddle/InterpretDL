@@ -1,7 +1,5 @@
 [**中文**](./README_CN.md) | English
 
-![](preview.png)
-
 [![Release](https://img.shields.io/github/release/PaddlePaddle/InterpretDL.svg)](https://github.com/PaddlePaddle/InterpretDL/releases)
 [![PyPI](https://img.shields.io/pypi/v/interpretdl.svg)](https://pypi.org/project/interpretdl)
 [![CircleCI](https://circleci.com/gh/PaddlePaddle/InterpretDL.svg?style=shield)](https://circleci.com/gh/PaddlePaddle/InterpretDL)
@@ -14,6 +12,8 @@
 InterpretDL, short for *interpretations of deep learning models*, is a model interpretation toolkit for [PaddlePaddle](https://github.com/PaddlePaddle/Paddle) models. This toolkit contains implementations of many interpretation algorithms, including LIME, Grad-CAM, Integrated Gradients and more. Some SOTA and new interpretation algorithms are also implemented.
 
 *InterpretDL is under active construction and all contributions are welcome!*
+
+![](https://user-images.githubusercontent.com/13829174/159609890-bf3f2050-1ee8-482f-baac-693d280f9039.jpg)
 
 # Why InterpretDL
 

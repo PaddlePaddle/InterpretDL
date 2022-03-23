@@ -14,6 +14,8 @@ InterpretDL(全称*interpretations of deep learning models*), 是基于[飞桨](
 
 *InterpretDL持续更新中，欢迎所有贡献。*
 
+![](https://user-images.githubusercontent.com/13829174/159610534-316fcc73-315d-47d3-aa07-c8e4da35c94f.jpg)
+
 # 为什么选择InterpretDL
 
 随着深度学习模型的越发复杂，人们很难去理解其内部的工作原理。“黑盒”的可解释性正成为许多优秀研究者的焦点。InterpretDL不仅支持经典的可解释性算法，也对最新的可解释性算法持续更新。
