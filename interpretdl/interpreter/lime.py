@@ -42,8 +42,8 @@ class LIMECVInterpreter(InputOutputInterpreter):
         interpret_class=None,
         num_samples=1000,
         batch_size=50,
-        resize_to=256, 
-        crop_to=224,
+        resize_to=224, 
+        crop_to=None,
         visual=True,
         save_path=None
     ):

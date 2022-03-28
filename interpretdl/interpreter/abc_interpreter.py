@@ -223,16 +223,18 @@ class InputOutputInterpreter(Interpreter):
                 import paddle
                 assert len(data.shape) == 4  # [bs, h, w, 3]
 
-                logits = self.paddle_model(paddle.to_tensor(data))  # get logits, [bs, num_c]
-                probas = paddle.nn.functional.softmax(logits, axis=1)  # get probabilities.
-                preds = paddle.argmax(probas, axis=1)  # get predictions.
-                if label is None:
-                    label = preds.numpy()  # label is an integer.
-                
-                if output == 'logit':
-                    return logits.numpy(), label
-                else:
-                    return probas.numpy(), label
+                with paddle.no_grad():
+                    logits = self.paddle_model(paddle.to_tensor(data))  # get logits, [bs, num_c]
+                    probas = paddle.nn.functional.softmax(logits, axis=1)  # get probabilities.
+                    preds = paddle.argmax(probas, axis=1)  # get predictions.
+
+                    if label is None:
+                        label = preds.numpy()  # label is an integer.
+                    
+                    if output == 'logit':
+                        return logits.numpy(), label
+                    else:
+                        return probas.numpy(), label
 
             self.predict_fn = predict_fn
 
