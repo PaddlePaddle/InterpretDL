@@ -20,41 +20,23 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
     def __init__(self,
                  paddle_model,
                  device='gpu:0',
-                 use_cuda=True,
-                 temp_data_file='all_lime_weights.npz'):
+                 use_cuda=None):
+        """
+        
+        Args:
+            paddle_model (_type_): 
+                A user-defined function that gives access to model predictions.
+                It takes the following arguments:
+                - data: Data inputs.
+                and outputs predictions.
+            device (str, optional): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+            use_cuda (_type_, optional): Would be deprecated soon. Use ``device`` directly.
         """
 
-        :param paddle_model: A user-defined function that gives access to model predictions.
-                    It takes the following arguments:
-
-                    - data: Data inputs.
-                    and outputs predictions. See the example at the end of ``interpret()``.
-        :type paddle_model: callable
-        :param model_input_shape: The input shape of the model. Default: [3, 224, 224]
-        :type model_input_shape: list, optional
-        :param use_cuda: Whether or not to use cuda. Default: True
-        :type use_cuda: bool, optional
-        :param temp_data_file: The .npz file to save/load the dictionary where key is image path,
-            and value is another dictionary with lime weights, segmentation and input.
-            Default: 'all_lime_weights.npz'
-        :type temp_data_file: str, optional
-        """
         LIMECVInterpreter.__init__(self, paddle_model, use_cuda=use_cuda, device=device)
         self.lime_interpret = super().interpret
 
-        if temp_data_file.endswith('.npz'):
-            self.filepath_to_save = temp_data_file
-        else:
-            self.filepath_to_save = temp_data_file + '.npz'
-
-        if os.path.exists(self.filepath_to_save):
-            self.all_lime_weights = dict(
-                np.load(
-                    self.filepath_to_save, allow_pickle=True))
-        else:
-            self.all_lime_weights = {}
-
-    def _get_lime_weights(self, data, num_samples, batch_size, auto_save=True):
+    def _get_lime_weights(self, data, num_samples, batch_size, save=False):
         if data in self.all_lime_weights:
             return
         lime_weights = self.lime_interpret(
@@ -69,7 +51,7 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
             'input': data_instance
         }
 
-        if auto_save:
+        if save and self.filepath_to_save is not None:
             np.savez(self.filepath_to_save, **self.all_lime_weights)
             # load: dict(np.load(filepath_to_load, allow_pickle=true))
 
@@ -79,39 +61,80 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
                   image_paths,
                   num_samples=1000,
                   batch_size=50,
-                  save_path='normlime_weights.npy'):
+                  save_path='normlime_weights.npy',
+                  temp_data_file='all_lime_weights.npz'):
         """
         Main function of the interpreter.
 
         Args:
             image_paths (list of strs): A list of image filepaths.
-            num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate interpretation. Default: 1000
-            batch_size (int, optional): Number of samples to forward each time. Default: 50
-            save_path (str, optional): The .npy path to save the normlime weights. It is a dictionary where the key is label and value is segmentation ids with their importance. Default: 'normlime_weights.npy'
+            num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more 
+                accurate interpretation. Default: 1000
+            batch_size (int, optional): Number of samples to forward each time. 
+                Default: 50
+            save_path (str, optional): The .npy path to save the normlime weights. It is a dictionary where 
+                the key is label and value is segmentation ids with their importance. 
+                Default: 'normlime_weights.npy'
+            temp_data_file (str, optional): 
+                The path to save the intermediate lime weights to avoid repeating computations.
+                Default: 'all_lime_weights.npz'. Set to None will not save the intermediate lime weights.
 
         Returns:
-            [dict] NormLIME weights: {label_i: weights on features}
+            [dict] NormLIME weights: Global feature importance as a dict {label_i: weights on features}
         """
-        _, h_pre_models_kmeans = get_pre_models()
-        kmeans_model = load_pickle_file(h_pre_models_kmeans)
+
+        # Check `save_path`. Saving NormLIME results is necessary.
+        if os.path.exists(save_path):
+            print(f'{save_path} exists.')
+            n = 0
+            tmp = save_path.split('.npy')[0]
+            while os.path.exists(f'{tmp}-{n}.npy'):
+                n += 1
+
+            save_path = f'{tmp}-{n}.npy'
+            print(f'NormLIME results will be saved to {save_path}.')
+
+        # Check `temp_data_file` and load computed results.
+        self.all_lime_weights = {}
+        if temp_data_file is None:
+            self.filepath_to_save = None
+            print("Intermediate LIME results will not be saved.")
+        else:
+            self.filepath_to_save = temp_data_file if temp_data_file.endswith('.npz') else temp_data_file + '.npz'
+
+            if os.path.exists(self.filepath_to_save):
+                self.all_lime_weights = dict(
+                    np.load(self.filepath_to_save, allow_pickle=True)
+                )
 
         # compute lime weights and put in self.all_lime_weights
         for i in tqdm(range(len(image_paths)), leave=True, position=0):
             image_path = image_paths[i]
             self._get_lime_weights(
-                image_path, num_samples, batch_size, auto_save=(i % 10 == 0))
+                image_path, num_samples, batch_size, save=(i % 10 == 0)
+            )
 
-        np.savez(self.filepath_to_save, **self.all_lime_weights)
+        if self.filepath_to_save is not None:
+            np.savez(self.filepath_to_save, **self.all_lime_weights)
 
         # convert superpixel indexes to cluster indexes.
+        _, h_pre_models_kmeans = get_pre_models()
+        kmeans_model = load_pickle_file(h_pre_models_kmeans)
         normlime_weights_all_labels = {}
+        fextractor = FeatureExtractor()
         for i, image_path in enumerate(image_paths):
-            temp = self.all_lime_weights[image_path]
-            if isinstance(temp, np.ndarray):
-                temp = temp.item()
+            lime_explanation_i = self.all_lime_weights[image_path]
+            if isinstance(lime_explanation_i, np.ndarray):
+                lime_explanation_i = lime_explanation_i.item()
+            # lime_explanation_i is a dict of {
+            # 'input': , 
+            # 'segmentation':, 
+            # 'lime_weights':
+            # }
 
-            fextractor = FeatureExtractor()
-            img_to_show = temp['input'][np.newaxis, ...]
+            img_to_show = lime_explanation_i['input'][np.newaxis, ...]
+            
+            # static model
             paddle.enable_static()
             f = fextractor.forward(img_to_show).transpose((1, 2, 0))
             paddle.disable_static()
@@ -119,19 +142,18 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
             img_size = (img_to_show.shape[1], img_to_show.shape[2])
             f = F.resize(f, img_size)
 
-            X = extract_superpixel_features(f, temp['segmentation'])
+            # compute clusters according to the sp features.
+            X = extract_superpixel_features(f, lime_explanation_i['segmentation'])
             try:
-                cluster_labels = kmeans_model.predict(
-                    X)  # a list. len = number of sp.
+                cluster_labels = kmeans_model.predict(X)  # a list. len = number of sp.
             except AttributeError:
                 from sklearn.metrics import pairwise_distances_argmin_min
                 cluster_labels, _ = pairwise_distances_argmin_min(
                     X, kmeans_model.cluster_centers_)
-            lime_weights = temp['lime_weights']
+            lime_weights = lime_explanation_i['lime_weights']
             pred_labels = lime_weights.keys()
             for y in pred_labels:
-                normlime_weights_label_y = normlime_weights_all_labels.get(y,
-                                                                           {})
+                normlime_weights_label_y = normlime_weights_all_labels.get(y, {})
                 w_f_y = [abs(w[1]) for w in lime_weights[y]]
                 w_f_y_l1norm = sum(w_f_y)
 
@@ -144,6 +166,7 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
                     normlime_weights_label_y[cluster_labels[seg_label]] = tmp
 
                 normlime_weights_all_labels[y] = normlime_weights_label_y
+        
         # compute normlime weights.
         for y in normlime_weights_all_labels:
             normlime_weights = normlime_weights_all_labels.get(y, {})
@@ -164,15 +187,8 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
                 "\n"
             )
 
-        if os.path.exists(save_path):
-            n = 0
-            tmp = save_path.split('.npy')[0]
-            while os.path.exists(f'{tmp}-{n}.npy'):
-                n += 1
-
-            np.save(f'{tmp}-{n}.npy', normlime_weights_all_labels)
-        else:
-            np.save(save_path, normlime_weights_all_labels)
+        # Saving NormLIME results is necessary.
+        np.save(save_path, normlime_weights_all_labels)
 
         return normlime_weights_all_labels
 
@@ -188,8 +204,7 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
     def __init__(self,
                  paddle_model,
                  device='gpu:0',
-                 use_cuda=None,
-                 temp_data_file='all_lime_weights.npz'):
+                 use_cuda=None):
         """
 
         Args:
@@ -206,32 +221,22 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
         LIMENLPInterpreter.__init__(self, paddle_model, device, use_cuda)
         self.lime_interpret = super().interpret
 
-        if temp_data_file.endswith('.npz'):
-            self.filepath_to_save = temp_data_file
-        else:
-            self.filepath_to_save = temp_data_file + '.npz'
-
-        if os.path.exists(self.filepath_to_save):
-            self.all_lime_weights = dict(
-                np.load(
-                    self.filepath_to_save, allow_pickle=True))
-        else:
-            self.all_lime_weights = {}
-
     def _get_lime_weights(self,
                           data,
-                          dict_key,
                           preprocess_fn,
                           num_samples,
                           batch_size,
                           unk_id,
                           pad_id,
                           lod_levels,
-                          auto_save=True):
+                          save=False):
+        
+        dict_key = '-'.join(list(data.values()))
 
-        #dict_key = '_'.join(str(i) for i in data)
-        #dict_key = data
+        # dict_key = '_'.join(str(i) for i in data)
+        # dict_key = data
         if dict_key in self.all_lime_weights:
+            print(f"'{dict_key}' has been computed before. Check it if this is NOT expected.")
             return
 
         lime_weights = self.lime_interpret(
@@ -241,11 +246,12 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
             pad_id=pad_id,
             num_samples=num_samples,
             lod_levels=lod_levels,
-            batch_size=batch_size)
+            batch_size=batch_size
+        )
 
         self.all_lime_weights[dict_key] = {'lime_weights': lime_weights, }
 
-        if auto_save:
+        if save and self.filepath_to_save is not None:
             np.savez(self.filepath_to_save, **self.all_lime_weights)
             # load: dict(np.load(filepath_to_load, allow_pickle=True))
 
@@ -259,7 +265,8 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
                   unk_id,
                   pad_id=None,
                   lod_levels=None,
-                  save_path='normlime_weights.npy'):
+                  save_path='normlime_weights.npy',
+                  temp_data_file='all_lime_weights.npz'):
         """
         Main function of the interpreter.
 
@@ -277,33 +284,57 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
         Returns:
             [dict] NormLIME weights: {label_i: weights on features}
         """
+        # Check `save_path`. Saving NormLIME results is necessary.
+        if os.path.exists(save_path):
+            print(f'{save_path} exists.')
+            n = 0
+            tmp = save_path.split('.npy')[0]
+            while os.path.exists(f'{tmp}-{n}.npy'):
+                n += 1
+
+            save_path = f'{tmp}-{n}.npy'
+            print(f'NormLIME results will be saved to {save_path}.')
+
+        # Check `temp_data_file` and load computed results.
+        self.all_lime_weights = {}
+        if temp_data_file is None:
+            self.filepath_to_save = None
+            print("Intermediate LIME results will not be saved.")
+        else:
+            self.filepath_to_save = temp_data_file if temp_data_file.endswith('.npz') else temp_data_file + '.npz'
+
+            if os.path.exists(self.filepath_to_save):
+                self.all_lime_weights = dict(
+                    np.load(self.filepath_to_save, allow_pickle=True)
+                )
 
         # compute lime weights and put in self.all_lime_weights
         for i in tqdm(range(len(data)), leave=True, position=0):
             self._get_lime_weights(
                 data[i],
                 preprocess_fn=preprocess_fn,
-                dict_key=str(i),
                 unk_id=unk_id,
                 pad_id=pad_id,
                 num_samples=num_samples,
                 batch_size=batch_size,
                 lod_levels=lod_levels,
-                auto_save=(i % 10) == 0)
+                save=(i % 10) == 0)
 
-        np.savez(self.filepath_to_save, **self.all_lime_weights)
+        if self.filepath_to_save is not None:
+            np.savez(self.filepath_to_save, **self.all_lime_weights)
 
+        # Gather LIME weights and Normalize.
         normlime_weights_all_labels = {}
-        for i in range(len(data)):
-            data_instance = data[i]
-            temp = self.all_lime_weights[str(i)]
-            if isinstance(temp, np.ndarray):
-                temp = temp.item()
-            lime_weights = temp['lime_weights']
+        for dict_key, lime_explanation_i in self.all_lime_weights.items():
+            
+            if isinstance(lime_explanation_i, np.ndarray):
+                lime_explanation_i = lime_explanation_i.item()
+            # lime_explanation_i is a dict
+
+            lime_weights = lime_explanation_i['lime_weights']
             pred_labels = lime_weights.keys()
             for y in pred_labels:
-                normlime_weights_label_y = normlime_weights_all_labels.get(y,
-                                                                           {})
+                normlime_weights_label_y = normlime_weights_all_labels.get(y, {})
                 w_f_y = [abs(w[1]) for w in lime_weights[y]]
                 w_f_y_l1norm = sum(w_f_y)
 
@@ -316,6 +347,7 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
                         normlime_weights_label_y[word_id] = tmp
 
                 normlime_weights_all_labels[y] = normlime_weights_label_y
+        
         # compute normlime weights.
         for y in normlime_weights_all_labels:
             normlime_weights = normlime_weights_all_labels.get(y, {})
@@ -337,14 +369,7 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
                 "\n"
             )
 
-        if os.path.exists(save_path):
-            n = 0
-            tmp = save_path.split('.npy')[0]
-            while os.path.exists(f'{tmp}-{n}.npy'):
-                n += 1
-
-            np.save(f'{tmp}-{n}.npy', normlime_weights_all_labels)
-        else:
-            np.save(save_path, normlime_weights_all_labels)
+        # Saving NormLIME results is necessary.
+        np.save(save_path, normlime_weights_all_labels)
 
         return normlime_weights_all_labels
