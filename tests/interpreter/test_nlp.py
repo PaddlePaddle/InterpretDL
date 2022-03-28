@@ -46,38 +46,38 @@ class TestLIMENLP(unittest.TestCase):
             return paddle.to_tensor(input_ids, stop_gradient=False), paddle.to_tensor(segment_ids, stop_gradient=False)
         self.preprocess_fn = preprocess_fn
 
-    # def test_lime_intgrad_gradshap_nlp(self):
-    #     self.prepare()
+    def test_lime_intgrad_gradshap_nlp(self):
+        self.prepare()
 
-    #     reviews = [
-    #         "it 's a charming and often affecting journey . ",
-    #     ]
-    #     data = [ {"text": r} for r in reviews]
+        reviews = [
+            "it 's a charming and often affecting journey . ",
+        ]
+        data = [ {"text": r} for r in reviews]
 
-    #     algo = it.LIMENLPInterpreter(self.paddle_model, device='cpu')
-    #     for i, review in enumerate(data):
-    #         pred_class, pred_prob, lime_weights = algo.interpret(
-    #             review,
-    #             self.preprocess_fn,
-    #             num_samples=22,
-    #             batch_size=20,
-    #             unk_id=self.tokenizer.convert_tokens_to_ids('[UNK]'),
-    #             pad_id=self.tokenizer.convert_tokens_to_ids('[PAD]'),
-    #             return_pred=True)
+        algo = it.LIMENLPInterpreter(self.paddle_model, device='cpu')
+        for i, review in enumerate(data):
+            pred_class, pred_prob, lime_weights = algo.interpret(
+                review,
+                self.preprocess_fn,
+                num_samples=22,
+                batch_size=20,
+                unk_id=self.tokenizer.convert_tokens_to_ids('[UNK]'),
+                pad_id=self.tokenizer.convert_tokens_to_ids('[PAD]'),
+                return_pred=True)
 
-    #     algo = it.IntGradNLPInterpreter(self.paddle_model, device='cpu')
-    #     pred_labels, pred_probs, avg_gradients = algo.interpret(
-    #         self.preprocess_fn(data),
-    #         steps=2,
-    #         return_pred=True)
+        algo = it.IntGradNLPInterpreter(self.paddle_model, device='cpu')
+        pred_labels, pred_probs, avg_gradients = algo.interpret(
+            self.preprocess_fn(data),
+            steps=2,
+            return_pred=True)
 
-    #     algo = it.GradShapNLPInterpreter(self.paddle_model, device='cpu')
+        algo = it.GradShapNLPInterpreter(self.paddle_model, device='cpu')
 
-    #     pred_labels, pred_probs, avg_gradients = algo.interpret(
-    #         self.preprocess_fn(data),
-    #         n_samples=2,
-    #         noise_amount=0.1,
-    #         return_pred=True)
+        pred_labels, pred_probs, avg_gradients = algo.interpret(
+            self.preprocess_fn(data),
+            n_samples=2,
+            noise_amount=0.1,
+            return_pred=True)
             
     def test_normlime(self):
         self.prepare()
