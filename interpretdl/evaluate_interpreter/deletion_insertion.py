@@ -156,10 +156,26 @@ class DeletionInsertion(InterpreterEvaluator):
         
         return results
 
-    def compute_probas(self, results, coi=None):
+    def compute_probas(self, results, batch_size, coi=None):
         if self.compute_deletion:
             data = preprocess_image(results['deletion_images'])
-            probas = self.predict_fn(data)
+            if batch_size is None:
+                probas = self.predict_fn(data)
+            else:
+                probas = []
+                list_to_compute = list(range(data.shape[0]))
+                while len(list_to_compute) > 0:
+                    if len(list_to_compute) >= batch_size:
+                        list_c = list_to_compute[:batch_size]
+                        list_to_compute = list_to_compute[batch_size:]
+                    else:
+                        list_c = list_to_compute[:len(list_to_compute)]
+                        list_to_compute = []
+
+                    probs_batch = self.predict_fn(data[list_c])
+                    probas.append(probs_batch)
+
+                probas = np.concatenate(probas, axis=0)
 
             # class of interest
             if coi is None:
@@ -171,7 +187,23 @@ class DeletionInsertion(InterpreterEvaluator):
 
         if self.compute_insertion:
             data = preprocess_image(results['insertion_images'])
-            probas = self.predict_fn(data)
+            if batch_size is None:
+                probas = self.predict_fn(data)
+            else:
+                probas = []
+                list_to_compute = list(range(data.shape[0]))
+                while len(list_to_compute) > 0:
+                    if len(list_to_compute) >= batch_size:
+                        list_c = list_to_compute[:batch_size]
+                        list_to_compute = list_to_compute[batch_size:]
+                    else:
+                        list_c = list_to_compute[:len(list_to_compute)]
+                        list_to_compute = []
+
+                    probs_batch = self.predict_fn(data[list_c])
+                    probas.append(probs_batch)
+
+                probas = np.concatenate(probas, axis=0)
 
             # class of interest
             if coi is None:
@@ -183,12 +215,14 @@ class DeletionInsertion(InterpreterEvaluator):
                 
         return results
 
-    def evaluate(self, img_path: str, explanation: list or np.ndarray, resize_to=224, crop_to=None, limit_number_generated_samples=None):
+    def evaluate(self, img_path: str, explanation: list or np.ndarray, batch_size=None,
+            resize_to=224, crop_to=None, limit_number_generated_samples=None):
         """Main function of this class. Evaluate whether the explanation is trustworthy for the model.
 
         Args:
             img_path (str): a string for image path.
-            explanation (listornp.ndarray): [description]
+            explanation (listornp.ndarray): [description].
+            batch_size (int or None): For memory issue. If not set, all samples are computed once.
             resize_to (int, optional): [description]. Defaults to 224.
             crop_to ([type], optional): [description]. Defaults to None.
             limit_number_generated_samples ([type], optional): [description]. Defaults to None.
@@ -215,6 +249,6 @@ class DeletionInsertion(InterpreterEvaluator):
 
         img, _ = images_transform_pipeline(img_path, resize_to=resize_to, crop_to=crop_to)
         results = self.generate_samples(img, explanation, limit_number_generated_samples, results)
-        results = self.compute_probas(results)
+        results = self.compute_probas(results, batch_size)
 
         return results

@@ -37,6 +37,7 @@ class TestDelIns(unittest.TestCase):
         )
         evaluator = it.DeletionInsertion(paddle_model, device='cpu')
         r = evaluator.evaluate(img_path, lime.lime_results)
+        r = evaluator.evaluate(img_path, lime.lime_results, 5)
         # test ends if no errors
 
 if __name__ == '__main__':
