@@ -230,8 +230,13 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
                           pad_id,
                           lod_levels,
                           save=False):
-        
-        dict_key = '-'.join(list(data.values()))
+        if isinstance(data, str):
+            dict_key = data
+        elif isinstance(data, dict):
+            dict_key = '-'.join([str(v) for v in list(data.values())])
+        else:
+            # TODO: open an issue if there are more cases that are not covered.
+            dict_key = str(data)
 
         # dict_key = '_'.join(str(i) for i in data)
         # dict_key = data

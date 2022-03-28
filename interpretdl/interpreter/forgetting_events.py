@@ -15,7 +15,7 @@ class ForgettingEventsInterpreter(Interpreter):
     https://arxiv.org/pdf/1812.05159.pdf
     """
 
-    def __init__(self, paddle_model, device='gpu:0', use_cuda=True):
+    def __init__(self, paddle_model, device='gpu:0', use_cuda=None):
         """
         Initialize the ForgettingEventsInterpreter.
         Args:

@@ -12,7 +12,7 @@ class TestDelIns(unittest.TestCase):
     def test_evaluate_sg(self):
         paddle_model = mobilenet_v2(pretrained=True)
         img_path = 'imgs/catdog.jpg'
-        sg = it.SmoothGradInterpreter(paddle_model, use_cuda=True)
+        sg = it.SmoothGradInterpreter(paddle_model, device='cpu')
         exp = sg.interpret(
             img_path,
             n_samples=5,
@@ -20,14 +20,14 @@ class TestDelIns(unittest.TestCase):
             visual=False, 
             labels=None, 
             save_path=None)
-        evaluator = it.DeletionInsertion(paddle_model, 'cpu', False)
+        evaluator = it.DeletionInsertion(paddle_model, device='cpu')
         r = evaluator.evaluate(img_path, exp)
         # test ends if no errors
 
     def test_evaluate_lime(self):
         paddle_model = mobilenet_v2(pretrained=True)
         img_path = 'imgs/catdog.jpg'
-        lime = it.LIMECVInterpreter(paddle_model, use_cuda=True)
+        lime = it.LIMECVInterpreter(paddle_model, device='cpu')
         lime_weights = lime.interpret(
             img_path,
             num_samples=50,
@@ -35,7 +35,7 @@ class TestDelIns(unittest.TestCase):
             visual=False,
             save_path=None
         )
-        evaluator = it.DeletionInsertion(paddle_model, 'cpu', False)
+        evaluator = it.DeletionInsertion(paddle_model, device='cpu')
         r = evaluator.evaluate(img_path, lime.lime_results)
         # test ends if no errors
 

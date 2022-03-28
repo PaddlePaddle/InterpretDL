@@ -19,7 +19,7 @@ class LIMECVInterpreter(InputOutputInterpreter):
     def __init__(
         self,
         paddle_model: callable,
-        use_cuda: bool=True,
+        use_cuda: bool=None,
         device: str='gpu:0',
         random_seed: int or None=None
     ):
