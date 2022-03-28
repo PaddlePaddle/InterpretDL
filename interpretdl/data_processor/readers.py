@@ -116,7 +116,7 @@ def preprocess_image(img: np.ndarray, random_mirror=False) -> np.ndarray:
     return img
 
 
-def read_image(img_path, target_size=256, crop_size=224, crop=True) -> np.ndarray:
+def read_image(img_path, target_size=256, crop_size=224) -> np.ndarray:
     """
     resize_short to target_size, then center crop to crop_size or not crop.
     :param img_path: one image path
@@ -129,7 +129,7 @@ def read_image(img_path, target_size=256, crop_size=224, crop=True) -> np.ndarra
             img = img.convert('RGB')
             img = np.array(img)
             img = resize_image(img, target_size)
-            if crop:
+            if crop_size is not None:
                 img = crop_image(img, target_size=crop_size, center=True)
             img = np.expand_dims(img, axis=0)
             return img
@@ -240,13 +240,8 @@ def images_transform_pipeline(array_or_path, resize_to=224, crop_to=None):
         resize_to (int, optional): [description]. Defaults to 224.
         crop_to ([type], optional): [description]. Defaults to None.
     """
-    if crop_to is not None:
-        assert isinstance(crop_to, int)
-        def read_image_func(path):
-            return read_image(path, target_size=resize_to, crop_size=crop_to)
-    else:
-        def read_image_func(path):
-            return read_image(path, target_size=resize_to, crop=False)
+    def read_image_func(path):
+        return read_image(path, target_size=resize_to, crop_size=crop_to)
 
     if isinstance(array_or_path, str):
         # one single image path.
