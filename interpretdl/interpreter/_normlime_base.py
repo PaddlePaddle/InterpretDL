@@ -213,10 +213,7 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
 
                     - data: Data inputs.
                     and outputs predictions. See the example at the end of ``interpret()``.
-            trained_model_path (str): The pretrained model directory.
-            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
-            use_cuda (bool, optional): Whether or not to use cuda. Default: True
-            temp_data_file (str, optinal): The .npz file to save/load the dictionary where key is word ids joined by '-' and value is another dictionary with lime weights. Default: 'all_lime_weights.npz'
+            use_cuda (bool, optional): Whether or not to use cuda. Default: None.
         """
         LIMENLPInterpreter.__init__(self, paddle_model, device, use_cuda)
         self.lime_interpret = super().interpret
