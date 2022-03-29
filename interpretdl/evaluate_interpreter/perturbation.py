@@ -1,4 +1,5 @@
 import numpy as np
+import cv2
 from .abc_evaluator import InterpreterEvaluator
 from interpretdl.data_processor.readers import images_transform_pipeline, preprocess_image
 
@@ -121,7 +122,9 @@ class Perturbation(InterpreterEvaluator):
         if len(explanation.shape) == 3:
             explanation = np.abs(explanation).sum(0)
         assert len(explanation.shape) == 2
-
+        
+        explanation = cv2.resize(explanation, (img.shape[2], img.shape[1]), interpolation=cv2.INTER_LINEAR)
+        
         if limit_number_generated_samples is None:
             limit_number_generated_samples = 20  # default to 20, each 5 percentiles.
         
