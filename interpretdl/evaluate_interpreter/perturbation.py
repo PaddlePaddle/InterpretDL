@@ -116,9 +116,8 @@ class Perturbation(InterpreterEvaluator):
     def generate_samples_array(self, img, explanation, limit_number_generated_samples, results):
         
         # usually explanation has shape of [n_sample, n_channel, h, w]
-        if len(explanation.shape) == 4:
-            assert explanation.shape[0] == 1, 'Explanation for one image.'
-            explanation = explanation[0]
+        explanation = np.squeeze(explanation)
+        assert len(explanation.shape) in [2, 3], 'Explanation for one image.'
         if len(explanation.shape) == 3:
             explanation = np.abs(explanation).sum(0)
         assert len(explanation.shape) == 2
