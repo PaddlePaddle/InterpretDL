@@ -73,7 +73,7 @@ class ScoreCAMInterpreter(IntermediateLayerInterpreter):
         for i in tqdm(range(feature_map.shape[1]), leave=True, position=0):
             feature_channel = feature_map[:, i, :, :]
             feature_channel = np.concatenate([
-                np.expand_dims(cv2.resize(f, (h, w)), 0)
+                np.expand_dims(cv2.resize(f, (w, h)), 0)
                 for f in feature_channel
             ])
             norm_feature_channel = np.array(
