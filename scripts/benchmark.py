@@ -18,7 +18,11 @@ def main(args):
 
     # model 
     if args.model.lower() == 'resnet50':
-        paddle_model = resnet50(pretrained=True)
+        if 'lrp' == args.it:
+            from tutorials.assets.lrp_model import resnet50_lrp
+            paddle_model = resnet50_lrp(pretrained=True)
+        else:
+            paddle_model = resnet50(pretrained=True)
     else:
         paddle_model = resnet50(pretrained=True)
 
@@ -31,7 +35,7 @@ def main(args):
         'gradshap': it.GradShapCVInterpreter,
         'scorecam': it.ScoreCAMInterpreter,
         'glime': None,
-        'lrp': None
+        'lrp': it.LRPCVInterpreter
     }
     interpreter = to_test_list[args.it](paddle_model, device=args.device)
     # interpreter configs

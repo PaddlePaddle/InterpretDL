@@ -416,14 +416,18 @@ class Linear(nn.Linear, RelProp):
 class Conv2D(nn.Conv2D, RelProp):
     def gradprop2(self, DY, weight):
         Z = self.forward(self.X)
-
-        output_padding = self.X.shape[2] - \
+        
+        output_padding_h = self.X.shape[2] - \
             ((Z.shape[2] - 1) * self._stride[0] -
+             2 * self._padding + self._kernel_size[0])
+        
+        output_padding_w = self.X.shape[3] - \
+            ((Z.shape[3] - 1) * self._stride[0] -
              2 * self._padding + self._kernel_size[0])
 
         return F.conv2d_transpose(
             DY, weight,
-            stride=self._stride, padding=self._padding, output_padding=output_padding)
+            stride=self._stride, padding=self._padding, output_padding=(output_padding_h, output_padding_w))
 
     def relprop(self, R, alpha):
         if self.X.shape[1] == 3:
