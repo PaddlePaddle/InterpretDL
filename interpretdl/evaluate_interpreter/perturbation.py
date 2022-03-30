@@ -54,8 +54,9 @@ class Perturbation(InterpreterEvaluator):
                 """
                 assert len(data.shape) == 4  # [bs, h, w, 3]
 
-                logits = self.paddle_model(paddle.to_tensor(data))  # get logits, [bs, num_c]
-                probas = paddle.nn.functional.softmax(logits, axis=1)  # get probabilities.
+                with paddle.no_grad():
+                    logits = self.paddle_model(paddle.to_tensor(data))  # get logits, [bs, num_c]
+                    probas = paddle.nn.functional.softmax(logits, axis=1)  # get probabilities.
                 return probas.numpy()
 
             self.predict_fn = predict_fn
@@ -87,7 +88,7 @@ class Perturbation(InterpreterEvaluator):
                 MoRF_images.append(fudged_image)
 
             if limit_number_generated_samples is not None and limit_number_generated_samples < len(MoRF_images):
-                indices = np.random.choice(len(MoRF_images), limit_number_generated_samples)
+                indices = np.linspace(0, len(MoRF_images)-1, limit_number_generated_samples).astype(np.int32)
                 MoRF_images = [MoRF_images[i] for i in indices]
             
             MoRF_images = np.vstack(MoRF_images)
@@ -105,7 +106,7 @@ class Perturbation(InterpreterEvaluator):
                 LeRF_images.append(fudged_image)
 
             if limit_number_generated_samples is not None and limit_number_generated_samples < len(LeRF_images):
-                indices = np.random.choice(len(LeRF_images), limit_number_generated_samples)
+                indices = np.linspace(0, len(LeRF_images)-1, limit_number_generated_samples).astype(np.int32)
                 LeRF_images = [LeRF_images[i] for i in indices]
 
             LeRF_images = np.vstack(LeRF_images)

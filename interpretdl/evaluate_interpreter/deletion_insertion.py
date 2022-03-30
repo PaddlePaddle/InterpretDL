@@ -51,8 +51,9 @@ class DeletionInsertion(InterpreterEvaluator):
                 """
                 assert len(data.shape) == 4  # [bs, h, w, 3]
 
-                logits = self.paddle_model(paddle.to_tensor(data))  # get logits, [bs, num_c]
-                probas = paddle.nn.functional.softmax(logits, axis=1)  # get probabilities.
+                with paddle.no_grad():
+                    logits = self.paddle_model(paddle.to_tensor(data))  # get logits, [bs, num_c]
+                    probas = paddle.nn.functional.softmax(logits, axis=1)  # get probabilities.
                 return probas.numpy()
 
             self.predict_fn = predict_fn        
@@ -83,7 +84,7 @@ class DeletionInsertion(InterpreterEvaluator):
                 deletion_images.append(fudged_image)
 
             if limit_number_generated_samples is not None and limit_number_generated_samples < len(deletion_images):
-                indices = np.random.choice(len(deletion_images), limit_number_generated_samples)
+                indices = np.linspace(0, len(deletion_images)-1, limit_number_generated_samples).astype(np.int32)
                 deletion_images = [deletion_images[i] for i in indices]
             
             deletion_images = np.vstack(deletion_images)
@@ -104,7 +105,7 @@ class DeletionInsertion(InterpreterEvaluator):
             insertion_images.append(img)
 
             if limit_number_generated_samples is not None and limit_number_generated_samples < len(insertion_images):
-                indices = np.random.choice(len(insertion_images), limit_number_generated_samples)
+                indices = np.linspace(0, len(insertion_images)-1, limit_number_generated_samples).astype(np.int32)
                 insertion_images = [insertion_images[i] for i in indices]
 
             insertion_images = np.vstack(insertion_images)
