@@ -99,6 +99,7 @@ git clone https://github.com/PaddlePaddle/InterpretDL.git
 # ... fix bugs or add new features
 cd InterpretDL && pip install -e .
 # welcome to propose pull request and contribute
+yapf -i <python_file_path>  # code style: column_limit=120
 ```
 
 ### Unit Tests

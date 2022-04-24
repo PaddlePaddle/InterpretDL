@@ -11,9 +11,7 @@ from ..common.paddle_utils import FeatureExtractor, extract_superpixel_features,
 
 
 def data_labels(file_path_list, predict_fn, batch_size):
-    print(
-        "Initialization for fast NormLIME: Computing each sample in the test list."
-    )
+    print("Initialization for fast NormLIME: Computing each sample in the test list.")
 
     _, h_pre_models_kmeans = get_pre_models()
     kmeans_model = load_pickle_file(h_pre_models_kmeans)
@@ -42,8 +40,7 @@ def data_labels(file_path_list, predict_fn, batch_size):
 
         for i in range(segments.shape[0]):
             for j in range(segments.shape[1]):
-                segments[i,
-                         j] = i // height_per_i * num_blocks + j // width_per_i
+                segments[i, j] = i // height_per_i * num_blocks + j // width_per_i
 
         X = extract_superpixel_features(feature, segments)
 
@@ -51,8 +48,7 @@ def data_labels(file_path_list, predict_fn, batch_size):
             cluster_labels = kmeans_model.predict(X)
         except AttributeError:
             from sklearn.metrics import pairwise_distances_argmin_min
-            cluster_labels, _ = pairwise_distances_argmin_min(
-                X, kmeans_model.cluster_centers_)
+            cluster_labels, _ = pairwise_distances_argmin_min(X, kmeans_model.cluster_centers_)
         x_data_i = np.zeros((num_features))
         for c in cluster_labels:
             x_data_i[c] = 1
@@ -92,19 +88,12 @@ def ridge_regressor(x_data, y_labels, softmax):
             exp_w = np.exp(w * 10)
             w = exp_w / np.sum(exp_w)
 
-        global_weights_all_labels[class_index] = {
-            i: wi
-            for i, wi in enumerate(w)
-        }
+        global_weights_all_labels[class_index] = {i: wi for i, wi in enumerate(w)}
 
     return global_weights_all_labels
 
 
-def precompute_global_prior(test_set_file_list,
-                            predict_fn,
-                            batch_size,
-                            gp_method="ridge",
-                            softmax=False):
+def precompute_global_prior(test_set_file_list, predict_fn, batch_size, gp_method="ridge", softmax=False):
 
     x_data, y_labels = data_labels(test_set_file_list, predict_fn, batch_size)
 
@@ -116,8 +105,7 @@ def precompute_global_prior(test_set_file_list,
     return global_weights_all_labels
 
 
-def use_fast_normlime_as_prior(image_show, segments, label_index,
-                               global_weights):
+def use_fast_normlime_as_prior(image_show, segments, label_index, global_weights):
     assert isinstance(global_weights, dict)
 
     _, h_pre_models_kmeans = get_pre_models()
@@ -125,9 +113,8 @@ def use_fast_normlime_as_prior(image_show, segments, label_index,
     try:
         kmeans_model = load_pickle_file(h_pre_models_kmeans)
     except:
-        raise ValueError(
-            "NormLIME needs the KMeans model, where we provided a default one in "
-            "pre_models/kmeans_model.pkl.")
+        raise ValueError("NormLIME needs the KMeans model, where we provided a default one in "
+                         "pre_models/kmeans_model.pkl.")
 
     fextractor = FeatureExtractor()
     paddle.enable_static()
@@ -143,8 +130,7 @@ def use_fast_normlime_as_prior(image_show, segments, label_index,
         cluster_labels = kmeans_model.predict(X)
     except AttributeError:
         from sklearn.metrics import pairwise_distances_argmin_min
-        cluster_labels, _ = pairwise_distances_argmin_min(
-            X, kmeans_model.cluster_centers_)
+        cluster_labels, _ = pairwise_distances_argmin_min(X, kmeans_model.cluster_centers_)
 
     cluster_weights = global_weights.get(label_index, {})
     local_weights = [cluster_weights.get(k, 0.0) for k in cluster_labels]

@@ -1,11 +1,3 @@
-numpy
-requests
-scikit-image
-scikit-learn
-tqdm
-pillow
-opencv-python
-matplotlib
-IPython
-paddlepaddle-gpu==2.0.1
-paddlepaddle
+sphinx
+recommonmark
+sphinx_rtd_theme

@@ -12,15 +12,14 @@ ABC = abc.ABC if sys.version_info >= (3, 4) else abc.ABCMeta(str('ABC'), (), {})
 class Interpreter(ABC):
     """
     Interpreter is the base abstract class for all interpretation algorithms. 
-    Interpreters should 
-    (1) prepare the ``self.predict_fn`` that outputs probability predictions, gradients or
-    other desired intermediate results of the model, and
-    (2) implement the core function ``interpret`` of the interpretation algorithm.
+    Interpreters should (1) prepare the ``self.predict_fn`` that outputs probability predictions, gradients or other 
+    desired intermediate results of the model, and (2) implement the core function ``interpret`` of the interpretation
+    algorithm.
     
     Three sub-abstract Interpreters that implement ``self.predict_fn`` are currently provided in this file:
-    ``InputGradientInterpreter``, ``InputOutputInterpreter``, ``IntermediateLayerInterpreter``.
-    For each of them, the implemented ``predict_fn`` can be used by several different algorithms.
-    Therefore, the further implementations can focus on the core algorithm.
+    ``InputGradientInterpreter``, ``InputOutputInterpreter``, ``IntermediateLayerInterpreter``. For each of them, the
+    implemented ``predict_fn`` can be used by several different algorithms. Therefore, the further implementations can
+    focus on the core algorithm.
 
     Args:
         paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
@@ -41,12 +40,12 @@ class Interpreter(ABC):
 
     def _paddle_prepare(self, predict_fn: callable or None = None):
         """
-        Prepare Paddle program inside of the interpreter. This will be called by interpret().
-        Would be renamed to ``_build_predict_fn``.
+        Prepare Paddle program inside of the interpreter. This will be called by interpret(). Would be renamed to
+        ``_build_predict_fn``.
 
         Args:
-            predict_fn: A defined callable function that defines inputs and outputs.
-                Defaults to None, and each interpreter should implement it.
+            predict_fn: A defined callable function that defines inputs and outputs. Defaults to None, and each 
+            interpreter should implement it.
         """
         raise NotImplementedError
 
@@ -59,9 +58,8 @@ class Interpreter(ABC):
         raise NotImplementedError
 
     def _paddle_env_setup(self):
-        """Prepare the environment setup. This is not always necessary because the setup can be
-        done within the function of ``_build_predict_fn``.
-        This function is a simple implementation for disabling gradient computation.
+        """Prepare the environment setup. This is not always necessary because the setup can be done within the 
+        function of ``_build_predict_fn``. This function is a simple implementation for disabling gradient computation.
         """
         import paddle
         if not paddle.is_compiled_with_cuda() and self.device[:3] == 'gpu':
@@ -78,9 +76,8 @@ class Interpreter(ABC):
 class InputGradientInterpreter(Interpreter):
     """This is one of the sub-abstract Interpreters. 
     
-    ``InputGradientInterpreter`` are used by input gradient based Interpreters.
-    Interpreters that are derived from ``InputGradientInterpreter``:
-    ``GradShapCVInterpreter``, ``IntGradCVInterpreter``, ``SmoothGradInterpreter``.
+    ``InputGradientInterpreter`` are used by input gradient based Interpreters. Interpreters that are derived from 
+    ``InputGradientInterpreter``: ``GradShapCVInterpreter``, ``IntGradCVInterpreter``, ``SmoothGradInterpreter``.
 
     The ``predict_fn`` provided by this interpreter will output input gradient given an input. 
 
@@ -192,9 +189,8 @@ class InputGradientInterpreter(Interpreter):
 class InputOutputInterpreter(Interpreter):
     """This is one of the sub-abstract Interpreters. 
     
-    ``InputOutputInterpreter`` are used by input-output correlation based Interpreters.
-    Interpreters that are derived from ``InputOutputInterpreter``:
-    ``OcclusionInterpreter``, ``LIMECVInterpreter``, ``SmoothGradInterpreter``.
+    ``InputOutputInterpreter`` are used by input-output correlation based Interpreters. Interpreters that are derived
+    from ``InputOutputInterpreter``: ``OcclusionInterpreter``, ``LIMECVInterpreter``, ``SmoothGradInterpreter``.
 
     The ``predict_fn`` provided by this interpreter will output the model's prediction given an input. 
 
@@ -212,9 +208,8 @@ class InputOutputInterpreter(Interpreter):
 
         Args:
             rebuild (bool, optional): forces to rebuild. Defaults to False.
-            output (str, optional): computes the logit or probability. 
-                Defaults to ``probability``. Other options can get similar 
-                results while the absolute scale might be different.
+            output (str, optional): computes the logit or probability. Defaults: 'probability'. Other options can 
+                get similar results while the absolute scale might be different.
         """
 
         if self.predict_fn is not None:

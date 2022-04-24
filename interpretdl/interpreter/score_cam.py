@@ -1,4 +1,3 @@
-
 import cv2
 import numpy as np
 from tqdm import tqdm
@@ -10,35 +9,36 @@ from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation
 
 class ScoreCAMInterpreter(IntermediateLayerInterpreter):
     """
-    Score CAM Interpreter.
+    Score-CAM Interpreter.
+
+    ScoreCAMInterpreter bridges the gap between perturbation-based and CAM-based methods, and derives the weight of 
+    activation maps in an intuitively understandable way.
 
     More details regarding the Score CAM method can be found in the original paper:
-    https://arxiv.org/abs/1910.01279
+    https://arxiv.org/abs/1910.01279.
     """
 
-    def __init__(self,
-                 paddle_model,
-                 use_cuda=None,
-                 device='gpu:0') -> None:
+    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None) -> None:
         """
 
         Args:
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
         """
         IntermediateLayerInterpreter.__init__(self, paddle_model, device, use_cuda)
 
     def interpret(self,
-                  inputs,
-                  target_layer_name,
-                  labels=None,
-                  resize_to=224, 
-                  crop_to=None,
-                  visual=True,
-                  save_path=None):
+                  inputs: str or list(str) or np.ndarray,
+                  target_layer_name: str,
+                  labels: list or np.ndarray = None,
+                  resize_to: int = 224,
+                  crop_to: int or None = None,
+                  visual: bool = True,
+                  save_path: str = None):
         """
         Main function of the interpreter.
+
+        (TODO) The technical details will be described later.
 
         Args:
             inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy array of read images.
@@ -72,17 +72,12 @@ class ScoreCAMInterpreter(IntermediateLayerInterpreter):
 
         for i in tqdm(range(feature_map.shape[1]), leave=True, position=0):
             feature_channel = feature_map[:, i, :, :]
-            feature_channel = np.concatenate([
-                np.expand_dims(cv2.resize(f, (w, h)), 0)
-                for f in feature_channel
-            ])
-            norm_feature_channel = np.array(
-                [(f - f.min()) / (f.max() - f.min()) if f.max() - f.min() > 0.0 else f
-                 for f in feature_channel]).reshape((bsz, 1, h, w))
+            feature_channel = np.concatenate([np.expand_dims(cv2.resize(f, (w, h)), 0) for f in feature_channel])
+            norm_feature_channel = np.array([(f - f.min()) / (f.max() - f.min()) if f.max() - f.min() > 0.0 else f
+                                             for f in feature_channel]).reshape((bsz, 1, h, w))
             _, probs, _ = self.predict_fn(data * norm_feature_channel)
             scores = [p[labels[i]] for i, p in enumerate(probs)]
-            interpretations += feature_channel * np.array(scores).reshape((
-                bsz, ) + (1, ) * (interpretations.ndim - 1))
+            interpretations += feature_channel * np.array(scores).reshape((bsz, ) + (1, ) * (interpretations.ndim - 1))
 
         # interpretations = np.maximum(interpretations, 0)
         # interpretations_min, interpretations_max = interpretations.min(

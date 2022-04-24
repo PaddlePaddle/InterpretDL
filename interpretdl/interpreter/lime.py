@@ -1,4 +1,3 @@
-
 import numpy as np
 
 from ..data_processor.readers import preprocess_image, read_image, restore_image
@@ -10,25 +9,25 @@ from .abc_interpreter import Interpreter, InputOutputInterpreter
 
 class LIMECVInterpreter(InputOutputInterpreter):
     """
-    LIME Interpreter for CV tasks.
+    LIME presents a locally explanation by fitting a set of perturbed samples near the target sample using an 
+    interpretable model, specifically a linear model. 
+
+    The implementation is based on https://github.com/marcotcr/lime.
 
     More details regarding the LIME method can be found in the original paper:
-    https://arxiv.org/abs/1602.04938
+    https://arxiv.org/abs/1602.04938.
     """
 
-    def __init__(
-        self,
-        paddle_model: callable,
-        use_cuda: bool=None,
-        device: str='gpu:0',
-        random_seed: int or None=None
-    ):
+    def __init__(self,
+                 paddle_model: callable,
+                 device: str = 'gpu:0',
+                 use_cuda: bool = None,
+                 random_seed: int or None = None):
         """
 
         Args:
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
         """
         InputOutputInterpreter.__init__(self, paddle_model, device, use_cuda)
 
@@ -36,19 +35,19 @@ class LIMECVInterpreter(InputOutputInterpreter):
         self.lime_base = LimeBase(random_state=random_seed)
         self.lime_results = {}
 
-    def interpret(
-        self,
-        data: str,
-        interpret_class=None,
-        num_samples=1000,
-        batch_size=50,
-        resize_to=224, 
-        crop_to=None,
-        visual=True,
-        save_path=None
-    ):
+    def interpret(self,
+                  data: str,
+                  interpret_class: int = None,
+                  num_samples: int = 1000,
+                  batch_size: int = 50,
+                  resize_to: int = 224,
+                  crop_to: int = None,
+                  visual: bool = True,
+                  save_path: str = None):
         """
         Main function of the interpreter.
+
+        The implementation is based on https://github.com/marcotcr/lime.
 
         Args:
             data (str): The input file path.
@@ -96,32 +95,27 @@ class LIMECVInterpreter(InputOutputInterpreter):
             interpret_class = np.array(interpret_class)
         else:
             interpret_class = np.array([interpret_class])
-        
+
         def predict_fn_for_lime(_imgs):
-            _data = preprocess_image(
-                _imgs
-            )  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
-            
+            _data = preprocess_image(_imgs)  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
+
             output, _ = self.predict_fn(_data, None)
             return output
 
         self.predict_fn_for_lime = predict_fn_for_lime
-        lime_weights, r2_scores = self.lime_base.interpret_instance(
-            img[0],
-            self.predict_fn_for_lime,
-            interpret_class,
-            num_samples=num_samples,
-            batch_size=batch_size
-        )
+        lime_weights, r2_scores = self.lime_base.interpret_instance(img[0],
+                                                                    self.predict_fn_for_lime,
+                                                                    interpret_class,
+                                                                    num_samples=num_samples,
+                                                                    batch_size=batch_size)
 
         # visualization and save image.
         if save_path is None and not visual:
             # no need to visualize or save explanation results.
             pass
         else:
-            explanation_mask = sp_weights_to_image_explanation(
-                img[0], lime_weights, interpret_class[0], self.lime_base.segments
-            )
+            explanation_mask = sp_weights_to_image_explanation(img[0], lime_weights, interpret_class[0],
+                                                               self.lime_base.segments)
             explanation_vis = overlay_threshold(img[0], explanation_mask)
             if visual:
                 show_vis_explanation(explanation_vis)
@@ -142,17 +136,25 @@ class LIMENLPInterpreter(Interpreter):
     """
     LIME Interpreter for NLP tasks.
 
+    LIME presents a locally explanation by fitting a set of perturbed samples near the target sample using an 
+    interpretable model, specifically a linear model. 
+
+    The implementation is based on https://github.com/marcotcr/lime.
+
     More details regarding the LIME method can be found in the original paper:
     https://arxiv.org/abs/1602.04938
     """
 
-    def __init__(self, paddle_model, device='gpu:0', use_cuda=None, random_seed=None) -> None:
+    def __init__(self,
+                 paddle_model: callable,
+                 device: str = 'gpu:0',
+                 use_cuda=None,
+                 random_seed: int or None = None) -> None:
         """
 
         Args:
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
             random_seed (int): random seed. Defaults to None.
         """
 
@@ -166,29 +168,36 @@ class LIMENLPInterpreter(Interpreter):
         self.lime_intermediate_results = {}
 
     def interpret(self,
-                  data,
-                  preprocess_fn,
-                  unk_id,
-                  pad_id=None,
-                  interpret_class=None,
-                  num_samples=1000,
-                  batch_size=50,
-                  lod_levels=None,
-                  return_pred=False,
-                  visual=True):
+                  data: str,
+                  preprocess_fn: callable,
+                  unk_id: int,
+                  pad_id: int or None = None,
+                  interpret_class: int = None,
+                  num_samples: int = 1000,
+                  batch_size: int = 50,
+                  lod_levels: int = None,
+                  return_pred: bool = False,
+                  visual: bool = True):
         """
         Main function of the interpreter.
 
+        The implementation is based on https://github.com/marcotcr/lime.
+
         Args:
             data (str): The raw string for analysis.
-            preprocess_fn (Callable): A user-defined function that input raw string and outputs the a tuple of inputs to feed into the NLP model.
+            preprocess_fn (callable): A user-defined function that input raw string and outputs the a tuple of inputs 
+                to feed into the NLP model.
             unk_id (int): The word id to replace occluded words. Typical choices include "", <unk>, and <pad>.
-            pad_id (int or None): The word id used to pad the sequences. If None, it means there is no padding. Default: None.
-            interpret_class (list or numpy.ndarray, optional): The index of class to interpret. If None, the most likely label will be used. Default: None
-            num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate interpretation. Default: 1000
+            pad_id (int or None): The word id used to pad the sequences. If None, it means there is no padding. 
+                Default: None.
+            interpret_class (list or numpy.ndarray, optional): The index of class to interpret. If None, the most 
+                likely label will be used. Default: None
+            num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate
+                interpretation. Default: 1000
             batch_size (int, optional): Number of samples to forward each time. Default: 50
-            lod_levels (list or tuple or numpy.ndarray or None, optional): The lod levels for model inputs. It should have the length equal to number of outputs given by preprocess_fn.
-                                            If None, lod levels are all zeros. Default: None.
+            lod_levels (list or tuple or numpy.ndarray or None, optional): The lod levels for model inputs. It should
+                have the length equal to number of outputs given by preprocess_fn. If None, lod levels are all zeros. 
+                Default: None.
             visual (bool, optional): Whether or not to visualize. Default: True
 
         Returns:
@@ -205,20 +214,19 @@ class LIMENLPInterpreter(Interpreter):
             self._paddle_prepare()
         # only one example here
         probability = self.predict_fn(*self.model_inputs)[0]
-        
+
         # only interpret top 1
         if interpret_class is None:
             pred_label = np.argsort(probability)
             interpret_class = pred_label[-1:]
 
-        lime_weights, r2_scores = self.lime_base.interpret_instance_text(
-            self.model_inputs,
-            classifier_fn=self.predict_fn,
-            interpret_labels=interpret_class,
-            unk_id=unk_id,
-            pad_id=pad_id,
-            num_samples=num_samples,
-            batch_size=batch_size)
+        lime_weights, r2_scores = self.lime_base.interpret_instance_text(self.model_inputs,
+                                                                         classifier_fn=self.predict_fn,
+                                                                         interpret_labels=interpret_class,
+                                                                         unk_id=unk_id,
+                                                                         pad_id=pad_id,
+                                                                         num_samples=num_samples,
+                                                                         batch_size=batch_size)
 
         data_array = self.model_inputs[0]
         data_array = data_array.reshape((np.prod(data_array.shape), ))
@@ -231,8 +239,7 @@ class LIMENLPInterpreter(Interpreter):
         # See the tutorial for more information:
         # https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2-tutorials.ipynb
         if return_pred:
-            return (interpret_class, probability[interpret_class],
-                    lime_weights)
+            return (interpret_class, probability[interpret_class], lime_weights)
         return lime_weights
 
     def _paddle_prepare(self, predict_fn=None):

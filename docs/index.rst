@@ -3,14 +3,21 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to InterpretDL's documentation!
+InterpretDL
 ===========================================
 
+InterpretDL is an open source toolkit for interpretation algorithms based on PaddlePaddle.
+This toolkit contains three kinds of interpreters: input feature interpreters, intermediate-layer feature interpreters,
+and dataset-level interpreters.
+InterpretDL also provides the evaluation metrics to verify the trustworthiness of interpretation algorithms.
+
+
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
-   interpretdl
+   interpreter
+   evaluator
 
 Indices and tables
 ==================

@@ -1,4 +1,3 @@
-
 import numpy as np
 
 from .abc_interpreter import Interpreter
@@ -10,22 +9,26 @@ class GradCAMInterpreter(Interpreter):
     """
     Gradient CAM Interpreter.
 
+    Given a convolutional network and an image classification task, classification activation map (CAM) can be derived
+    from the global average pooling and the last fully-connected layer, and show the important regions that affect
+    model decisions.
+
+    GradCAM further looks at the gradients flowing into one of the convolutional layers to give weight to activation 
+    maps. Note that if there is a global average pooling layer in the network, GradCAM targeting the last layer is 
+    equivalent to CAM.
+
+    More details regarding the CAM method can be found in the original paper:
+    https://arxiv.org/abs/1512.04150.
     More details regarding the GradCAM method can be found in the original paper:
-    https://arxiv.org/abs/1610.02391
+    https://arxiv.org/abs/1610.02391.
     """
 
-    def __init__(
-        self,
-        paddle_model: callable,
-        device: str='gpu:0',
-        use_cuda: bool=None
-    ):
+    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None):
         """
 
         Args:
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
         """
         Interpreter.__init__(self, paddle_model, device, use_cuda)
         self.paddle_prepared = False
@@ -37,13 +40,16 @@ class GradCAMInterpreter(Interpreter):
     def interpret(self,
                   inputs: str or list(str) or np.ndarray,
                   target_layer_name: str,
-                  label: list or np.ndarray=None,
-                  resize_to=224, 
-                  crop_to=None,
-                  visual: bool=True,
-                  save_path=None) -> np.ndarray:
+                  label: list or np.ndarray = None,
+                  resize_to: int = 224,
+                  crop_to: int = None,
+                  visual: bool = True,
+                  save_path: str = None) -> np.ndarray:
         """
-        Main function of the interpreter.
+        The technical details of the GradCAM method are described as follows:
+        GradCAM computes the feature map and the gradient of the objective function w.r.t. ``target_layer_name``.
+        With the average of gradients along the spatial dimensions, gradients will be multiplied with feature map,
+        following by a ReLU activation to produce the final explanation.
 
         Args:
             inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy array of read images.
@@ -51,7 +57,7 @@ class GradCAMInterpreter(Interpreter):
             labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. 
                 The number of labels should be equal to the number of images. If None, the most likely label for each image will be used. Default: None
             resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`. Defaults to 224.
-            crop_to ([type], optional): [description]. After resize, images will be center cropped to a square image with the size `crop_to`. 
+            crop_to (int, optional): [description]. After resize, images will be center cropped to a square image with the size `crop_to`. 
                 If None, no crop will be performed. Defaults to None.
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
             save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). 
@@ -68,7 +74,7 @@ class GradCAMInterpreter(Interpreter):
         assert target_layer_name in [n for n, v in self.paddle_model.named_sublayers()], \
             f"target_layer_name {target_layer_name} does not exist in the given model, " \
             f"please check all valid layer names by [n for n, v in paddle_model.named_sublayers()]"
-        
+
         if self._target_layer_name != target_layer_name:
             self._target_layer_name = target_layer_name
             self.paddle_prepared = False
@@ -80,16 +86,16 @@ class GradCAMInterpreter(Interpreter):
         if label is None:
             label = preds
 
-        label = np.array(label).reshape((bsz,))
+        label = np.array(label).reshape((bsz, ))
         f = np.array(feature_map.numpy())
         g = gradients
 
         # print(f.shape, g.shape)  # [bsz, channels, w, h]
 
+        # the core algorithm
         cam_weights = np.mean(g, (2, 3), keepdims=True)
         heatmap = cam_weights * f
         heatmap = heatmap.mean(1)
-        # relu
         gradcam_explanation = np.maximum(heatmap, 0)
 
         # visualization and save image.
@@ -131,8 +137,7 @@ class GradCAMInterpreter(Interpreter):
                 preds = paddle.argmax(out, axis=1)
                 if label is None:
                     label = preds.numpy()
-                label_onehot = paddle.nn.functional.one_hot(
-                    paddle.to_tensor(label), num_classes=out.shape[1])
+                label_onehot = paddle.nn.functional.one_hot(paddle.to_tensor(label), num_classes=out.shape[1])
                 target = paddle.sum(out * label_onehot, axis=1)
 
                 target.backward()

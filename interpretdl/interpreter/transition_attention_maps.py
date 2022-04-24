@@ -1,4 +1,3 @@
-
 import numpy as np
 import re
 
@@ -11,52 +10,57 @@ class TAMInterpreter(Interpreter):
     """
     Transition Attention Maps Interpreter.
 
-    More details regarding the Transition_Attention_Maps method can be found in the original paper:
-    
-    .. code-block:: none
+    This is a specific interpreter for Transformers models.
+    TAMInterpreter assumes that the information flowing inside the Transformer model follows the Markov Chain. Within
+    this supposition, TAMInterpreter considers the attention maps as transition matrices and computes the explanation
+    by multiplying the initial state with the attention maps, with integrated gradients.
 
-        Tingyi Yuan, Xuhong Li, Haoyi Xiong, Hui Cao, Dejing Dou. Explaining Information Flow Inside Vision Transformers Using Markov Chain. 
-        In *Neurips 2021 XAI4Debugging Workshop*. https://openreview.net/forum?id=TT-cf6QSDaQ
+    More details regarding the Transition_Attention_Maps method can be found in the original paper:
+    https://openreview.net/forum?id=TT-cf6QSDaQ.
 
     """
 
-    def __init__(self,
-                 paddle_model,
-                 use_cuda=None,
-                 device='gpu:0') -> None:
+    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None) -> None:
         """
 
         Args:
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
         """
         Interpreter.__init__(self, paddle_model, device, use_cuda)
         self.paddle_prepared = False
 
     def interpret(self,
-                  inputs,
-                  start_layer=4,
-                  steps=20,
-                  label=None,
-                  resize_to=224, 
-                  crop_to=None,
-                  visual=True,
-                  save_path=None):
+                  inputs: str or list(str) or np.ndarray,
+                  start_layer: int = 4,
+                  steps: int = 20,
+                  label: int or None = None,
+                  resize_to: int = 224,
+                  crop_to: int or None = None,
+                  visual: bool = True,
+                  save_path: str or None = None):
         """
-        Main function of the interpreter.
+        Given ``inputs``, TAMInterpreter obtains all attention maps (of layers whose name matches 
+        ``attention_layer_pattern``) and calculates their matrix multiplication. The ``start_layer`` controls the
+        number of involved layers. The order of involving attention maps (from last layer to the first) is is different
+        from Rollout (from first to last). Then, an integrated gradients with ``steps`` is computed and multiplied to 
+        the attention result.
 
         Args:
-            inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy array of read images.
+            inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy 
+                array of read images.
             start_layer (int, optional): Compute the state from the start layer. Default: 4
             steps (int, optional): number of steps in the Riemman approximation of the integral. Default: 50
-            labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels should be equal to the number of images. 
-                If None, the most likely label for each image will be used. Default: None
-            resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`. Defaults to 224.
-            crop_to ([type], optional): [description]. After resize, images will be center cropped to a square image with the size `crop_to`. 
-                If None, no crop will be performed. Defaults to None.
+            labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels 
+                should be equal to the number of images. If None, the most likely label for each image will be used. 
+                Default: None
+            resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`.
+                Defaults to 224.
+            crop_to ([type], optional): [description]. After resize, images will be center cropped to a square image 
+                with the size `crop_to`. If None, no crop will be performed. Defaults to None.
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
-            save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None, the image will not be saved. Default: None
+            save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). 
+                If None, the image will not be saved. Default: None
 
         Returns:
             [numpy.ndarray]: interpretations/heatmap for images
@@ -78,7 +82,7 @@ class TAMInterpreter(Interpreter):
         b, h, s, _ = attns[0].shape
         num_blocks = len(attns)
         states = np.mean(attns[-1], axis=1)[:, 0, :].reshape((b, 1, s))
-        for i in range(start_layer, num_blocks-1)[::-1]:
+        for i in range(start_layer, num_blocks - 1)[::-1]:
             attn = np.mean(attns[i], 1)
             states_ = states
             states = states @ attn
@@ -127,6 +131,7 @@ class TAMInterpreter(Interpreter):
                 data.stop_gradient = False
 
                 attns = []
+
                 def hook(layer, input, output):
                     attns.append(output)
 
@@ -144,8 +149,7 @@ class TAMInterpreter(Interpreter):
                 if label is None:
                     label = preds.numpy()
 
-                label_onehot = paddle.nn.functional.one_hot(
-                    paddle.to_tensor(label), num_classes=out.shape[1])
+                label_onehot = paddle.nn.functional.one_hot(paddle.to_tensor(label), num_classes=out.shape[1])
                 target = paddle.sum(out * label_onehot, axis=1)
                 target.backward()
                 gradients = attns[-1].grad

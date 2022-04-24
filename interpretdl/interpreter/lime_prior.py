@@ -1,5 +1,3 @@
-
-from typing import Any, Callable, List, Tuple, Union
 import numpy as np
 import paddle
 
@@ -9,15 +7,16 @@ from ._global_prior_base import precompute_global_prior, use_fast_normlime_as_pr
 from ..data_processor.readers import images_transform_pipeline, preprocess_image, load_npy_dict_file
 from ..data_processor.visualizer import sp_weights_to_image_explanation, overlay_threshold, save_image, show_vis_explanation
 
+
 class LIMEPriorInterpreter(LIMECVInterpreter):
     """
-    LIME Prior Interpreter.
+    LIME Prior Interpreter. This is an Interpreter in progress.
     """
 
     def __init__(self,
-                 paddle_model: Callable,
-                 prior_method="none",
-                 device='gpu:0',
+                 paddle_model: callable,
+                 prior_method: str = "none",
+                 device: str = 'gpu:0',
                  use_cuda=None) -> None:
         """
         Args:
@@ -33,10 +32,7 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
         self.prior_method = prior_method
         self.global_weights = None
 
-    def interpreter_init(self,
-                         list_file_paths=None,
-                         batch_size=0,
-                         weights_file_path=None):
+    def interpreter_init(self, list_file_paths=None, batch_size=0, weights_file_path=None):
         """
         Pre-compute global weights.
 
@@ -61,35 +57,34 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
             "Cannot prepare without anything. "
 
         self._build_predict_fn(rebuild=True, output='probability')
+
         def predict_fn_for_lime(_imgs):
-            _data = preprocess_image(
-                _imgs
-            )  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
-            
+            _data = preprocess_image(_imgs)  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
+
             output, _ = self.predict_fn(_data, None)
             return output
+
         self.predict_fn_for_lime = predict_fn_for_lime
 
         precomputed_weights = load_npy_dict_file(weights_file_path)
         if precomputed_weights is not None:
             self.global_weights = precomputed_weights
         else:
-            self.global_weights = precompute_global_prior(
-                list_file_paths, self.predict_fn_for_lime, batch_size,
-                self.prior_method)
+            self.global_weights = precompute_global_prior(list_file_paths, self.predict_fn_for_lime, batch_size,
+                                                          self.prior_method)
             if weights_file_path is not None and self.global_weights is not None:
                 np.save(weights_file_path, self.global_weights)
 
     def interpret(self,
-                  inputs,
-                  interpret_class=None,
-                  prior_reg_force=1.0,
-                  num_samples=1000,
-                  batch_size=50,
-                  resize_to=256, 
-                  crop_to=224,
-                  visual=True,
-                  save_path=None):
+                  inputs: str,
+                  interpret_class: int or None = None,
+                  prior_reg_force: float = 1.0,
+                  num_samples: int = 1000,
+                  batch_size: int = 50,
+                  resize_to: int = 256,
+                  crop_to: int = 224,
+                  visual: bool = True,
+                  save_path: str = None):
         """
         Note that for LIME prior interpreter, ``interpreter_init()`` needs to be called before calling ``interpret()``.
 
@@ -110,9 +105,7 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
 
         """
         if self.global_weights is None and self.prior_method != "none":
-            raise ValueError(
-                "The interpreter is not prepared. Call prepare() before interpretation."
-            )
+            raise ValueError("The interpreter is not prepared. Call prepare() before interpretation.")
         imgs, data = images_transform_pipeline(inputs, resize_to, crop_to)
 
         self._build_predict_fn(output='probability')
@@ -130,12 +123,12 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
             interpret_class = np.array(interpret_class)
         else:
             interpret_class = np.array([interpret_class])
-        
+
         # def predict_fn_for_lime(_imgs):
         #     _data = preprocess_image(
         #         _imgs
         #     )  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
-            
+
         #     output, _ = self.predict_fn(_data, None)
         #     return output
 
@@ -145,23 +138,19 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
         if self.prior_method == "none":
             prior = np.zeros(len(np.unique(segments)))
         else:
-            prior = use_fast_normlime_as_prior(imgs, segments,
-                                               interpret_class[0],
-                                               self.global_weights)
+            prior = use_fast_normlime_as_prior(imgs, segments, interpret_class[0], self.global_weights)
 
-        lime_weights, r2_scores = self.lime_base.interpret_instance(
-            imgs[0],
-            self.predict_fn_for_lime,
-            interpret_class,
-            num_samples=num_samples,
-            batch_size=batch_size,
-            prior=prior,
-            reg_force=prior_reg_force)
+        lime_weights, r2_scores = self.lime_base.interpret_instance(imgs[0],
+                                                                    self.predict_fn_for_lime,
+                                                                    interpret_class,
+                                                                    num_samples=num_samples,
+                                                                    batch_size=batch_size,
+                                                                    prior=prior,
+                                                                    reg_force=prior_reg_force)
 
         # visualization and save image.
-        explanation_mask = sp_weights_to_image_explanation(
-            imgs[0], lime_weights, interpret_class[0], self.lime_base.segments
-        )
+        explanation_mask = sp_weights_to_image_explanation(imgs[0], lime_weights, interpret_class[0],
+                                                           self.lime_base.segments)
         explanation_vis = overlay_threshold(imgs[0], explanation_mask)
         if visual:
             show_vis_explanation(explanation_vis)

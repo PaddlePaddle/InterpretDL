@@ -15,12 +15,12 @@ class ConsensusInterpreter(object):
 
     """
 
-    def __init__(self, InterpreterClass, list_of_models: list, device: str, use_cuda=None, **kwargs):
-        """[summary]
+    def __init__(self, InterpreterClass, list_of_models: list, device: str = 'gpu:0', use_cuda=None, **kwargs):
+        """
 
         Args:
             InterpreterClass ([type]): The given Interpreter defined in InterpretDL.
-            list_of_models (list): a list of model classes. Can be found from paddle.vision.models, or 
+            list_of_models (list): a list of trained models. Can be found from paddle.vision.models, or 
                 https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/__init__.py. 
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
         """
@@ -33,12 +33,11 @@ class ConsensusInterpreter(object):
         self.other_args = kwargs
 
     def interpret(self, inputs: str or list(str) or np.ndarray, **kwargs) -> np.ndarray:
-        """Main function of the interpreter.
-
+        """
         The technical details are simple to understand for the Consensus method:
-        Given the input and the interpretation algorithm (one of Interpreters), each model in ``list_of_models`` will 
-        produce an explanation, then Consensus will concatenate all the explanations. Subsequent normalization and 
-        average can be done as users' preference. The suggested operation for input gradient based algorithms is 
+        Given the ``inputs`` and the interpretation algorithm (one of Interpreters), each model in ``list_of_models`` 
+        will produce an explanation, then Consensus will concatenate all the explanations. Subsequent normalization 
+        and average can be done as users' preference. The suggested operation for input gradient based algorithms is 
         average of the absolute values.
 
         We leave the visualization to users. 
