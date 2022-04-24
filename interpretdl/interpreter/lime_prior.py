@@ -28,7 +28,7 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
             use_cuda: Whether to use CUDA. Defaults to ``True``.
         """
 
-        LIMECVInterpreter.__init__(self, paddle_model, use_cuda, device)
+        LIMECVInterpreter.__init__(self, paddle_model, device, use_cuda)
         self.prior_method = prior_method
         self.global_weights = None
 

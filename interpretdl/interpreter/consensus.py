@@ -82,7 +82,7 @@ class ConsensusInterpreter(object):
 
         exps = []
         for model in self.list_of_models:
-            interpreter = self.InterpreterClass(model, self.use_cuda, self.device, **self.other_args)
+            interpreter = self.InterpreterClass(model, self.device, self.use_cuda, **self.other_args)
             raw_explanation = interpreter.interpret(inputs, visual=False, save_path=None, **kwargs)
             exps.append(raw_explanation)
 
