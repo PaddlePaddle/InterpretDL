@@ -10,3 +10,4 @@ pillow
 opencv-python
 matplotlib
 IPython
+paddlepaddle
