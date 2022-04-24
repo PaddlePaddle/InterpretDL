@@ -10,39 +10,51 @@ from .abc_interpreter import Interpreter
 
 class ForgettingEventsInterpreter(Interpreter):
     """
-    Forgetting Events Interpreter.
+    Forgetting Events Interpreter computes the frequency of forgetting events for each training sample by 
+    running a normal training process. The training sample undergoes a forgetting event if it is misclassified 
+    at step t+1 after having been correctly classified at step t. 
+
+    A training sample would be more probable to be mislabeled or hard to learn if it has more forgetting events 
+    happened.
+
     More details regarding the Forgetting Events method can be found in the original paper:
-    https://arxiv.org/pdf/1812.05159.pdf
+    https://arxiv.org/abs/1812.05159.
     """
 
-    def __init__(self, paddle_model, device='gpu:0', use_cuda=None):
-        """
-        Initialize the ForgettingEventsInterpreter.
+    def __init__(self, paddle_model: callable, device: str, use_cuda=None):
+        """Initialize the ForgettingEventsInterpreter.
+
         Args:
-            paddle_model (callable): A user-defined function that gives access to model predictions. It takes in data inputs and output predictions.
-            use_cuda (bool, optional): Whether or not to use cuda. Default: True
-            model_input_shape (list, optional): The input shape of the model. Default: [3, 224, 224]
+            paddle_model (callable): A user-defined function that gives access to model predictions. 
+                It takes in data inputs and output predictions.
+            device (str): Whether or not to use cuda. Default: None.
         """
         Interpreter.__init__(self, paddle_model, device, use_cuda)
 
     def interpret(self,
-                  train_reader,
-                  optimizer,
-                  batch_size,
-                  epochs,
-                  noisy_labels=False,
+                  train_reader: callable,
+                  optimizer: paddle.optimizer,
+                  batch_size: int,
+                  epochs: int,
+                  find_noisy_labels=False,
                   save_path=None):
-        """
-        Main function of the interpreter.
+        """Run the training process and record the forgetting events statistics.
+
         Args:
             train_reader (callable): A training data generator.
-            optimizer (paddle.fluid.optimizer): The paddle optimizer.
+            optimizer (paddle.optimizer): The paddle optimizer.
             batch_size (int): Number of samples to forward each time.
             epochs (int): The number of epochs to train the model.
-            save_path (str, optional): The filepath to save the processed image. If None, the image will not be saved. Default: None
-        :return: (count_forgotten, forgotten) where count_forgotten is {count of forgetting events: list of data indices with such count of forgetting events} and forgotten is {data index: numpy.ndarray of wrong predictions that follow true predictions in the training process}
-        :rtype: (dict, dict)
+            find_noisy_labels (bool, optional): whether to find noisy labels. Defaults to False.
+            save_path (_type_, optional): The filepath to save the processed image. 
+                If None, the image will not be saved. Default: None
+
+        Returns:
+            (dict, dict): (count_forgotten, forgotten) where count_forgotten is {count of forgetting events: 
+            list of data indices with such count of forgetting events} and forgotten is {data index: numpy.ndarray of 
+            wrong predictions that follow true predictions in the training process}.
         """
+
         stats = {}
         if save_path is None:
             save_path = 'assets'
@@ -67,8 +79,7 @@ class ForgettingEventsInterpreter(Interpreter):
                 predicted = paddle.argmax(logits, axis=1).numpy()
                 bsz = len(predicted)
 
-                loss = paddle.nn.functional.softmax_with_cross_entropy(logits,
-                                                                       y_train)
+                loss = paddle.nn.functional.softmax_with_cross_entropy(logits, y_train)
                 avg_loss = paddle.mean(loss)
                 y_train = y_train.reshape((bsz, )).numpy()
 
@@ -89,25 +100,21 @@ class ForgettingEventsInterpreter(Interpreter):
                 correct += np.sum(acc)
                 total += bsz
                 sys.stdout.write('\r')
-                sys.stdout.write(
-                    '| Epoch [%3d/%3d] Iter[%3d]\t\tLoss: %.4f Acc@1: %.3f%%' %
-                    (i + 1, epochs, step_id + 1, avg_loss.numpy().item(),
-                     100. * correct / total))
+                sys.stdout.write('| Epoch [%3d/%3d] Iter[%3d]\t\tLoss: %.4f Acc@1: %.3f%%' %
+                                 (i + 1, epochs, step_id + 1, avg_loss.numpy().item(), 100. * correct / total))
                 sys.stdout.flush()
 
         with open(os.path.join(save_path, "stats.pkl"), "wb") as f:
             pickle.dump(stats, f)
 
-        if noisy_labels:
+        if find_noisy_labels:
             noisy_samples = self.find_noisy_labels(stats)
             return stats, noisy_samples
         else:
-            count_forgotten, forgotten = self.compute_and_order_forgetting_stats(
-                stats, epochs, save_path)
+            count_forgotten, forgotten = self.compute_and_order_forgetting_stats(stats, epochs, save_path)
             return stats, (count_forgotten, forgotten)
 
-    def compute_and_order_forgetting_stats(self, stats, epochs,
-                                           save_path=None):
+    def compute_and_order_forgetting_stats(self, stats, epochs, save_path=None):
         unlearned_per_presentation = {}
         first_learned = {}
         forgotten = {}
@@ -122,19 +129,16 @@ class ForgettingEventsInterpreter(Interpreter):
 
             if len(np.where(transitions == -1)[0]) > 0:
                 # forgotten epochs
-                unlearned_per_presentation[example_id] = np.where(transitions
-                                                                  == -1)[0] + 2
+                unlearned_per_presentation[example_id] = np.where(transitions == -1)[0] + 2
                 # forgotten indices
-                forgotten[example_id] = presentation_predicted[np.where(
-                    transitions == -1)[0] + 1]
+                forgotten[example_id] = presentation_predicted[np.where(transitions == -1)[0] + 1]
 
             else:
                 unlearned_per_presentation[example_id] = []
                 forgotten[example_id] = np.array([])
 
             if len(np.where(presentation_acc == 1)[0]) > 0:
-                first_learned[example_id] = np.where(
-                    presentation_acc == 1)[0][0]
+                first_learned[example_id] = np.where(presentation_acc == 1)[0][0]
             else:
                 first_learned[example_id] = np.nan
                 forgotten[example_id] = presentation_predicted
@@ -152,8 +156,7 @@ class ForgettingEventsInterpreter(Interpreter):
             count_forgotten[count] = count_stats
 
         if save_path is not None:
-            with open(os.path.join(save_path, "count_forgotten.pkl"),
-                      "wb") as f:
+            with open(os.path.join(save_path, "count_forgotten.pkl"), "wb") as f:
                 pickle.dump(count_forgotten, f)
             with open(os.path.join(save_path, "forgotten.pkl"), "wb") as f:
                 pickle.dump(forgotten, f)
@@ -166,8 +169,7 @@ class ForgettingEventsInterpreter(Interpreter):
             presentation_acc = np.array(example_stats[0])
             if len(np.where(presentation_acc == 1)[0]) == 0:
                 continue
-            pairs.append(
-                [example_id, np.where(presentation_acc == 1)[0].mean()])
+            pairs.append([example_id, np.where(presentation_acc == 1)[0].mean()])
 
         if len(pairs) == 0:
             return []
@@ -176,8 +178,7 @@ class ForgettingEventsInterpreter(Interpreter):
         thre = np.mean(scores) + 5 * np.std(scores)
 
         noisy_pairs = [p for p in pairs if p[1] > thre]
-        sorted_noisy_pairs = sorted(
-            noisy_pairs, key=lambda x: x[1], reverse=True)
+        sorted_noisy_pairs = sorted(noisy_pairs, key=lambda x: x[1], reverse=True)
         img_ids = [p[0] for p in sorted_noisy_pairs]
 
         return img_ids

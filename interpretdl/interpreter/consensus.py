@@ -5,14 +5,16 @@ from .abc_interpreter import Interpreter
 class ConsensusInterpreter(object):
     """
     
-    Consensus averages the explanations of a given Interpreter over a list of models.
+    ConsensusInterpreter averages the explanations of a given Interpreter over a list of models.
     The averaged result is more like an explanation for the data, instead of specific models.
+    For visual object recognition tasks, the Consensus explanation would be more aligned with the object than
+    individual models.
 
     More details regarding the Consensus method can be found in the original paper:
     https://arxiv.org/abs/2109.00707.
 
     """
-    
+
     def __init__(self, InterpreterClass, list_of_models: list, device: str, use_cuda=None, **kwargs):
         """[summary]
 
@@ -32,6 +34,12 @@ class ConsensusInterpreter(object):
 
     def interpret(self, inputs: str or list(str) or np.ndarray, **kwargs) -> np.ndarray:
         """Main function of the interpreter.
+
+        The technical details are simple to understand for the Consensus method:
+        Given the input and the interpretation algorithm (one of Interpreters), each model in ``list_of_models`` will 
+        produce an explanation, then Consensus will concatenate all the explanations. Subsequent normalization and 
+        average can be done as users' preference. The suggested operation for input gradient based algorithms is 
+        average of the absolute values.
 
         We leave the visualization to users. 
         See https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials/consensus_tutorial_cv.ipynb for an example.
@@ -72,11 +80,11 @@ class ConsensusInterpreter(object):
         Returns:
             np.ndarray: Concatenated raw explanations.
         """
-        
+
         exps = []
         for model in self.list_of_models:
             interpreter = self.InterpreterClass(model, self.use_cuda, self.device, **self.other_args)
             raw_explanation = interpreter.interpret(inputs, visual=False, save_path=None, **kwargs)
             exps.append(raw_explanation)
-        
+
         return np.concatenate(exps)
