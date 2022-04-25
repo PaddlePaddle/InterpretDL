@@ -41,15 +41,19 @@ class ScoreCAMInterpreter(IntermediateLayerInterpreter):
         (TODO) The technical details will be described later.
 
         Args:
-            inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy array of read images.
+            inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy 
+                array of read images.
             target_layer_name (str): The target layer to calculate gradients.
-            labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels should be equal to the number of images. 
-                If None, the most likely label for each image will be used. Default: None
-            resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`. Defaults to 224.
-            crop_to ([type], optional): [description]. After resize, images will be center cropped to a square image with the size `crop_to`. 
-                If None, no crop will be performed. Defaults to None.
+            labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels 
+                should be equal to the number of images. If None, the most likely label for each image will be used. 
+                Default: None
+            resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`. 
+            Defaults to 224.
+            crop_to ([type], optional): [description]. After resize, images will be center cropped to a square image 
+                with the size `crop_to`. If None, no crop will be performed. Defaults to None.
             visual (bool, optional): Whether or not to visualize the processed image. Default: True
-            save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None, the image will not be saved. Default: None
+            save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None,
+                the image will not be saved. Default: None
 
         Returns:
             [numpy.ndarray]: interpretations/heatmap for images

@@ -11,24 +11,24 @@ from .lime import LIMECVInterpreter, LIMENLPInterpreter
 
 class NormLIMECVInterpreter(LIMECVInterpreter):
     """
-    NormLIME Interpreter for CV tasks.
+    NormLIME Interpreter for CV tasks. 
+
+    (TODO) Some technical details will be complete soon.
 
     More details regarding the NormLIME method can be found in the original paper:
-    https://arxiv.org/abs/1909.04200
+    https://arxiv.org/abs/1909.04200.
+
+    Args:
+        paddle_model (_type_): 
+            A user-defined function that gives access to model predictions.
+            It takes the following arguments:
+            - data: Data inputs.
+            and outputs predictions.
+        device (str, optional): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+        use_cuda (_type_, optional): Would be deprecated soon. Use ``device`` directly.    
     """
 
     def __init__(self, paddle_model, device='gpu:0', use_cuda=None):
-        """
-        
-        Args:
-            paddle_model (_type_): 
-                A user-defined function that gives access to model predictions.
-                It takes the following arguments:
-                - data: Data inputs.
-                and outputs predictions.
-            device (str, optional): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-            use_cuda (_type_, optional): Would be deprecated soon. Use ``device`` directly.
-        """
 
         LIMECVInterpreter.__init__(self, paddle_model, use_cuda=use_cuda, device=device)
         self.lime_interpret = super().interpret
@@ -57,6 +57,8 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
                   temp_data_file='all_lime_weights.npz'):
         """
         Main function of the interpreter.
+
+        (TODO) Some technical details will be complete soon.
 
         Args:
             image_paths (list of strs): A list of image filepaths.
@@ -182,20 +184,18 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
     NormLIME Interpreter for NLP tasks.
 
     More details regarding the NormLIME method can be found in the original paper:
-    https://arxiv.org/abs/1909.04200
+    https://arxiv.org/abs/1909.04200.
+
+    Args:
+        paddle_model (callable): A user-defined function that gives access to model predictions.
+                It takes the following arguments:
+
+                - data: Data inputs.
+                and outputs predictions. See the example at the end of ``interpret()``.
+        device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.    
     """
 
     def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None):
-        """
-
-        Args:
-            paddle_model (callable): A user-defined function that gives access to model predictions.
-                    It takes the following arguments:
-
-                    - data: Data inputs.
-                    and outputs predictions. See the example at the end of ``interpret()``.
-            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-        """
         LIMENLPInterpreter.__init__(self, paddle_model, device, use_cuda)
         self.lime_interpret = super().interpret
 
