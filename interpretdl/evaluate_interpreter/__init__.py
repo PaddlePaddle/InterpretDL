@@ -1,4 +1,4 @@
-# Files within this path, contain the algorithms that evaluate 
+# Files within this path, contain the algorithms that evaluate
 # the trustworthiness of interpreter algorithms.
 
 from .abc_evaluator import InterpreterEvaluator

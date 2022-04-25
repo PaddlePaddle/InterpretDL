@@ -7,11 +7,26 @@ from interpretdl.data_processor.readers import images_transform_pipeline, prepro
 class Perturbation(InterpreterEvaluator):
     """Perturbation based Evaluations. 
 
-    More details of the Most Relevant First (MoRF) can be found in the original paper:
+    The evaluation of interpretation algorithms follows the intuition that flipping the most salient pixels first 
+    should lead to high performance decay. Perturbation-based examples can therefore be used for the trustworthiness
+    evaluations of interpretation algorithms. 
+
+    Two metrics are provided: most relevant first (MoRF) and least relevant first (LeRF).
+
+    The MoRF metric is computed as follows. The perturbation starts from an original image, perturbs (zeros 
+    out) the most important pixels in the input, and then computes the responses of the trained model. So that a 
+    curve, with ratios of perturbed pixels as x-axis and probabilities as y-axis, can be obtained and the area under
+    this curve is the MoRF score.
+
+    The LeRF metric is similar, but the perturbation perturbs (zeros out) the least important pixels in the input and
+    then computes the responses of the trained model. A similar curve can be obtained and the area under this curve is
+    the LeRF score.
+
+    Note that MoRF is equivalent to Deletion, but LeRF is NOT equivalent to Insertion.
+
+    More details of MoRF and LeRF can be found in the original paper:
     https://arxiv.org/abs/1509.06321. 
 
-    We additionally provide the Least Relevant First (LeRF) for the supplement. 
-    Note that MoRF is equivalent to Deletion, but LeRF is NOT equivalent to Insertion.
     """
 
     def __init__(self, paddle_model: callable, device: str, compute_MoRF=True, compute_LeRF=True, **kwargs):
@@ -25,7 +40,7 @@ class Perturbation(InterpreterEvaluator):
 
         self._build_predict_fn()
 
-    def _build_predict_fn(self, rebuild: bool=False):
+    def _build_predict_fn(self, rebuild: bool = False):
         if self.predict_fn is not None:
             assert callable(self.predict_fn), "predict_fn is predefined before, but is not callable." \
                 "Check it again."
@@ -61,6 +76,64 @@ class Perturbation(InterpreterEvaluator):
 
             self.predict_fn = predict_fn
 
+    def evaluate(self,
+                 img_path: str,
+                 explanation: list or np.ndarray,
+                 batch_size=None,
+                 resize_to=224,
+                 crop_to=None,
+                 limit_number_generated_samples=None) -> dict:
+        """Given ``img_path``, Perturbation first generates perturbed samples of MoRF and LeRF respectively, according
+        to the order provided by ``explanation``. The number of samples is defined by 
+        ``limit_number_generated_samples`` (a sampling is used for the numbers are different). Then Perturbation 
+        computes the probabilities of these perturbed samples, and the mean of all probabilities of the class of 
+        interest is computed for the final score.
+
+        Note that LIME produces explanations based on superpixels, the number of perturbed samples is originally equal
+        to the number of superpixels. So if ``limit_number_generated_samples`` is None, then the number of superpixels
+        is used. For other explanations that produce the explanation of the same spatial dimension as the input image,
+        ``limit_number_generated_samples`` is set to 20 if ``limit_number_generated_samples`` is not given.
+
+        Args:
+            img_path (str): a string for image path.
+            explanation (listornp.ndarray): the explanation result from an interpretation algorithm.
+            batch_size (intorNone, optional): batch size for each pass. Defaults to None.
+            resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`.
+                Defaults to 224.
+            crop_to (int, optional): [description]. After resize, images will be center cropped to a square image with
+                the size `crop_to`. If None, no crop will be performed. Defaults to None.
+            limit_number_generated_samples (intorNone, optional): a maximum value for samples of perturbation. If None,
+                it will be automatically chosen. The number of superpixels is used for LIME explanations, otherwise, 
+                20 is to be set. Defaults to None.
+
+        Returns:
+            dict: {'MoRF_score': float, 'MoRF_probas': list of float, 'MoRF_images': list of np.ndarray,
+                'LeRF_score': float, 'LeRF_probas': float, 'LeRF_images': list of np.ndarray}, if 
+                compute_MoRF and compute_LeRF are both True.
+        """
+
+        if not isinstance(explanation, np.ndarray):
+            # if not an array, then should be lime results.
+            # for lime results, superpixel segmentation corresponding to the lime_weights is required.
+            assert isinstance(explanation, dict) and 'segmentation' in explanation, \
+                'For LIME results, give the LIMECVInterpreter.lime_results as explanation. ' \
+                'If there are confusions, please contact us.'
+            self.evaluate_lime = True
+
+        results = {}
+        if self.compute_MoRF:
+            results['MoRF_score'] = 0.0
+            results['MoRF_probas'] = None
+        if self.compute_LeRF:
+            results['LeRF_score'] = 0.0
+            results['LeRF_probas'] = None
+
+        img, _ = images_transform_pipeline(img_path, resize_to=resize_to, crop_to=crop_to)
+        results = self.generate_samples(img, explanation, limit_number_generated_samples, results)
+        results = self.compute_probas(results, batch_size)
+
+        return results
+
     def generate_samples(self, img, explanation, limit_number_generated_samples, results):
 
         if self.evaluate_lime:
@@ -84,16 +157,16 @@ class Perturbation(InterpreterEvaluator):
 
                 indices = np.where(sp_segments == sp)
                 fudged_image[:, indices[0], indices[1]] = mx
-                
+
                 MoRF_images.append(fudged_image)
 
             if limit_number_generated_samples is not None and limit_number_generated_samples < len(MoRF_images):
-                indices = np.linspace(0, len(MoRF_images)-1, limit_number_generated_samples).astype(np.int32)
+                indices = np.linspace(0, len(MoRF_images) - 1, limit_number_generated_samples).astype(np.int32)
                 MoRF_images = [MoRF_images[i] for i in indices]
-            
+
             MoRF_images = np.vstack(MoRF_images)
             results['MoRF_images'] = MoRF_images
-        
+
         if self.compute_LeRF:
             LeRF_images = [img]
             fudged_image = img.copy()
@@ -102,11 +175,11 @@ class Perturbation(InterpreterEvaluator):
 
                 indices = np.where(sp_segments == sp)
                 fudged_image[:, indices[0], indices[1]] = mx
-                
+
                 LeRF_images.append(fudged_image)
 
             if limit_number_generated_samples is not None and limit_number_generated_samples < len(LeRF_images):
-                indices = np.linspace(0, len(LeRF_images)-1, limit_number_generated_samples).astype(np.int32)
+                indices = np.linspace(0, len(LeRF_images) - 1, limit_number_generated_samples).astype(np.int32)
                 LeRF_images = [LeRF_images[i] for i in indices]
 
             LeRF_images = np.vstack(LeRF_images)
@@ -115,24 +188,24 @@ class Perturbation(InterpreterEvaluator):
         return results
 
     def generate_samples_array(self, img, explanation, limit_number_generated_samples, results):
-        
+
         # usually explanation has shape of [n_sample, n_channel, h, w]
         explanation = np.squeeze(explanation)
         assert len(explanation.shape) in [2, 3], 'Explanation for one image.'
         if len(explanation.shape) == 3:
             explanation = np.abs(explanation).sum(0)
         assert len(explanation.shape) == 2
-        
+
         explanation = cv2.resize(explanation, (img.shape[2], img.shape[1]), interpolation=cv2.INTER_LINEAR)
-        
+
         if limit_number_generated_samples is None:
             limit_number_generated_samples = 20  # default to 20, each 5 percentiles.
-        
+
         q = 100. / limit_number_generated_samples
-        qs = [q*(i-1) for i in range(limit_number_generated_samples, 0, -1)]
+        qs = [q * (i - 1) for i in range(limit_number_generated_samples, 0, -1)]
         percentiles = np.percentile(explanation, qs)
         mx = (127, 127, 127)
-        
+
         if self.compute_MoRF:
             MoRF_images = [img]
             fudged_image = img.copy()
@@ -153,8 +226,8 @@ class Perturbation(InterpreterEvaluator):
                 fudged_image[:, indices[0], indices[1]] = mx
                 LeRF_images.append(fudged_image)
             LeRF_images = np.vstack(LeRF_images)
-            results['LeRF_images'] = LeRF_images            
-        
+            results['LeRF_images'] = LeRF_images
+
         return results
 
     def compute_probas(self, results, batch_size, coi=None):
@@ -182,7 +255,7 @@ class Perturbation(InterpreterEvaluator):
             if coi is None:
                 # probas.shape = [n_samples, n_classes]
                 coi = np.argmax(probas[0], axis=0)
-            
+
             results['MoRF_probas'] = probas[:, coi]
             results['MoRF_score'] = np.mean(results['MoRF_probas'])
 
@@ -210,46 +283,8 @@ class Perturbation(InterpreterEvaluator):
             if coi is None:
                 # probas.shape = [n_samples, n_classes]
                 coi = np.argmax(probas[0], axis=0)
-            
+
             results['LeRF_probas'] = probas[:, coi]
-            results['LeRF_score'] = np.mean(results['LeRF_probas'])            
-
-        return results
-
-    def evaluate(self, img_path: str, explanation: list or np.ndarray, batch_size=None,
-            resize_to=224, crop_to=None, limit_number_generated_samples=None):
-        """Main function of this class. Evaluate whether the explanation is trustworthy for the model.
-
-        Args:
-            img_path (str): a string for image path.
-            explanation (listornp.ndarray): [description].
-            batch_size (int or None): For memory issue. If not set, all samples are computed once.
-            resize_to (int, optional): [description]. Defaults to 224.
-            crop_to ([type], optional): [description]. Defaults to None.
-            limit_number_generated_samples ([type], optional): [description]. Defaults to None.
-
-        Returns:
-            [dict]: contains `MoRF_score`, `MoRF_probas`, `MoRF_images` if compute_MoRF; LeRF likewise. 
-        """
-        
-        if not isinstance(explanation, np.ndarray):
-            # if not an array, then should be lime results.
-            # for lime results, superpixel segmentation corresponding to the lime_weights is required.
-            assert isinstance(explanation, dict) and 'segmentation' in explanation, \
-                'For LIME results, give the LIMECVInterpreter.lime_results as explanation. ' \
-                'If there are confusions, please contact us.'
-            self.evaluate_lime = True
-
-        results = {}
-        if self.compute_MoRF:
-            results['MoRF_score'] = 0.0
-            results['MoRF_probas'] = None
-        if self.compute_LeRF:
-            results['LeRF_score'] = 0.0
-            results['LeRF_probas'] = None
-
-        img, _ = images_transform_pipeline(img_path, resize_to=resize_to, crop_to=crop_to)
-        results = self.generate_samples(img, explanation, limit_number_generated_samples, results)
-        results = self.compute_probas(results, batch_size)
+            results['LeRF_score'] = np.mean(results['LeRF_probas'])
 
         return results
