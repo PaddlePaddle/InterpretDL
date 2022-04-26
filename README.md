@@ -74,6 +74,7 @@ For sentiment classfication task, the reason why a model gives positive/negative
   - [Implemented Algorithms with Taxonomy](#implemented-algorithms-with-taxonomy)
   - [Implemented Trustworthiness Evaluation Algorithms](#implemented-trustworthiness-evaluation-algorithms)
 - [Examples and Tutorials](#examples-and-tutorials)
+- [Presentations](#presentations)
 - [References of Algorithms](#references-of-algorithms)
 - [Copyright and License](#copyright-and-license)
 - [Recent News](#recent-news)
@@ -147,31 +148,33 @@ Welcome to contribute or just tell us which algorithms are desired.
 
 ## Implemented Algorithms with Taxonomy
 
-Two dimensions (representations of explanations and types of the target model) are used to categorize the interpretation algorithms. This taxonomy can be an indicator to find the best suitable algorithm for the target task and model.
+Two dimensions (representations of explanation results and types of the target model) are used to categorize the interpretation algorithms. This taxonomy can be an indicator to find the best suitable algorithm for the target task and model.
 
 | Methods                         | Representation        | Model Type                                     |
 |---------------------------------|-----------------------|------------------------------------------------|
-| LIME                            | Input Features        | Model-Agnostic                                 |
-| LIME with Prior                 | Input Features        | Model-Agnostic                                 |
-| NormLIME/FastNormLIME           | Input Features        | Model-Agnostic                                 |
-| LRP                             | Input Features        | Differentiable (with specific implementations) |
-| SmoothGrad                      | Input Features        | Differentiable                                 |
-| IntGrad                         | Input Features        | Differentiable                                 |
-| GradSHAP                        | Input Features        | Differentiable                                 |
-| Occlusion                       | Input Features        | Model-Agnostic                                 |
-| GradCAM/CAM                     | Intermediate Features | Specific: CNNs                                 |
-| ScoreCAM                        | Intermediate Features | Specific: CNNs                                 |
-| Rollout                         | Intermediate Features | Specific: Transformers                         |
-| TAM                             | Intermediate Features | Specific: Transformers                         |
-| ForgettingEvents                | Dataset-Level         | Differentiable                                 |
-| TIDY (Training Data   Analyzer) | Dataset-Level         | Differentiable                                 |
-| Consensus                       | Features              | Cross-Model                                    |
+| [LIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/lime.py)                            | Input Features        | Model-Agnostic                                 |
+| [LIME with Prior](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/lime_prior.py)                 | Input Features        | Model-Agnostic                                 |
+| [NormLIME/FastNormLIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/_normlime_base.py)           | Input Features        | Model-Agnostic                                 |
+| [LRP](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/lrp.py)                             | Input Features        | Differentiable* |
+| [SmoothGrad](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/smooth_grad.py)                      | Input Features        | Differentiable                                 |
+| [IntGrad](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/integrated_gradients.py)                         | Input Features        | Differentiable                                 |
+| [GradSHAP](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/gradient_shap.py)                        | Input Features        | Differentiable                                 |
+| [Occlusion](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/occlusion.py)                     | Input Features        | Model-Agnostic                                 |
+| [GradCAM/CAM](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/gradient_cam.py)                     | Intermediate Features | Specific: CNNs                                 |
+| [ScoreCAM](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/score_cam.py)                        | Intermediate Features | Specific: CNNs                                 |
+| [Rollout](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/rollout.py)                         | Intermediate Features | Specific: Transformers                         |
+| [TAM](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/transition_attention_maps.py)                             | Intermediate Features | Specific: Transformers                         |
+| [ForgettingEvents](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/forgetting_events.py)                | Dataset-Level         | Differentiable                                 |
+| [TIDY (Training Data Analyzer)](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/TIDY_tutorial.ipynb) | Dataset-Level         | Differentiable                                 |
+| [Consensus](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/consensus.py)                       | Features              | Cross-Model                                    |
+
+\* LRP requires that the model is of specific implementations for relevance back-propagation.
 
 ## Implemented Trustworthiness Evaluation Algorithms
 
-- [x] Perturbation Tests
-- [x] Deletion & Insertion
-- [x] Localization Ablity
+- [x] [Perturbation Tests](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/evaluate_interpreter/perturbation.py)
+- [x] [Deletion & Insertion](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/evaluate_interpreter/deletion_insertion.py)
+- [x] [Localization Ability](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/evaluate_interpreter/localization.py)
 
 ## Planning Alorithms
 
@@ -190,6 +193,14 @@ Two dimensions (representations of explanations and types of the target model) a
 We plan to provide at least one example for each interpretation algorithm, and hopefully cover applications for both CV and NLP.
 
 Current tutorials can be accessed under [tutorials](https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials) folder.
+
+
+# Presentations
+**Linux Foundation Project AI & Data** -- Interpretable Deep Learning: Interpretation, Interpretability, Trustworthiness, and Beyond. [Video Link](https://wiki.lfaidata.foundation/download/attachments/7733341/GMT20220324-130226_Recording_3840x2160.mp4?version=1&modificationDate=1649079184753&api=v2) (00:20:30 -- 00:45:00).
+
+**Baidu Create 2021 (in Chinese)**: [Video Link](https://live.baidu.com/m/media/pclive/pchome/live.html?room_id=5073321791&source=h5pre) (01:18:40 -- 01:36:30).
+
+**ICML 2021 Expo** -- Interpretable Deep Learning: Interpretation, Interpretability, Trustworthiness, and Beyond. [Video Link](https://icml.cc/ExpoConferences/2021/workshop/11429#wse-detail-11435).
 
 # References of Algorithms
 
