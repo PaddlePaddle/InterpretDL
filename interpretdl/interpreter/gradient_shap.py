@@ -16,12 +16,12 @@ class GradShapCVInterpreter(InputGradientInterpreter):
     GradShap uses noised inputs to get input gradients and then average.
 
     More details regarding the GradShap method can be found in the original paper:
-    http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions
+    http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions.
     """
 
     def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None):
         """
-
+        
         Args:
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
@@ -128,16 +128,16 @@ class GradShapNLPInterpreter(Interpreter):
     are done for the embeddings.
 
     More details regarding the GradShap method can be found in the original paper:
-    http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions
+    http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions.
     """
 
     def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda: bool = None) -> None:
         """
-
+        
         Args:
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-        """
+        """        
         Interpreter.__init__(self, paddle_model, device, use_cuda)
 
     def interpret(self,

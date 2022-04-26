@@ -19,17 +19,16 @@ class LRPCVInterpreter(Interpreter):
     ``paddle_model``.
 
     More details regarding the LRP method can be found in the original paper:
-    https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140
+    https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140.
     """
 
     def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None) -> None:
         """
-
+        
         Args:
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-
-        """
+        """        
         Interpreter.__init__(self, paddle_model, device, use_cuda)
         self.paddle_prepared = False
 

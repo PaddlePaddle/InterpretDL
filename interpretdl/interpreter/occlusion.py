@@ -17,17 +17,16 @@ class OcclusionInterpreter(InputOutputInterpreter):
     More details regarding the Occlusion method can be found in the original paper:
     https://arxiv.org/abs/1311.2901
 
-    Part of the code is modified from https://github.com/pytorch/captum/blob/master/captum/attr/_core/occlusion.py
+    Part of the code is modified from https://github.com/pytorch/captum/blob/master/captum/attr/_core/occlusion.py.
     """
 
     def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None) -> None:
         """
-
+        
         Args:
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
-        """
+        """        
         InputOutputInterpreter.__init__(self, paddle_model, device, use_cuda)
 
     def interpret(self,

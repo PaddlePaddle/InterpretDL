@@ -30,7 +30,6 @@ class SmoothGradInterpreterV2(InputGradientInterpreter):
         Args:
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-            use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
         """
 
         InputGradientInterpreter.__init__(self, paddle_model, device, use_cuda)

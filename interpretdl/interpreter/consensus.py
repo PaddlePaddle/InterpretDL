@@ -5,19 +5,17 @@ from .abc_interpreter import Interpreter
 class ConsensusInterpreter(object):
     """
     
-    ConsensusInterpreter averages the explanations of a given Interpreter over a list of models.
-    The averaged result is more like an explanation for the data, instead of specific models.
-    For visual object recognition tasks, the Consensus explanation would be more aligned with the object than
-    individual models.
+    ConsensusInterpreter averages the explanations of a given Interpreter over a list of models. The averaged result 
+    is more like an explanation for the data, instead of specific models. For visual object recognition tasks, the 
+    Consensus explanation would be more aligned with the object than individual models.
 
     More details regarding the Consensus method can be found in the original paper:
     https://arxiv.org/abs/2109.00707.
-
     """
 
     def __init__(self, InterpreterClass, list_of_models: list, device: str = 'gpu:0', use_cuda=None, **kwargs):
         """
-
+        
         Args:
             InterpreterClass ([type]): The given Interpreter defined in InterpretDL.
             list_of_models (list): a list of trained models. Can be found from paddle.vision.models, or 
@@ -35,13 +33,14 @@ class ConsensusInterpreter(object):
     def interpret(self, inputs: str or list(str) or np.ndarray, **kwargs) -> np.ndarray:
         """
         The technical details are simple to understand for the Consensus method:
-        Given the ``inputs`` and the interpretation algorithm (one of Interpreters), each model in ``list_of_models`` 
-        will produce an explanation, then Consensus will concatenate all the explanations. Subsequent normalization 
-        and average can be done as users' preference. The suggested operation for input gradient based algorithms is 
-        average of the absolute values.
+        Given the ``inputs`` and the interpretation algorithm (one of the Interpreters), each model in 
+        ``list_of_models`` will produce an explanation, then Consensus will concatenate all the explanations. 
+        Subsequent normalization and average can be done as users' preference. The suggested operation for input
+        gradient based algorithms is average of the absolute values.
 
         We leave the visualization to users. 
-        See https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials/consensus_tutorial_cv.ipynb for an example.
+        See https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials/consensus_tutorial_cv.ipynb for an 
+        example.
 
         .. code-block:: python
 
@@ -74,7 +73,8 @@ class ConsensusInterpreter(object):
             ax[-1].set_title('Consensus')
 
         Args:
-            inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy array of read images.
+            inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy 
+                array of read images.
 
         Returns:
             np.ndarray: Concatenated raw explanations.

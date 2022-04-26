@@ -146,7 +146,12 @@ class LIMENLPInterpreter(Interpreter):
     The implementation is based on https://github.com/marcotcr/lime.
 
     More details regarding the LIME method can be found in the original paper:
-    https://arxiv.org/abs/1602.04938
+    https://arxiv.org/abs/1602.04938.
+
+    Args:
+        paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
+        device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+        random_seed (int): random seed. Defaults to None.
     """
 
     def __init__(self,
@@ -154,14 +159,6 @@ class LIMENLPInterpreter(Interpreter):
                  device: str = 'gpu:0',
                  use_cuda=None,
                  random_seed: int or None = None) -> None:
-        """
-
-        Args:
-            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
-            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-            random_seed (int): random seed. Defaults to None.
-        """
-
         Interpreter.__init__(self, paddle_model, device, use_cuda)
         self.paddle_model = paddle_model
         self.paddle_prepared = False

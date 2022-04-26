@@ -19,15 +19,14 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
                  device: str = 'gpu:0',
                  use_cuda=None) -> None:
         """
-        Args:
-            paddle_model (callable): A paddle model that outputs predictions.
-            prior_method: Prior method. Can be chosen from ``{"none", "ridge"}``.
-                Defaults to ``"none"``, which is equivalent to LIME.
-                If ``"none"``, ``interpret()`` will use zeros as prior;
-                Otherwise, the loaded prior will be used.
-            use_cuda: Whether to use CUDA. Defaults to ``True``.
-        """
 
+        Args:
+            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
+            prior_method: Prior method. Can be chosen from ``{"none", "ridge"}``. Defaults to ``"none"``, which is 
+                equivalent to LIME. If ``"none"``, ``interpret()`` will use zeros as prior; Otherwise, the loaded prior 
+                will be used.
+            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.       
+        """
         LIMECVInterpreter.__init__(self, paddle_model, device, use_cuda)
         self.prior_method = prior_method
         self.global_weights = None

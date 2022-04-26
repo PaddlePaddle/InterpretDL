@@ -11,23 +11,27 @@ ABC = abc.ABC if sys.version_info >= (3, 4) else abc.ABCMeta(str('ABC'), (), {})
 
 class Interpreter(ABC):
     """
-    Interpreter is the base abstract class for all interpretation algorithms. 
-    Interpreters should (1) prepare the ``self.predict_fn`` that outputs probability predictions, gradients or other 
-    desired intermediate results of the model, and (2) implement the core function ``interpret`` of the interpretation
-    algorithm.
+    Interpreter is the base abstract class for all Interpreters. 
+    The implementation of Interpreters should (1) prepare the ``self.predict_fn`` that outputs probability predictions,
+    gradients or other desired intermediate results of the model, and (2) implement the core function ``interpret`` of
+    the interpretation algorithm.
+    This kind of implementation works for all post-poc interpretation algorithms. While there are other algorithms that
+    may have different features, this kind of implementation can cover most of them. So we follow this design for all 
+    Interpreters in this library.
     
     Three sub-abstract Interpreters that implement ``self.predict_fn`` are currently provided in this file:
     ``InputGradientInterpreter``, ``InputOutputInterpreter``, ``IntermediateLayerInterpreter``. For each of them, the
     implemented ``predict_fn`` can be used by several different algorithms. Therefore, the further implementations can
-    focus on the core algorithm.
-
-    Args:
-        paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
-        device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-        use_cuda (bool):  Would be deprecated soon. Use ``device`` directly.
+    focus on the core algorithm. More sub-abstract Interpreters will be provided if necessary.
     """
 
     def __init__(self, paddle_model: callable, device: str, use_cuda: bool = None, **kwargs):
+        """
+        
+        Args:
+            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
+            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+        """
         self.device = device
         self.paddle_model = paddle_model
         self.predict_fn = None
@@ -54,13 +58,16 @@ class Interpreter(ABC):
         raise NotImplementedError
 
     def _build_predict_fn(self, **kwargs):
-        """Build self.predict_fn for interpreters."""
+        """ Build self.predict_fn for interpreters. This will be called by interpret(). """
         raise NotImplementedError
 
     def _paddle_env_setup(self):
         """Prepare the environment setup. This is not always necessary because the setup can be done within the 
-        function of ``_build_predict_fn``. This function is a simple implementation for disabling gradient computation.
+        function of ``_build_predict_fn``.
         """
+        #######################################################################
+        # This is a simple implementation for disabling gradient computation. #
+        #######################################################################
         import paddle
         if not paddle.is_compiled_with_cuda() and self.device[:3] == 'gpu':
             print("Paddle is not installed with GPU support. Change to CPU version now.")
@@ -79,11 +86,16 @@ class InputGradientInterpreter(Interpreter):
     ``InputGradientInterpreter`` are used by input gradient based Interpreters. Interpreters that are derived from 
     ``InputGradientInterpreter``: ``GradShapCVInterpreter``, ``IntGradCVInterpreter``, ``SmoothGradInterpreter``.
 
-    The ``predict_fn`` provided by this interpreter will output input gradient given an input. 
-
+    The ``predict_fn`` in this interpreter will return input gradient given an input. 
     """
 
     def __init__(self, paddle_model: callable, device: str, use_cuda: bool = None, **kwargs):
+        """
+        
+        Args:
+            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
+            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+        """        
         Interpreter.__init__(self, paddle_model, device, use_cuda, **kwargs)
         assert hasattr(paddle_model, 'forward'), \
             "paddle_model has to be " \
@@ -197,6 +209,12 @@ class InputOutputInterpreter(Interpreter):
     """
 
     def __init__(self, paddle_model: callable, device: str, use_cuda: bool = None, **kwargs):
+        """
+        
+        Args:
+            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
+            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+        """        
         Interpreter.__init__(self, paddle_model, device, use_cuda, **kwargs)
         assert hasattr(paddle_model, 'forward'), \
             "paddle_model has to be " \
@@ -259,11 +277,17 @@ class IntermediateLayerInterpreter(Interpreter):
     Interpreters that are derived from ``IntermediateLayerInterpreter``:
     ``RolloutInterpreter``, ``ScoreCAMInterpreter``.
 
-    The ``predict_fn`` provided by this interpreter will output the model's intermediate outputs given an input. 
-
+    The ``predict_fn`` provided by this interpreter will return the model's intermediate outputs given an input. 
     """
 
     def __init__(self, paddle_model: callable, device: str, use_cuda: bool = None, **kwargs):
+        """
+
+        Args:
+            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
+            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+        """
+        
         Interpreter.__init__(self, paddle_model, device, use_cuda, **kwargs)
         assert hasattr(paddle_model, 'forward'), \
             "paddle_model has to be " \
@@ -272,16 +296,15 @@ class IntermediateLayerInterpreter(Interpreter):
     def _build_predict_fn(self, rebuild: bool = False, target_layer: str = None, target_layer_pattern: str = None):
         """Build self.predict_fn for IntermediateLayer based algorithms.
         The model is supposed to be a classification model.
-        target_layer and target_layer_pattern cannot be set at the same time.
+        ``target_layer`` and ``target_layer_pattern`` cannot be set at the same time. See the arguments below.
 
         Args:
             rebuild (bool, optional): forces to rebuild. Defaults to False.
-            target_layer (str, optional): the name of the desired layer whose features will output. 
-                This is used when there is only one layer to output. Conflict with ``target_layer_pattern``.
-                Defaults to None.
-            target_layer_pattern (str, optional): the pattern name of the layers whose features will output. 
-                This is used when there are several layers to output and they share a common pattern name. 
-                Conflict with ``target_layer``. Defaults to None.
+            target_layer (str, optional): the name of the desired layer whose features will output. This is used when
+                there is only one layer to output. Conflict with ``target_layer_pattern``. Defaults to None.
+            target_layer_pattern (str, optional): the pattern name of the layers whose features will output. This is 
+                used when there are several layers to output and they share a common pattern name. Conflict with 
+                ``target_layer``. Defaults to None.
         """
 
         if self.predict_fn is not None:

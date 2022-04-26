@@ -3,25 +3,10 @@
 Input Feature Based Interpreters
 ================================
 
-Smooth Gradients
+Consensus
 ----------------
 
-.. autoclass:: interpretdl.SmoothGradInterpreter
-   :members:
-
-Integrated Gradients
---------------------
-
-.. autoclass:: interpretdl.IntGradCVInterpreter
-   :members:
-
-.. autoclass:: interpretdl.IntGradNLPInterpreter
-   :members:
-   
-Occlusion
----------
-
-.. autoclass:: interpretdl.OcclusionInterpreter
+.. autoclass:: interpretdl.ConsensusInterpreter
    :members:
       
 Gradient Shap
@@ -32,7 +17,16 @@ Gradient Shap
 
 .. autoclass:: interpretdl.GradShapNLPInterpreter
    :members:
-   
+
+Integrated Gradients
+--------------------
+
+.. autoclass:: interpretdl.IntGradCVInterpreter
+   :members:
+
+.. autoclass:: interpretdl.IntGradNLPInterpreter
+   :members:
+
 LIME
 ----
 
@@ -48,6 +42,30 @@ LIME With Global Prior
 .. autoclass:: interpretdl.LIMEPriorInterpreter
    :members:
 
+LRP
+----------------
+
+.. autoclass:: interpretdl.LRPCVInterpreter
+   :members:
+
+Occlusion
+---------
+
+.. autoclass:: interpretdl.OcclusionInterpreter
+   :members:
+
+Smooth Gradients
+----------------
+
+.. autoclass:: interpretdl.SmoothGradInterpreter
+   :members:
+
+Smooth Gradients V2
+-------------------
+
+.. autoclass:: interpretdl.SmoothGradInterpreterV2
+   :members:
+
 NormLIME
 --------
 
@@ -56,9 +74,3 @@ NormLIME
 
 .. autoclass:: interpretdl.NormLIMENLPInterpreter
   :members:
-
-LRP
-----------------
-
-.. autoclass:: interpretdl.LRPCVInterpreter
-   :members:

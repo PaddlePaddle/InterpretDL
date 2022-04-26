@@ -11,7 +11,7 @@ class GradCAMInterpreter(Interpreter):
 
     Given a convolutional network and an image classification task, classification activation map (CAM) can be derived
     from the global average pooling and the last fully-connected layer, and show the important regions that affect
-    model decisions.
+    model's decisions.
 
     GradCAM further looks at the gradients flowing into one of the convolutional layers to give weight to activation 
     maps. Note that if there is a global average pooling layer in the network, GradCAM targeting the last layer is 
@@ -25,11 +25,11 @@ class GradCAMInterpreter(Interpreter):
 
     def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None):
         """
-
+        
         Args:
             paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
             device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-        """
+        """        
         Interpreter.__init__(self, paddle_model, device, use_cuda)
         self.paddle_prepared = False
 
@@ -47,9 +47,9 @@ class GradCAMInterpreter(Interpreter):
                   save_path: str = None) -> np.ndarray:
         """
         The technical details of the GradCAM method are described as follows:
-        GradCAM computes the feature map and the gradient of the objective function w.r.t. ``target_layer_name``.
-        With the average of gradients along the spatial dimensions, gradients will be multiplied with feature map,
-        following by a ReLU activation to produce the final explanation.
+        GradCAM computes the feature map at the layer of ``target_layer_name`` and the gradient of the objective 
+        function w.r.t. ``target_layer_name``. With the average of gradients along the spatial dimensions, gradients
+        will be multiplied with feature map, following by a ReLU activation to produce the final explanation.
 
         Args:
             inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy 

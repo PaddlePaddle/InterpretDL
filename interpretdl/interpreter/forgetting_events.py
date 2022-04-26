@@ -21,14 +21,13 @@ class ForgettingEventsInterpreter(Interpreter):
     https://arxiv.org/abs/1812.05159.
     """
 
-    def __init__(self, paddle_model: callable, device: str, use_cuda=None):
-        """Initialize the ForgettingEventsInterpreter.
-
-        Args:
-            paddle_model (callable): A user-defined function that gives access to model predictions. 
-                It takes in data inputs and output predictions.
-            device (str): Whether or not to use cuda. Default: None.
+    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None):
         """
+        
+        Args:
+            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
+            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+        """        
         Interpreter.__init__(self, paddle_model, device, use_cuda)
 
     def interpret(self,
