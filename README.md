@@ -71,11 +71,10 @@ For sentiment classfication task, the reason why a model gives positive/negative
 - [Documentation](#documentation)
 - [Usage Guideline](#usage-guideline)
 - [Roadmap](#roadmap)
-  - [Algorithms](#algorithms)
-    - [Feature-level Interpretation Algorithms](#feature-level-interpretation-algorithms)
-    - [Dataset-level Interpretation Algorithms](#dataset-level-interpretation-algorithms)
-  - [Tutorials](#tutorials)
-  - [References of Algorithms](#references-of-algorithms)
+  - [Implemented Algorithms with Taxonomy](#implemented-algorithms-with-taxonomy)
+  - [Implemented Trustworthiness Evaluation Algorithms](#implemented-trustworthiness-evaluation-algorithms)
+- [Examples and Tutorials](#examples-and-tutorials)
+- [References of Algorithms](#references-of-algorithms)
 - [Copyright and License](#copyright-and-license)
 - [Recent News](#recent-news)
 
@@ -146,46 +145,47 @@ We are planning to create a useful toolkit for offering the model interpretation
 We have now implemented the interpretation algorithms as follows, and we are planning to add more algorithms that are desired.
 Welcome to contribute or just tell us which algorithms are desired.
 
-## Implemented Algorithms
+## Implemented Algorithms with Taxonomy
 
-* Target at Input Features
-    - [x] SmoothGrad
-    - [x] IntegratedGradients
-    - [x] Occlusion
-    - [x] GradientSHAP
-    - [x] LIME
-    - [x] GLIME (LIMEPrior)
-    - [x] NormLIME/FastNormLIME
-    - [x] LRP
+Two dimensions (representations of explanations and types of the target model) are used to categorize the interpretation algorithms. This taxonomy can be an indicator to find the best suitable algorithm for the target task and model.
 
-* Target at Intermediate Features
-    - [x] CAM
-    - [x] GradCAM
-    - [x] ScoreCAM
-    - [x] Rollout
-    - [X] TAM
+| Methods                         | Representation        | Model Type                                     |
+|---------------------------------|-----------------------|------------------------------------------------|
+| LIME                            | Input Features        | Model-Agnostic                                 |
+| LIME with Prior                 | Input Features        | Model-Agnostic                                 |
+| NormLIME/FastNormLIME           | Input Features        | Model-Agnostic                                 |
+| LRP                             | Input Features        | Differentiable (with specific implementations) |
+| SmoothGrad                      | Input Features        | Differentiable                                 |
+| IntGrad                         | Input Features        | Differentiable                                 |
+| GradSHAP                        | Input Features        | Differentiable                                 |
+| Occlusion                       | Input Features        | Model-Agnostic                                 |
+| GradCAM/CAM                     | Intermediate Features | Specific: CNNs                                 |
+| ScoreCAM                        | Intermediate Features | Specific: CNNs                                 |
+| Rollout                         | Intermediate Features | Specific: Transformers                         |
+| TAM                             | Intermediate Features | Specific: Transformers                         |
+| ForgettingEvents                | Dataset-Level         | Differentiable                                 |
+| TIDY (Training Data   Analyzer) | Dataset-Level         | Differentiable                                 |
+| Consensus                       | Features              | Cross-Model                                    |
 
-* Dataset-level Interpretation Algorithms
-    - [x] Forgetting Event
-    - [x] SGDNoise
-    - [x] TrainIng Data analYzer (TIDY)
+## Implemented Trustworthiness Evaluation Algorithms
 
-* Cross-Model Explanation
-    - [x] Consensus
+- [x] Perturbation Tests
+- [x] Deletion & Insertion
+- [x] Localization Ablity
 
 ## Planning Alorithms
 
-* Dataset-level Interpretation Algorithms
-    - [ ] Influence Function
+* Intermediate Features Interpretation Algorithm
+  - [ ] Bi-Modal Explanation
+
+* Dataset-Level Interpretation Algorithms
+  - [ ] Influence Function
 
 * Evaluations
-    - [x] Perturbation Tests
-    - [x] Deletion & Insertion
-    - [x] Localization Ablity
-    - [ ] Local Fidelity
-    - [ ] Sensitivity
+  - [ ] Local Fidelity
+  - [ ] Sensitivity
 
-## Tutorials
+# Examples and Tutorials
 
 We plan to provide at least one example for each interpretation algorithm, and hopefully cover applications for both CV and NLP.
 
