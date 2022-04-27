@@ -105,7 +105,7 @@ python -m unittest -v
 
 # Documentation
 
-Online link: [interpretdl.readthedocs.io](https://interpretdl.readthedocs.io/en/latest/interpretdl.html).
+Online link: [interpretdl.readthedocs.io](https://interpretdl.readthedocs.io/en/latest/index.html).
 
 Or generate the docs locally:
 
