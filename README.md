@@ -130,7 +130,7 @@ sg = it.SmoothGradInterpreter(paddle_model, use_cuda=True)
 gradients = sg.interpret("test.jpg", visual=True, save_path=None)
 ```
 
-A quick [Getting-Started tutorial]((https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/Getting_Started.ipynb)) is provided. It takes only a few minutes to be familiar with InterpretDL.
+A quick [Getting-Started tutorial](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/Getting_Started.ipynb) (or [on NBviewer](https://nbviewer.org/github/PaddlePaddle/InterpretDL/blob/master/tutorials/Getting_Started.ipynb)) is provided. It takes only a few minutes to be familiar with InterpretDL.
 
 # Examples and Tutorials
 
