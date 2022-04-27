@@ -32,10 +32,23 @@ class DeletionInsertion(InterpreterEvaluator):
                  compute_deletion: bool = True,
                  compute_insertion: bool = True,
                  **kwargs):
+        """
+
+        Args:
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions. This 
+                is not always required if the model is not involved. 
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc. Again, this is not always required if the model is not involved.
+            compute_deletion (bool, optional): Whether compute deletion score. Defaults to ``True``.
+            compute_insertion (bool, optional): Whether compute insertion score. Defaults to ``True``.
+
+        Raises:
+            ValueError: At least one of ``compute_deletion`` and ``compute_insertion`` must be True.
+        """
         super().__init__(paddle_model, device, use_cuda, **kwargs)
 
         if (not compute_deletion) or (not compute_insertion):
-            raise ValueError('Either compute_deletion or compute_insertion is False.')
+            raise ValueError('At least one of ``compute_deletion`` and ``compute_insertion`` must be True.')
         self.compute_deletion = compute_deletion
         self.compute_insertion = compute_insertion
         self.evaluate_lime = False
@@ -85,24 +98,25 @@ class DeletionInsertion(InterpreterEvaluator):
         Note that LIME produces explanations based on superpixels, the number of perturbed samples is originally equal
         to the number of superpixels. So if ``limit_number_generated_samples`` is None, then the number of superpixels
         is used. For other explanations that produce the explanation of the same spatial dimension as the input image,
-        ``limit_number_generated_samples`` is set to 20 if ``limit_number_generated_samples`` is not given.
+        ``limit_number_generated_samples`` is set to ``20`` if not given.
 
         Args:
             img_path (str): a string for image path.
-            explanation (listornp.ndarray): the explanation result from an interpretation algorithm.
-            batch_size (intorNone, optional): batch size for each pass. Defaults to None.
-            resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`.
-                Defaults to 224.
-            crop_to (int, optional): [description]. After resize, images will be center cropped to a square image with
-                the size `crop_to`. If None, no crop will be performed. Defaults to None.
-            limit_number_generated_samples (intorNone, optional): a maximum value for samples of perturbation. If None,
-                it will be automatically chosen. The number of superpixels is used for LIME explanations, otherwise, 
-                20 is to be set. Defaults to None.
+            explanation (list or np.ndarray): the explanation result from an interpretation algorithm.
+            batch_size (int or None, optional): batch size for each pass. Defaults to ``None``.
+            resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
+                ``224``.
+            crop_to (int, optional): After resize, images will be center cropped to a square image with the size 
+                ``crop_to``. If None, no crop will be performed. Defaults to ``None``.
+            limit_number_generated_samples (int or None, optional): a maximum value for samples of perturbation. If 
+                None, it will be automatically chosen. The number of superpixels is used for LIME explanations, 
+                otherwise, ``20`` is to be set. Defaults to ``None``.
 
         Returns:
-            dict: {'deletion_score': float, 'del_probas': list of float, 'deletion_images': list of np.ndarray,
-                'insertion_score': float, 'ins_probas': float, 'insertion_images': list of np.ndarray}, if 
-                compute_deletion and compute_insertion are both True.
+            dict: 
+                A dict containing ``'deletion_score'``, ``'del_probas'``, ``'deletion_images'``, ``'insertion_score'``,
+                ``'ins_probas'`` and ``'insertion_images'``, if ``compute_deletion`` and ``compute_insertion``
+                are both True.
         """
 
         if not isinstance(explanation, np.ndarray):

@@ -56,7 +56,7 @@ def explanation_to_vis(batched_image: np.ndarray, explanation: np.ndarray, style
     image = batched_image
     if style == 'grayscale':
         # explanation has the same size as image, no need to scale.
-        # usually for gradient-based explanations w.r.t. the image.
+        # usually for gradient-based explanations *w.r.t.* the image.
         return _grayscale(explanation)
     elif style == 'heatmap':
         # explanation's width and height are usually smaller than image.

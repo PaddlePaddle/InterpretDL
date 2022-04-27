@@ -26,8 +26,9 @@ class LIMECVInterpreter(InputOutputInterpreter):
         """
 
         Args:
-            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
-            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc.
         """
         InputOutputInterpreter.__init__(self, paddle_model, device, use_cuda)
 
@@ -52,17 +53,17 @@ class LIMECVInterpreter(InputOutputInterpreter):
         Args:
             data (str): The input file path.
             interpret_class (int, optional): The index of class to interpret. If None, the most likely label will be 
-                used. Default: None
+                used. Default: ``None``.
             num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate 
-                interpretation. Default: 1000
-            batch_size (int, optional): Number of samples to forward each time. Default: 50
-            resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`. 
-                Defaults to 224.
-            crop_to ([type], optional): [description]. After resize, images will be center cropped to a square image 
-                with the size `crop_to`. If None, no crop will be performed. Defaults to None.
-            visual (bool, optional): Whether or not to visualize the processed image. Default: True
-            save_path (str, optional): The path to save the processed image. If None, the image will not be saved. 
-                Default: None
+                interpretation. Default: ``1000``.
+            batch_size (int, optional): Number of samples to forward each time. Default: ``50``.
+            resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
+                ``224``.
+            crop_to (int, optional): After resize, images will be center cropped to a square image with the size 
+                ``crop_to``. If None, no crop will be performed. Defaults to ``None``.
+            visual (bool, optional): Whether or not to visualize the processed image. Default: ``True``.
+            save_path (str, optional): The filepath(s) to save the processed image(s). If None, the image will not be 
+                saved. Default: ``None``.
 
         Returns:
             [dict]: LIME results: {interpret_label_i: weights on features}
@@ -148,10 +149,6 @@ class LIMENLPInterpreter(Interpreter):
     More details regarding the LIME method can be found in the original paper:
     https://arxiv.org/abs/1602.04938.
 
-    Args:
-        paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
-        device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-        random_seed (int): random seed. Defaults to None.
     """
 
     def __init__(self,
@@ -159,6 +156,14 @@ class LIMENLPInterpreter(Interpreter):
                  device: str = 'gpu:0',
                  use_cuda=None,
                  random_seed: int or None = None) -> None:
+        """
+
+        Args:
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc.
+            random_seed (int): random seed. Defaults to None.
+        """
         Interpreter.__init__(self, paddle_model, device, use_cuda)
         self.paddle_model = paddle_model
         self.paddle_prepared = False
@@ -190,16 +195,16 @@ class LIMENLPInterpreter(Interpreter):
                 to feed into the NLP model.
             unk_id (int): The word id to replace occluded words. Typical choices include "", <unk>, and <pad>.
             pad_id (int or None): The word id used to pad the sequences. If None, it means there is no padding. 
-                Default: None.
+                Default: ``None``.
             interpret_class (list or numpy.ndarray, optional): The index of class to interpret. If None, the most 
-                likely label will be used. Default: None
+                likely label will be used. Default: ``None``.
             num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate
-                interpretation. Default: 1000
-            batch_size (int, optional): Number of samples to forward each time. Default: 50
+                interpretation. Default: ``1000``.
+            batch_size (int, optional): Number of samples to forward each time. Default: ``50``.
             lod_levels (list or tuple or numpy.ndarray or None, optional): The lod levels for model inputs. It should
                 have the length equal to number of outputs given by preprocess_fn. If None, lod levels are all zeros. 
-                Default: None.
-            visual (bool, optional): Whether or not to visualize. Default: True
+                Default: ``None``.
+            visual (bool, optional): Whether or not to visualize. Default: ``True``.
 
         Returns:
             [dict]: LIME results: {interpret_label_i: weights on features}

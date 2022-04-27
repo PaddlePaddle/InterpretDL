@@ -14,8 +14,8 @@ class LRPCVInterpreter(Interpreter):
     or text. LRP operates by propagating the prediction backwards in the neural network, by means of purposely designed
     local propagation rules.
 
-    Note that LRP requires ``paddle_model`` have ``relprop`` and related implementations, see the lrp_model in the 
-    [tutorial/assets/lrp_model](https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials/assets/lrp_model). 
+    Note that LRP requires ``paddle_model`` have :py:func:`relprop` and related implementations, see 
+    `tutorial/assets/lrp_model <https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials/assets/lrp_model>`_.
     This is different from other interpreters, which do not have additional requirements for ``paddle_model``.
 
     More details regarding the LRP method can be found in the original paper:
@@ -26,31 +26,32 @@ class LRPCVInterpreter(Interpreter):
         """
         
         Args:
-            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
-            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-        """        
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc.
+        """
         Interpreter.__init__(self, paddle_model, device, use_cuda)
         self.paddle_prepared = False
 
     def interpret(self, inputs, label=None, resize_to=224, crop_to=None, visual=True, save_path=None):
         """
         The difficulty for LRP implementation does not reside the algorithm, but the model. The model should be 
-        implemented with ``relprop`` functions, and the algorithm calls the relevance back-propagation, until the input
-        layer, where the final explanation is obtained.
+        implemented with :py:func:`relprop` functions, and the algorithm calls the relevance back-propagation, until 
+        the input layer, where the final explanation is obtained.
 
         Args:
             inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy
                 array of read images.
             labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels 
                 should be equal to the number of images. If None, the most likely label for each  image will be used. 
-                Default: None
-            resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`. 
-                Defaults to 224.
-            crop_to ([type], optional): [description]. After resize, images will be center cropped to a square image 
-                with the size `crop_to`. If None, no crop will be performed. Defaults to None.
-            visual (bool, optional): Whether or not to visualize the processed image. Default: True
-            save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None,
-                the image will not be saved. Default: None
+                Default: ``None``.
+            resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
+                ``224``.
+            crop_to (int, optional): After resize, images will be center cropped to a square image with the size 
+                ``crop_to``. If None, no crop will be performed. Defaults to ``None``.
+            visual (bool, optional): Whether or not to visualize the processed image. Default: ``True``.
+            save_path (str, optional): The filepath(s) to save the processed image(s). If None, the image will not be 
+                saved. Default: ``None``.
         
         Returns:
             [numpy.ndarray]: interpretations/Relevance map for images.

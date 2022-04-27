@@ -24,9 +24,10 @@ class OcclusionInterpreter(InputOutputInterpreter):
         """
         
         Args:
-            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
-            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-        """        
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc.
+        """
         InputOutputInterpreter.__init__(self, paddle_model, device, use_cuda)
 
     def interpret(self,
@@ -51,17 +52,17 @@ class OcclusionInterpreter(InputOutputInterpreter):
                 should be equal to the number of images. If None, the most likely label for each image will be used. 
                 Default: None
             strides (int or tuple): The step by which the occlusion should be shifted by in each direction for each 
-                iteration. If int, the step size in each direction will be the same. Default: 1
+                iteration. If int, the step size in each direction will be the same. Default: ``1``.
             baselines (numpy.ndarray or None, optional): The baseline images to compare with. It should have the same
-                shape as images. If None, the baselines of all zeros will be used. Default: None.
-            perturbations_per_eval (int, optional): number of occlusions in each batch. Default: 1
-            resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`. 
-                Defaults to 224.
-            crop_to ([type], optional): [description]. After resize, images will be center cropped to a square image 
-                with the size `crop_to`. If None, no crop will be performed. Defaults to None.
-            visual (bool, optional): Whether or not to visualize the processed image. Default: True
-            save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None,
-                the image will not be saved. Default: None
+                shape as images. If None, the baselines of all zeros will be used. Default: ``None``.
+            perturbations_per_eval (int, optional): number of occlusions in each batch. Default: ``1``.
+            resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
+                ``224``.
+            crop_to (int, optional): After resize, images will be center cropped to a square image with the size 
+                ``crop_to``. If None, no crop will be performed. Defaults to ``None``.
+            visual (bool, optional): Whether or not to visualize the processed image. Default: ``True``.
+            save_path (str, optional): The filepath(s) to save the processed image(s). If None, the image will not be 
+                saved. Default: ``None``.
 
         Returns:
             [numpy.ndarray]: interpretations for images

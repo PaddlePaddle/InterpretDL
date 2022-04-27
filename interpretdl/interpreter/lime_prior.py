@@ -21,11 +21,12 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
         """
 
         Args:
-            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
             prior_method: Prior method. Can be chosen from ``{"none", "ridge"}``. Defaults to ``"none"``, which is 
-                equivalent to LIME. If ``"none"``, ``interpret()`` will use zeros as prior; Otherwise, the loaded prior 
-                will be used.
-            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.       
+                equivalent to LIME. If ``none``, :py:func:`interpret()` will use zeros as prior; Otherwise, the loaded
+                prior will be used.
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc.
         """
         LIMECVInterpreter.__init__(self, paddle_model, device, use_cuda)
         self.prior_method = prior_method
@@ -85,23 +86,24 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
                   visual: bool = True,
                   save_path: str = None):
         """
-        Note that for LIME prior interpreter, ``interpreter_init()`` needs to be called before calling ``interpret()``.
+        Note that for LIME prior interpreter, :py:func:`interpreter_init()` needs to be called before calling 
+        :py:func:`interpret()`.
 
         Args:
             inputs (str): The input file path.
             interpret_class (int, optional): The index of class to interpret. If None, the most likely label will be 
-                used. Default: None
-            prior_reg_force (float, optional): The regularization force to apply. Default: 1.0
+                used. Default: ``None``.
+            prior_reg_force (float, optional): The regularization force to apply. Default: ``1.0``.
             num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate 
-                interpretation. Default: 1000
+                interpretation. Default: ``1000``.
             batch_size (int, optional): Number of samples to forward each time. Default: 50
-            resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`. 
-                Defaults to 224.
-            crop_to ([type], optional): [description]. After resize, images will be center cropped to a square image 
-                with the size `crop_to`. If None, no crop will be performed. Defaults to None.
-            visual (bool, optional): Whether or not to visualize the processed image. Default: True
+            resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to
+                ``224``.
+            crop_to ([type], optional): After resize, images will be center cropped to a square image 
+                with the size ``crop_to``. If None, no crop will be performed. Defaults to ``None``.
+            visual (bool, optional): Whether or not to visualize the processed image. Default: ``True``.
             save_path (str, optional): The path to save the processed image. If None, the image will not be saved. 
-                Default: None
+                Default: ``None``.
 
         Returns:
             [dict]: LIME results: {interpret_label_i: weights on features}

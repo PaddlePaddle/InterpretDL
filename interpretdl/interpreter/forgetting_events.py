@@ -25,9 +25,10 @@ class ForgettingEventsInterpreter(Interpreter):
         """
         
         Args:
-            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
-            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-        """        
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc.
+        """
         Interpreter.__init__(self, paddle_model, device, use_cuda)
 
     def interpret(self,

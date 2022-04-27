@@ -11,6 +11,9 @@ class ConsensusInterpreter(object):
 
     More details regarding the Consensus method can be found in the original paper:
     https://arxiv.org/abs/2109.00707.
+
+    For reference, the ``list_of_models`` can be found from :py:mod:`paddle.vision.models` or 
+    `PPClas <https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/__init__.py>`_.
     """
 
     def __init__(self, InterpreterClass, list_of_models: list, device: str = 'gpu:0', use_cuda=None, **kwargs):
@@ -18,9 +21,9 @@ class ConsensusInterpreter(object):
         
         Args:
             InterpreterClass ([type]): The given Interpreter defined in InterpretDL.
-            list_of_models (list): a list of trained models. Can be found from paddle.vision.models, or 
-                https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/__init__.py. 
-            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+            list_of_models (list): a list of trained models.
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc.
         """
         assert issubclass(InterpreterClass, Interpreter)
 
@@ -39,8 +42,9 @@ class ConsensusInterpreter(object):
         gradient based algorithms is average of the absolute values.
 
         We leave the visualization to users. 
-        See https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials/example_consensus_cv.ipynb for an 
-        example.
+        See the `notebook example 
+        <https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials/example_consensus_cv.ipynb>`_ 
+        for an example.
 
         .. code-block:: python
 

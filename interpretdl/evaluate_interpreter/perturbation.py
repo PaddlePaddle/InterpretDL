@@ -29,11 +29,29 @@ class Perturbation(InterpreterEvaluator):
 
     """
 
-    def __init__(self, paddle_model: callable, device: str, compute_MoRF=True, compute_LeRF=True, **kwargs):
+    def __init__(self,
+                 paddle_model: callable,
+                 device: str,
+                 compute_MoRF: bool = True,
+                 compute_LeRF: bool = True,
+                 **kwargs):
+        """_summary_
+
+        Args:
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions. This 
+                is not always required if the model is not involved. 
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc. Again, this is not always required if the model is not involved.
+            compute_MoRF (bool, optional): Whether comptue MoRF score. Defaults to True.
+            compute_LeRF (bool, optional): Whether comptue LeRF score. Defaults to True.
+
+        Raises:
+            ValueError: 'At least one of ``compute_MoRF`` and ``compute_LeRF`` must be True.'
+        """
         super().__init__(paddle_model, device, None, **kwargs)
 
         if (not compute_MoRF) and (not compute_LeRF):
-            raise ValueError('Either compute_MoRF or compute_LeRF is False.')
+            raise ValueError('At least one of ``compute_MoRF`` and ``compute_LeRF`` must be True.')
         self.compute_MoRF = compute_MoRF
         self.compute_LeRF = compute_LeRF
         self.evaluate_lime = False
@@ -92,24 +110,24 @@ class Perturbation(InterpreterEvaluator):
         Note that LIME produces explanations based on superpixels, the number of perturbed samples is originally equal
         to the number of superpixels. So if ``limit_number_generated_samples`` is None, then the number of superpixels
         is used. For other explanations that produce the explanation of the same spatial dimension as the input image,
-        ``limit_number_generated_samples`` is set to 20 if ``limit_number_generated_samples`` is not given.
+        ``limit_number_generated_samples`` is set to ``20`` if not given.
 
         Args:
             img_path (str): a string for image path.
-            explanation (listornp.ndarray): the explanation result from an interpretation algorithm.
-            batch_size (intorNone, optional): batch size for each pass. Defaults to None.
-            resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`.
-                Defaults to 224.
-            crop_to (int, optional): [description]. After resize, images will be center cropped to a square image with
-                the size `crop_to`. If None, no crop will be performed. Defaults to None.
-            limit_number_generated_samples (intorNone, optional): a maximum value for samples of perturbation. If None,
-                it will be automatically chosen. The number of superpixels is used for LIME explanations, otherwise, 
-                20 is to be set. Defaults to None.
+            explanation (list or np.ndarray): the explanation result from an interpretation algorithm.
+            batch_size (int or None, optional): batch size for each pass. Defaults to ``None``.
+            resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
+                ``224``.
+            crop_to (int, optional): After resize, images will be center cropped to a square image with the size 
+                ``crop_to``. If None, no crop will be performed. Defaults to ``None``.
+            limit_number_generated_samples (int or None, optional): a maximum value for samples of perturbation. If 
+                None, it will be automatically chosen. The number of superpixels is used for LIME explanations, 
+                otherwise, ``20`` is to be set. Defaults to ``None``.
 
         Returns:
-            dict: {'MoRF_score': float, 'MoRF_probas': list of float, 'MoRF_images': list of np.ndarray,
-                'LeRF_score': float, 'LeRF_probas': float, 'LeRF_images': list of np.ndarray}, if 
-                compute_MoRF and compute_LeRF are both True.
+            dict: 
+                A dict containing ``'MoRF_score'``, ``'MoRF_probas'``, ``'MoRF_images'``, ``'LeRF_score'``, 
+                ``'LeRF_probas'`` and ``'LeRF_images'``, if ``compute_MoRF`` and ``compute_LeRF`` are both True.
         """
 
         if not isinstance(explanation, np.ndarray):

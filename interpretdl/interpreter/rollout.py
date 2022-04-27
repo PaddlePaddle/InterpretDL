@@ -21,20 +21,21 @@ class RolloutInterpreter(IntermediateLayerInterpreter):
         """
 
         Args:
-            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
-            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc.
         """
         IntermediateLayerInterpreter.__init__(self, paddle_model, device, use_cuda)
 
     def interpret(self,
                   inputs: str or list(str) or np.ndarray,
                   start_layer: int = 0,
+                  attention_layer_pattern: str = '^blocks.*.attn.attn_drop$',
                   resize_to: int = 224,
                   crop_to: int or None = None,
-                  attention_layer_pattern: str = '^blocks.*.attn.attn_drop$',
                   visual: bool = True,
                   save_path: str or None = None):
-        """
+        """        
         Given ``inputs``, RolloutInterpreter obtains all attention maps (of layers whose name matches 
         ``attention_layer_pattern``) and calculates their matrix multiplication. The ``start_layer`` controls the
         number of involved layers.
@@ -42,19 +43,20 @@ class RolloutInterpreter(IntermediateLayerInterpreter):
         Args:
             inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy 
                 array of read images.
-            labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels 
-                should be equal to the number of images. If None, the most likely label for each image will be used. 
-                Default: None
-            resize_to (int, optional): [description]. Images will be rescaled with the shorter edge being `resize_to`.
-                Defaults to 224.
-            crop_to ([type], optional): [description]. After resize, images will be center cropped to a square image 
-                with the size `crop_to`. If None, no crop will be performed. Defaults to None.
-            visual (bool, optional): Whether or not to visualize the processed image. Default: True
-            save_path (str or list of strs or None, optional): The filepath(s) to save the processed image(s). If None,
-                the image will not be saved. Default: None
+            start_layer (int, optional): The index of the start layer involving the computation of attentions. Defaults
+                to ``0``.
+            attention_layer_pattern (str, optional): the string pattern to pick the layers that match the pattern. 
+                Defaults to ``^blocks.*.attn.attn_drop$``.
+            resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
+                ``224``.
+            crop_to (int, optional): After resize, images will be center cropped to a square image with the size 
+                ``crop_to``. If None, no crop will be performed. Defaults to ``None``.
+            visual (bool, optional): Whether or not to visualize the processed image. Default: ``True``.
+            save_path (str, optional): The filepath(s) to save the processed image(s). If None, the image will not be 
+                saved. Default: ``None``.
 
         Returns:
-            [numpy.ndarray]: interpretations/heatmap for images
+            [np.ndarray]: interpretations/heatmap for images.
         """
 
         imgs, data = images_transform_pipeline(inputs, resize_to, crop_to)

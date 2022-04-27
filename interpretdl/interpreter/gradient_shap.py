@@ -23,8 +23,9 @@ class GradShapCVInterpreter(InputGradientInterpreter):
         """
         
         Args:
-            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
-            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc.
         """
         InputGradientInterpreter.__init__(self, paddle_model, device, use_cuda)
 
@@ -40,25 +41,26 @@ class GradShapCVInterpreter(InputGradientInterpreter):
                   save_path: str = None) -> np.ndarray:
         """The technical details of the GradShap method are described as follows:
         GradShap generates ``n_samples`` noised inputs, with the noise scale of ``noise_amount``, and then computes 
-        the gradients w.r.t. these noised inputs. A difference between ``baselines`` and noised inputs is considered.
+        the gradients *w.r.t.* these noised inputs. A difference between ``baselines`` and noised inputs is considered.
         The final explanation is the multiplication between the gradients and the difference to ``baselines``.
 
         Args:
-            inputs (strorlist): The input image filepath or a list of filepaths or numpy array of read images.
-            labels (listornp.ndarray, optional): The target labels to analyze. The number of labels should be equal to 
-                the number of images. If None, the most likely label for each image will be used. Default: None
+            inputs (str or list): The input image filepath or a list of filepaths or numpy array of read images.
+            labels (list or np.ndarray, optional): The target labels to analyze. The number of labels should be equal 
+                to the number of images. If None, the most likely label for each image will be used. Default: ``None``.
             baselines (np.ndarray, optional): The baseline images to compare with. It should have the same shape as 
                 images and same length as the number of images. If None, the baselines of all zeros will be used. 
-                Default: None.
-            n_samples (int, optional): The number of randomly generated samples. Defaults to 5.
+                Default: ``None``.
+            n_samples (int, optional): The number of randomly generated samples. Defaults to ``5``.
             noise_amount (float, optional): Noise level of added noise to each image. The std of Gaussian random noise
-                is noise_amount * (x_max - x_min). Default: 0.1
-            resize_to (int, optional): Images will be rescaled with the shorter edge being `resize_to`. Defaults to 224.
-            crop_to (_type_, optional): After resize, images will be center cropped to a square image with the size 
-                `crop_to`. If None, no crop will be performed. Defaults to None.
-            visual (bool, optional): Whether or not to visualize the processed image. Default: True.
-            save_path (_type_, optional): The filepath(s) to save the processed image(s). If None, the image will not be
-                saved. Default: None
+                is ``noise_amount`` * (x :sub:`max` - x :sub:`min`). Default: ``0.1``.
+            resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
+                ``224``.
+            crop_to (int, optional): After resize, images will be center cropped to a square image with the size 
+                ``crop_to``. If None, no crop will be performed. Defaults to ``None``.
+            visual (bool, optional): Whether or not to visualize the processed image. Default: ``True``.
+            save_path (str, optional): The filepath(s) to save the processed image(s). If None, the image will not be 
+                saved. Default: ``None``.
 
         Returns:
             np.ndarray: the explanation result.
@@ -135,9 +137,10 @@ class GradShapNLPInterpreter(Interpreter):
         """
         
         Args:
-            paddle_model (callable): A model with ``forward`` and possibly ``backward`` functions.
-            device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-        """        
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc.
+        """
         Interpreter.__init__(self, paddle_model, device, use_cuda)
 
     def interpret(self,
@@ -152,16 +155,16 @@ class GradShapNLPInterpreter(Interpreter):
 
         Args:
             data (tupleornp.ndarray): The inputs to the NLP model.
-            labels (listornp.ndarray, optional): The target label to analyze. If None, the most likely label will be used. 
-                Default: None.
-            n_samples (int, optional): The number of randomly generated samples. Defaults to 5.
+            labels (listornp.ndarray, optional): The target label to analyze. If None, the most likely label will be 
+                used. Default: ``None``.
+            n_samples (int, optional): The number of randomly generated samples. Defaults to ``5``.
             noise_amount (float, optional): Noise level of added noise to the embeddings. The std of Gaussian random
-                noise is ``noise_amount * embedding.mean() * (x_max - x_min)``. Default: 0.1
+                noise is ``noise_amount`` * ``embedding.mean()`` * (x :sub:`max` - x :sub:`min`). Default: ``0.1``.
             embedding_name (str, optional): name of the embedding layer at which the noises will be applied. 
-                The name of embedding can be verified through ``print(model)``. Defaults to 'word_embeddings'. 
+                The name of embedding can be verified through ``print(model)``. Defaults to ``word_embeddings``. 
             return_pred (bool, optional): Whether or not to return predicted labels and probabilities. 
                 If True, a tuple of predicted labels, probabilities, and interpretations will be returned.
-                There are useful for visualization. Else, only interpretations will be returned. Default: True.
+                There are useful for visualization. Else, only interpretations will be returned. Default: ``True``.
 
         Returns:
             np.ndarray or tuple: explanations, or (explanations, pred).

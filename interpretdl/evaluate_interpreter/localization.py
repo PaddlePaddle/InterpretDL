@@ -46,19 +46,20 @@ class PointGame():
         """
         Since the explanation is actually a ranking order, PointGame computes two categories of measures. One is based
         on thresholding. Here, ``threshold`` * max(``exp_array``) is used as the threshold. Based on this, precision,
-        recall and F1 score are computed, w.r.t. ``bbox``. Another measure does not depend on the threshold. Here, the
-        ROC AUC score and the Average Precision (both of them are imported from sklearn.metrics) are computed.
+        recall and F1 score are computed, *w.r.t.* ``bbox``. Another measure does not depend on the threshold. Here, 
+        the ROC AUC score and the Average Precision (both of them are imported from :py:mod:`sklearn.metrics`) are 
+        computed.
 
         Args:
             bbox (tuple): A tuple of four integers: (x1, y1, x2, y2), where (x1, y1) is the coordinates of the top-left
-                point w.r.t. width and height respectively; (x2, y2) is the coordinates of the bottom-right point 
-                w.r.t. width and height respectively;
+                point *w.r.t.* width and height respectively; (x2, y2) is the coordinates of the bottom-right point 
+                *w.r.t.* width and height respectively;
             exp_array (np.ndarray): the explanation result from an interpretation algorithm.
-            threshold (float, optional): threshold for computing precision, recall and F1 score. Defaults to 0.25.
+            threshold (float, optional): threshold for computing precision, recall and F1 score. Defaults to ``0.25``.
 
         Returns:
-            dict: containing 'precision', 'recall', 'f1_score' and 'auc_score', 'ap_score', where the first three 
-                depend on the threshold and the last two do not.
+            dict: A dict containing ``precision``, ``recall``, ``f1_score`` and ``auc_score``, ``ap_score``, where the 
+            first three depend on the threshold and the last two do not.
         """
 
         gt = np.zeros_like(exp_array, dtype=np.uint8)
@@ -99,18 +100,18 @@ class PointGameSegmentation():
         """        
         Since the explanation is actually a ranking order, PointGameSegmentation computes two categories of measures.
         One is based on thresholding. Here, ``threshold`` * max(``exp_array``) is used as the threshold. Based on this,
-        precision, recall and F1 score are computed, w.r.t. ``seg_gt``. Another measure does not depend on the 
-        threshold. Here, the ROC AUC score and the Average Precision (both of them are imported from sklearn.metrics) 
-        are computed.
+        precision, recall and F1 score are computed, *w.r.t.* ``seg_gt``. Another measure does not depend on the 
+        threshold. Here, the ROC AUC score and the Average Precision (both of them are imported from 
+        :py:mod:`sklearn.metrics`) are computed.
 
         Args:
             seg_gt (np.ndarray): binary values are supported only currently.
             exp_array (np.ndarray): the explanation result from an interpretation algorithm.
-            threshold (float, optional): threshold for computing precision, recall and F1 score. Defaults to 0.25.
+            threshold (float, optional): threshold for computing precision, recall and F1 score. Defaults to ``0.25``.
 
         Returns:
-            dict: containing 'precision', 'recall', 'f1_score' and 'auc_score', 'ap_score', where the first three 
-                depend on the threshold and the last two do not.
+            dict: A dict containing ``precision``, ``recall``, ``f1_score`` and ``auc_score``, ``ap_score``, where the 
+            first three depend on the threshold and the last two do not.
         """
         gt = seg_gt
 

@@ -18,17 +18,15 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
     More details regarding the NormLIME method can be found in the original paper:
     https://arxiv.org/abs/1909.04200.
 
-    Args:
-        paddle_model (_type_): 
-            A user-defined function that gives access to model predictions.
-            It takes the following arguments:
-            - data: Data inputs.
-            and outputs predictions.
-        device (str, optional): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.
-        use_cuda (_type_, optional): Would be deprecated soon. Use ``device`` directly.    
     """
 
-    def __init__(self, paddle_model, device='gpu:0', use_cuda=None):
+    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None):
+        """
+
+        Args:
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` etc.
+        """
 
         LIMECVInterpreter.__init__(self, paddle_model, use_cuda=use_cuda, device=device)
         self.lime_interpret = super().interpret
@@ -186,16 +184,15 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
     More details regarding the NormLIME method can be found in the original paper:
     https://arxiv.org/abs/1909.04200.
 
-    Args:
-        paddle_model (callable): A user-defined function that gives access to model predictions.
-                It takes the following arguments:
-
-                - data: Data inputs.
-                and outputs predictions. See the example at the end of ``interpret()``.
-        device (str): The device used for running `paddle_model`, options: ``cpu``, ``gpu:0``, ``gpu:1`` etc.    
     """
 
     def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None):
+        """
+
+        Args:
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` etc.
+        """
         LIMENLPInterpreter.__init__(self, paddle_model, device, use_cuda)
         self.lime_interpret = super().interpret
 
