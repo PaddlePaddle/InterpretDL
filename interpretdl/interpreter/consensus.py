@@ -39,7 +39,7 @@ class ConsensusInterpreter(object):
         gradient based algorithms is average of the absolute values.
 
         We leave the visualization to users. 
-        See https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials/consensus_tutorial_cv.ipynb for an 
+        See https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials/example_consensus_cv.ipynb for an 
         example.
 
         .. code-block:: python

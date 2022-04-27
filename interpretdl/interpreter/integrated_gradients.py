@@ -196,7 +196,7 @@ class IntGradNLPInterpreter(Interpreter):
 
         # Visualization is currently not supported here.
         # See the tutorial for more information:
-        # https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2-tutorials.ipynb
+        # https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2.ipynb
 
         return ig_gradients
 

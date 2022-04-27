@@ -15,8 +15,8 @@ class LRPCVInterpreter(Interpreter):
     local propagation rules.
 
     Note that LRP requires ``paddle_model`` have ``relprop`` and related implementations, see the lrp_model in the 
-    tutorial. This is different from other interpreters, which do not have additional requirements for 
-    ``paddle_model``.
+    [tutorial/assets/lrp_model](https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials/assets/lrp_model). 
+    This is different from other interpreters, which do not have additional requirements for ``paddle_model``.
 
     More details regarding the LRP method can be found in the original paper:
     https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140.

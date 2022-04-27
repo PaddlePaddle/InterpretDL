@@ -25,35 +25,26 @@ For researchers working on designing new interpretation algorithms, InterpretDL 
 
 # :fire: :fire: :fire: News :fire: :fire: :fire:
 
+- (2022/04/27) A getting-started tutorial is provided. Check it from [GitHub](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/Getting_Started.ipynb) or [NBViewer](https://nbviewer.org/github/PaddlePaddle/InterpretDL/blob/master/tutorials/Getting_Started.ipynb). Usage examples have been provided for each algorithm (both Interpreter and Evaluator). We are currently preparing tutorials for easy usages of InterpretDL. Both tutorials and examples can be assessed under the [tutorial](https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials) folder.
 
-- (2022/01/06) Implmented the Cross-Model Consensus Explanation method. In brief, this method averages the explanation results from several models. Instead of interpreting individual models, this method is able to identify the discriminative features in the input data with accurate localization. See the [paper](https://arxiv.org/abs/2109.00707) for details.
+- (2022/01/06) Implemented the Cross-Model Consensus Explanation method. In brief, this method averages the explanation results from several models. Instead of interpreting individual models, this method is able to identify the discriminative features in the input data with accurate localization. See the [paper](https://arxiv.org/abs/2109.00707) for details.
 
   * `Consensus`: Xuhong Li, Haoyi Xiong, Siyu Huang, Shilei Ji, Dejing Dou. Cross-Model Consensus of Explanations and Beyond for Image Classification Models: An Empirical Study. arXiv:2109.00707.
 
-We show a demo with four models, while more models (around 15) could give a much better result. See the [tutorial](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/consensus_tutorial_cv.ipynb) for details.
+We show a demo with four models, while more models (around 15) could give a much better result. See the [example](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_consensus_cv.ipynb) for details.
 
 ![Consensus Result](https://user-images.githubusercontent.com/13829174/148335027-8d9de3cd-29fa-4fbb-bede-84c2cbf9bbd9.png)
-
-
-- (2021/10/20) Implemented the Transition Attention Maps (TAM) explanation method for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/model_zoo/vision_transformer.py). As always, several lines call this interpreter. See details from the [tutorial notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ViT_explanations_tam.ipynb), and the [paper](https://openreview.net/forum?id=TT-cf6QSDaQ):
-
-  * `TAM`: Tingyi Yuan, Xuhong Li, Haoyi Xiong, Hui Cao, Dejing Dou. Explaining Information Flow Inside Vision Transformers Using Markov Chain. In *Neurips 2021 XAI4Debugging Workshop*. 
-
-| image | elephant | zebra |
-:-----------:|:-----------:|:-----------:
-![image](https://user-images.githubusercontent.com/13829174/139223230-66094dbf-cbc8-450c-acd8-0c0ec40c5fef.png) | ![elephant](https://user-images.githubusercontent.com/13829174/138049903-8106d879-3c70-437b-a580-cf8e9c17f974.png) | ![zebra](https://user-images.githubusercontent.com/13829174/138049895-6d52b97d-c4fd-40da-be88-f5c956cb9fcb.png)
-
 
 # Demo
 
 Interpretation algorithms give a hint of why a black-box model makes its decision.
 
 The following table gives visualizations of several interpretation algorithms applied to the original image to tell us why the model predicts "bull_mastiff."
-| Original Image | IntGrad ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/int_grad_tutorial_cv.ipynb)) | SG ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/smooth_grad_tutorial_cv.ipynb)) | LIME ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/lime_tutorial_cv.ipynb)) | Grad-CAM ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/grad_cam_tutorial_cv.ipynb)) |
+| Original Image | IntGrad ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_int_grad_cv.ipynb)) | SG ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_smooth_grad_cv.ipynb)) | LIME ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_lime_cv.ipynb)) | Grad-CAM ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_grad_cam_cv.ipynb)) |
 :-----------:|:-----------:|:-----------:|:-----------:|:-----------:
 ![](imgs/catdog.jpg)|![](imgs/catdog_ig_overlay.jpeg)|![](imgs/catdog_sg_overlay.jpeg)|![](imgs/catdog_lime_overlay.jpeg)|![](imgs/catdog_gradcam_overlay.jpeg)
 
-For sentiment classfication task, the reason why a model gives positive/negative predictions can be visualized as follows. A quick demo can be found [here](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2-tutorials.ipynb). Samples in Chinese are also available [here](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-1.0-zh-chnsenticorp-tutorials.ipynb).
+For sentiment analysis task, the reason why a model gives positive/negative predictions can be visualized as follows. A quick demo can be found [here](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2.ipynb). Samples in Chinese are also available [here](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-1.0-zh-chnsenticorp.ipynb).
 
 ![](imgs/sentiment-en.png)
 
@@ -68,12 +59,13 @@ For sentiment classfication task, the reason why a model gives positive/negative
 - [Installation](#installation)
   - [Pip installation](#pip-installation)
   - [Developer installation](#developer-installation)
+  - [Unit Tests](#unit-tests)
 - [Documentation](#documentation)
-- [Usage Guideline](#usage-guideline)
+- [Getting Started](#getting-started)
+- [Examples and Tutorials](#examples-and-tutorials)
 - [Roadmap](#roadmap)
   - [Implemented Algorithms with Taxonomy](#implemented-algorithms-with-taxonomy)
   - [Implemented Trustworthiness Evaluation Algorithms](#implemented-trustworthiness-evaluation-algorithms)
-- [Examples and Tutorials](#examples-and-tutorials)
 - [Presentations](#presentations)
 - [References of Algorithms](#references-of-algorithms)
 - [Copyright and License](#copyright-and-license)
@@ -102,7 +94,7 @@ cd InterpretDL && pip install -e .
 yapf -i <python_file_path>  # code style: column_limit=120
 ```
 
-### Unit Tests
+## Unit Tests
 
 ```bash
 # run gradcam unit tests
@@ -124,7 +116,7 @@ make html
 open _build/html/index.html
 ```
 
-# Usage Guideline
+# Getting Started
 
 All interpreters inherit the abstract class [`Interpreter`](https://github.com/PaddlePaddle/InterpretDL/blob/4f7444160981e99478c26e2a52f8e40bd06bf644/interpretdl/interpreter/abc_interpreter.py), of which `interpret(**kwargs)` is the function to call.
 
@@ -138,7 +130,15 @@ sg = it.SmoothGradInterpreter(paddle_model, use_cuda=True)
 gradients = sg.interpret("test.jpg", visual=True, save_path=None)
 ```
 
-Details of the usage can be found under [tutorials](https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials) folder.
+A quick [Getting-Started tutorial]((https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/Getting_Started.ipynb)) is provided. It takes only a few minutes to be familiar with InterpretDL.
+
+# Examples and Tutorials
+
+We have provided at least one example for each interpretation algorithm and each trustworthiness evaluation algorithm, hopefully covering applications for both CV and NLP.
+
+We are currently preparing tutorials for easy usages of InterpretDL.
+
+Both examples and tutorials can be accessed under [tutorials](https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials) folder.
 
 # Roadmap
 
@@ -165,7 +165,7 @@ Two dimensions (representations of explanation results and types of the target m
 | [Rollout](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/rollout.py)                         | Intermediate Features | Specific: Transformers                         |
 | [TAM](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/transition_attention_maps.py)                             | Intermediate Features | Specific: Transformers                         |
 | [ForgettingEvents](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/forgetting_events.py)                | Dataset-Level         | Differentiable                                 |
-| [TIDY (Training Data Analyzer)](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/TIDY_tutorial.ipynb) | Dataset-Level         | Differentiable                                 |
+| [TIDY (Training Data Analyzer)](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/TIDY.ipynb) | Dataset-Level         | Differentiable                                 |
 | [Consensus](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/consensus.py)                       | Features              | Cross-Model                                    |
 
 \* LRP requires that the model is of specific implementations for relevance back-propagation.
@@ -187,13 +187,6 @@ Two dimensions (representations of explanation results and types of the target m
 * Evaluations
   - [ ] Local Fidelity
   - [ ] Sensitivity
-
-# Examples and Tutorials
-
-We plan to provide at least one example for each interpretation algorithm, and hopefully cover applications for both CV and NLP.
-
-Current tutorials can be accessed under [tutorials](https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials) folder.
-
 
 # Presentations
 **Linux Foundation Project AI & Data** -- Interpretable Deep Learning: Interpretation, Interpretability, Trustworthiness, and Beyond. [Video Link](https://wiki.lfaidata.foundation/download/attachments/7733341/GMT20220324-130226_Recording_3840x2160.mp4?version=1&modificationDate=1649079184753&api=v2) (00:20:30 -- 00:45:00).
@@ -229,7 +222,7 @@ InterpretDL is provided under the [Apache-2.0 license](https://github.com/Paddle
 # Recent News
 
 
-- (2021/10/20) Implemented the Transition Attention Maps (TAM) explanation method for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/model_zoo/vision_transformer.py). As always, several lines call this interpreter. See details from the [tutorial notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ViT_explanations_tam.ipynb), and the [paper](https://openreview.net/forum?id=TT-cf6QSDaQ):
+- (2021/10/20) Implemented the Transition Attention Maps (TAM) explanation method for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/model_zoo/vision_transformer.py). As always, several lines call this interpreter. See details from the [example](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_tam_cv_ViT.ipynb), and the [paper](https://openreview.net/forum?id=TT-cf6QSDaQ):
 
   * `TAM`: Tingyi Yuan, Xuhong Li, Haoyi Xiong, Hui Cao, Dejing Dou. Explaining Information Flow Inside Vision Transformers Using Markov Chain. In *Neurips 2021 XAI4Debugging Workshop*. 
 
@@ -266,7 +259,7 @@ heatmap = tam.interpret(
 
 
 
-- (2021/07/22) Implemented Rollout Explanations for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/model_zoo/vision_transformer.py). See the [notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ViT_explanations_rollout.ipynb) for the visualization.
+- (2021/07/22) Implemented Rollout Explanations for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/model_zoo/vision_transformer.py). See the [notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_rollout_cv_ViT.ipynb) for the visualization.
 
 ```python
 import paddle

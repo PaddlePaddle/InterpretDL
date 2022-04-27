@@ -26,22 +26,15 @@ InterpretDL(全称*interpretations of deep learning models*), 是基于[飞桨](
 
 # :fire: :fire: :fire: News :fire: :fire: :fire:
 
+- (2022/04/27) 除了已提供的每个算法的具体使用案例，新增一个快速上手教程：可从 [GitHub](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/Getting_Started.ipynb) 或者 [NBViewer](https://nbviewer.org/github/PaddlePaddle/InterpretDL/blob/master/tutorials/Getting_Started.ipynb) 查看。我们也在准备更多的教程以方便InterpretDL的用户使用。教程和使用案例均可以在 [tutorial](https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials) 目录下查看。 
+
 - (2022/01/06) 新增 Cross-Model Consensus Explanation 算法. 简单来说，这个可解释性算法将多个模型的解释结果进行平均，来定位数据中最具代表性的特征，并且定位的精度相比单个模型的结果更为准确。更多细节请查看[文章](https://arxiv.org/abs/2109.00707)。
 
   * `Consensus`: Xuhong Li, Haoyi Xiong, Siyu Huang, Shilei Ji, Dejing Dou. Cross-Model Consensus of Explanations and Beyond for Image Classification Models: An Empirical Study. arXiv:2109.00707.
 
-我们准备了一个简单的demo，用了4个模型进行平均，原文中建议用15个以上的模型进行解释，可以得到一个更好的结果。实现代码可以参考[tutorial](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/consensus_tutorial_cv.ipynb)。
+我们准备了一个简单的demo，用了4个模型进行平均，原文中建议用15个以上的模型进行解释，可以得到一个更好的结果。实现代码可以参考[使用案例](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_consensus_cv.ipynb)。
 
 ![Consensus Result](https://user-images.githubusercontent.com/13829174/148335027-8d9de3cd-29fa-4fbb-bede-84c2cbf9bbd9.png)
-
-- (2021/10/20) 新增 Transition Attention Maps (TAM) 算法，专门针对PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/model_zoo/vision_transformer.py) 进行解释。一如往常，几行代码即可调用！ 详情查看 [tutorial notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ViT_explanations_tam.ipynb), 以及 [paper](https://openreview.net/forum?id=TT-cf6QSDaQ):
-
-  * `TAM`: Tingyi Yuan, Xuhong Li, Haoyi Xiong, Hui Cao, Dejing Dou. Explaining Information Flow Inside Vision Transformers Using Markov Chain. In *Neurips 2021 XAI4Debugging Workshop*. 
-
-| image | elephant | zebra |
-:-----------:|:-----------:|:-----------:
-![image](https://user-images.githubusercontent.com/13829174/139223230-66094dbf-cbc8-450c-acd8-0c0ec40c5fef.png) | ![elephant](https://user-images.githubusercontent.com/13829174/138049903-8106d879-3c70-437b-a580-cf8e9c17f974.png) | ![zebra](https://user-images.githubusercontent.com/13829174/138049895-6d52b97d-c4fd-40da-be88-f5c956cb9fcb.png)
-
 
 # Demo
 
@@ -49,11 +42,11 @@ InterpretDL(全称*interpretations of deep learning models*), 是基于[飞桨](
 
 下表是使用一些可解释性算法对原始图片的可视化展示，告诉我们为什么模型做出了"bull_mastiff"的预测。
 
-| Original Image | IntGrad ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/int_grad_tutorial_cv.ipynb)) | SG ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/smooth_grad_tutorial_cv.ipynb)) | LIME ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/lime_tutorial_cv.ipynb)) | Grad-CAM ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/grad_cam_tutorial_cv.ipynb)) |
+| Original Image | IntGrad ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_int_grad_cv.ipynb)) | SG ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_smooth_grad_cv.ipynb)) | LIME ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_lime_cv.ipynb)) | Grad-CAM ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_grad_cam_cv.ipynb)) |
 :-----------:|:-----------:|:-----------:|:-----------:|:-----------:
 ![](imgs/catdog.jpg)|![](imgs/catdog_ig_overlay.jpeg)|![](imgs/catdog_sg_overlay.jpeg)|![](imgs/catdog_lime_overlay.jpeg)|![](imgs/catdog_gradcam_overlay.jpeg)
 
-文本情感分类任务中模型给出积极或消极预测的原因也可以被可视化。 这里是[demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2-tutorials.ipynb). 对中文的样本数据也同样适用。 这里是[demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-1.0-zh-chnsenticorp-tutorials.ipynb).
+文本情感分类任务中模型给出积极或消极预测的原因也可以被可视化。 这里是[demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2.ipynb). 对中文的样本数据也同样适用。 这里是[demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-1.0-zh-chnsenticorp.ipynb).
 
 ![](imgs/sentiment-en.png)
 
@@ -219,7 +212,7 @@ InterpretDL 基于 [Apache-2.0 license](https://github.com/PaddlePaddle/Interpre
 
 
 
-- (2021/10/20) 新增 Transition Attention Maps (TAM) explanation method for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/model_zoo/vision_transformer.py). 一如往常，几行代码即可调用！ 详情查看 [tutorial notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ViT_explanations_tam.ipynb), 以及 [paper](https://openreview.net/forum?id=TT-cf6QSDaQ):
+- (2021/10/20) 新增 Transition Attention Maps (TAM) explanation method for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/model_zoo/vision_transformer.py). 一如往常，几行代码即可调用！ 详情查看 [使用案例](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_tam_cv_ViT.ipynb), 以及 [paper](https://openreview.net/forum?id=TT-cf6QSDaQ):
 
   * `TAM`: Tingyi Yuan, Xuhong Li, Haoyi Xiong, Hui Cao, Dejing Dou. Explaining Information Flow Inside Vision Transformers Using Markov Chain. In *Neurips 2021 XAI4Debugging Workshop*. 
 
@@ -255,7 +248,7 @@ heatmap = tam.interpret(
 ![image](https://user-images.githubusercontent.com/13829174/139223230-66094dbf-cbc8-450c-acd8-0c0ec40c5fef.png) | ![elephant](https://user-images.githubusercontent.com/13829174/138049903-8106d879-3c70-437b-a580-cf8e9c17f974.png) | ![zebra](https://user-images.githubusercontent.com/13829174/138049895-6d52b97d-c4fd-40da-be88-f5c956cb9fcb.png)
 
 
-- (2021/07/22) 新增 Rollout Explanations for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/model_zoo/vision_transformer.py). 点击 [notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ViT_explanations_rollout.ipynb) 浏览可视化结果。
+- (2021/07/22) 新增 Rollout Explanations for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/model_zoo/vision_transformer.py). 点击 [notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_rollout_cv_ViT.ipynb) 浏览可视化结果。
 
 ```python
 import paddle
