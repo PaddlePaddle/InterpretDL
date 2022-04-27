@@ -67,7 +67,7 @@ class Interpreter(ABC):
         raise NotImplementedError
 
     def _build_predict_fn(self, **kwargs):
-        """ Build self.predict_fn for interpreters. This will be called by interpret(). """
+        """ Build :py:attr:`predict_fn` for interpreters. This will be called by :py:meth:`interpret`. """
         raise NotImplementedError
 
     def _paddle_env_setup(self):
