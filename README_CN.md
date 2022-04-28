@@ -32,9 +32,9 @@ InterpretDL(全称*interpretations of deep learning models*), 是基于[飞桨](
 
   * `Consensus`: Xuhong Li, Haoyi Xiong, Siyu Huang, Shilei Ji, Dejing Dou. Cross-Model Consensus of Explanations and Beyond for Image Classification Models: An Empirical Study. arXiv:2109.00707.
 
-我们准备了一个简单的demo，用了4个模型进行平均，原文中建议用15个以上的模型进行解释，可以得到一个更好的结果。实现代码可以参考[使用案例](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_consensus_cv.ipynb)。
+我们准备了一个简单的demo，用了6个模型进行平均，原文中建议用15个以上的模型进行解释，可以得到一个更好的结果。实现代码可以参考[使用案例](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_consensus_cv.ipynb)。
 
-![Consensus Result](https://user-images.githubusercontent.com/13829174/148335027-8d9de3cd-29fa-4fbb-bede-84c2cbf9bbd9.png)
+![Consensus Result](https://user-images.githubusercontent.com/13829174/165700043-1c680494-8573-4b4a-a2d6-74ea3d14f214.png)
 
 # Demo
 

@@ -31,9 +31,9 @@ For researchers working on designing new interpretation algorithms, InterpretDL 
 
   * `Consensus`: Xuhong Li, Haoyi Xiong, Siyu Huang, Shilei Ji, Dejing Dou. Cross-Model Consensus of Explanations and Beyond for Image Classification Models: An Empirical Study. arXiv:2109.00707.
 
-We show a demo with four models, while more models (around 15) could give a much better result. See the [example](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_consensus_cv.ipynb) for details.
+We show a demo with six models (the last column shows the consensus explanation), while more models (around 15) could give a much better result. See the [example](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_consensus_cv.ipynb) for more details.
 
-![Consensus Result](https://user-images.githubusercontent.com/13829174/148335027-8d9de3cd-29fa-4fbb-bede-84c2cbf9bbd9.png)
+![Consensus Result](https://user-images.githubusercontent.com/13829174/165700043-1c680494-8573-4b4a-a2d6-74ea3d14f214.png)
 
 # Demo
 
