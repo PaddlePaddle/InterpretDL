@@ -15,13 +15,14 @@ from .lrp import LRPCVInterpreter
 from .rollout import RolloutInterpreter
 from .transition_attention_maps import TAMInterpreter
 from .consensus import ConsensusInterpreter
+from .generic_attention import GAInterpreter
 
 __all__ = [
     "Interpreter", "InputGradientInterpreter", "InputOutputInterpreter", "IntermediateLayerInterpreter",
     "LIMECVInterpreter", "LIMENLPInterpreter", "GradCAMInterpreter", "IntGradCVInterpreter", "IntGradNLPInterpreter",
     "SmoothGradInterpreter", "OcclusionInterpreter", "GradShapCVInterpreter", "GradShapNLPInterpreter",
     "ScoreCAMInterpreter", "LRPCVInterpreter", "RolloutInterpreter", "TAMInterpreter", "SmoothGradInterpreterV2",
-    'ConsensusInterpreter'
+    'ConsensusInterpreter', 'GAInterpreter'
 ]
 
 try:

@@ -26,6 +26,7 @@ Interpretation Algorithms:
 | [ForgettingEvents](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/forgetting_events.py)   | Dataset-Level           | Differentiable         | [link](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_forgetting_events_cv.ipynb) |
 | [TIDY (Training Data Analyzer)](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/TIDY.ipynb)              | Dataset-Level           | Differentiable         | [link](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/TIDY.ipynb) |
 | [Consensus](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/consensus.py)                  | Features                | Cross-Model            | [link](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_consensus_cv.ipynb)  |
+| [Generic Attention](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/generic_attention.py)                  | Input Features                | Specific: Bi-Modal Transformers            | [link](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_ga_bi-modal.ipynb)  |
 
 Trustworthiness Evaluation Algorithms:
 
