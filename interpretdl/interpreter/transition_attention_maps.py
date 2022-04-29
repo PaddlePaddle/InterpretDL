@@ -43,7 +43,7 @@ class TAMInterpreter(Interpreter):
         """
         Given ``inputs``, TAMInterpreter obtains all attention maps (of layers whose name matches 
         ``attention_layer_pattern``) and calculates their matrix multiplication. The ``start_layer`` controls the
-        number of involved layers. The order of involving attention maps (from last layer to the first) is is different
+        number of involved layers. The order of involving attention maps (from last layer to the first) is different
         from Rollout (from first to last). Then, an integrated gradients with ``steps`` is computed and multiplied to 
         the attention result.
 
