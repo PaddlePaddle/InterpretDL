@@ -74,3 +74,9 @@ NormLIME
 
 .. autoclass:: interpretdl.NormLIMENLPInterpreter
   :members:
+
+Generic Attention
+------------------
+
+.. autoclass:: interpretdl.GAInterpreter
+   :members:
