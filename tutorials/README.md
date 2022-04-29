@@ -26,7 +26,9 @@ Interpretation Algorithms:
 | [ForgettingEvents](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/forgetting_events.py)   | Dataset-Level           | Differentiable         | [link](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_forgetting_events_cv.ipynb) |
 | [TIDY (Training Data Analyzer)](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/TIDY.ipynb)              | Dataset-Level           | Differentiable         | [link](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/TIDY.ipynb) |
 | [Consensus](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/consensus.py)                  | Features                | Cross-Model            | [link](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_consensus_cv.ipynb)  |
-| [Generic Attention](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/generic_attention.py)                  | Input Features                | Specific: Bi-Modal Transformers            | [link](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_ga_bi-modal.ipynb)  |
+| [Generic Attention](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/generic_attention.py)                  | Input Features                | Specific: Bi-Modal Transformers            | [link](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_ga_bi-modal.ipynb)  ([nblink](https://nbviewer.org/github/PaddlePaddle/InterpretDL/blob/master/tutorials/example_ga_bi-modal.ipynb))*|
+
+\* For text visualizations, NBViewer gives better and colorful rendering results. 
 
 Trustworthiness Evaluation Algorithms:
 
@@ -51,7 +53,7 @@ The available (and planning) tutorials are listed below:
 [Bert in English](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/bert-en-sst-2.ipynb) ([on NBViewer](https://nbviewer.org/github/PaddlePaddle/InterpretDL/blob/master/tutorials/bert-en-sst-2.ipynb)), 
 [BiLSTM in Chinese](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/bilstm-zh-chnsenticorp.ipynb) ([on NBViewer](https://nbviewer.org/github/PaddlePaddle/InterpretDL/blob/master/tutorials/bilstm-zh-chnsenticorp.ipynb)) and 
 [Ernie1.0 in Chinese](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-1.0-zh-chnsenticorp.ipynb) ([on NBViewer](https://nbviewer.org/github/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-1.0-zh-chnsenticorp.ipynb))
-as examples. For text visualizations, NBViewer gives better rendering results.
+as examples. For text visualizations, NBViewer gives better and colorful rendering results.
 
 - Input Gradient Interpreters (to appear). This tutorial introduces the input gradient based interpretation algorithms.
 

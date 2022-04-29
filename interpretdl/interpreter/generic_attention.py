@@ -73,7 +73,7 @@ class GAInterpreter(InputGradientInterpreter):
                 saved. Default: ``None``.
 
         Returns:
-            tuple: _description_
+            tuple: (text_relevance: np.ndarray, image_relevance: np.ndarray)
         """
 
         imgs, data = images_transform_pipeline(image_input, resize_to, crop_to)
@@ -178,7 +178,7 @@ class GAInterpreter(InputGradientInterpreter):
                 one_hot = np.zeros((logits_per_image.shape[0], logits_per_image.shape[1]), dtype=np.float32)
                 one_hot[paddle.arange(logits_per_image.shape[0]), index] = 1
                 one_hot = paddle.to_tensor(one_hot)
-                one_hot = paddle.sum(one_hot.cuda() * logits_per_image)
+                one_hot = paddle.sum(one_hot * logits_per_image)
                 self.paddle_model.clear_gradients()
                 one_hot.backward()
 
