@@ -55,7 +55,7 @@ The available (and planning) tutorials are listed below:
 [Ernie1.0 in Chinese](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-1.0-zh-chnsenticorp.ipynb) ([on NBViewer](https://nbviewer.org/github/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-1.0-zh-chnsenticorp.ipynb))
 as examples. For text visualizations, NBViewer gives better and colorful rendering results.
 
-- Input Gradient Interpreters (to appear). This tutorial introduces the input gradient based interpretation algorithms.
+- [Input Gradient Interpreters](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/Input_Gradient.ipynb). This tutorial introduces the input gradient based interpretation algorithms.
 
 - LIME and Its Variants (to appear). This tutorial introduces the LIME algorithms and many advanced improvements based on LIME.
 

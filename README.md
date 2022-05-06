@@ -167,6 +167,7 @@ Two dimensions (representations of explanation results and types of the target m
 | [ForgettingEvents](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/forgetting_events.py)                | Dataset-Level         | Differentiable                                 |
 | [TIDY (Training Data Analyzer)](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/TIDY.ipynb) | Dataset-Level         | Differentiable                                 |
 | [Consensus](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/consensus.py)                       | Features              | Cross-Model                                    |
+| [Generic Attention](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/generic_attention.py)                  | Input Features                | Specific: Bi-Modal Transformers |
 
 \* LRP requires that the model is of specific implementations for relevance back-propagation.
 
@@ -179,7 +180,7 @@ Two dimensions (representations of explanation results and types of the target m
 ## Planning Alorithms
 
 * Intermediate Features Interpretation Algorithm
-  - [ ] Bi-Modal Explanation
+  - [ ] More Transformers Specific Interpreters
 
 * Dataset-Level Interpretation Algorithms
   - [ ] Influence Function
@@ -214,6 +215,8 @@ Two dimensions (representations of explanation results and types of the target m
 * `Perturbation`: [Evaluating the visualization of what a deep neural network has learned.](https://arxiv.org/abs/1509.06321)
 * `Deletion&Insertion`: [RISE: Randomized Input Sampling for Explanation of Black-box Models.](https://arxiv.org/abs/1806.07421)
 * `PointGame`: [Top-down Neural Attention by Excitation Backprop.](https://arxiv.org/abs/1608.00507)
+* `Generic Attention`: [Generic Attention-model Explainability for Interpreting Bi-Modal and Encoder-Decoder Transformers
+](https://arxiv.org/abs/2103.15679)
 
 # Copyright and License
 
