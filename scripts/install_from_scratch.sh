@@ -4,7 +4,7 @@
 pip install --upgrade pip
 
 # install paddlepaddle cpu version
-pip install paddlepaddle  # -i https://mirror.baidu.com/pypi/simple
+pip install paddlepaddle "protobuf<=3.20"  # -i https://mirror.baidu.com/pypi/simple
 
 # install interpretdl dev. 
 pip install -r requirements.txt  # -i https://pypi.tuna.tsinghua.edu.cn/simple
