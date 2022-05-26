@@ -39,6 +39,7 @@ class LIMECVInterpreter(InputOutputInterpreter):
     def interpret(self,
                   data: str,
                   interpret_class: int = None,
+                  top_k: int = 1,
                   num_samples: int = 1000,
                   batch_size: int = 50,
                   resize_to: int = 224,
@@ -54,6 +55,8 @@ class LIMECVInterpreter(InputOutputInterpreter):
             data (str): The input file path.
             interpret_class (int, optional): The index of class to interpret. If None, the most likely label will be 
                 used. Default: ``None``.
+            top_k (int, optional): Number of top classes to interpret. Will not be used if ``interpret_class`` is 
+                given. Default: ``1``.
             num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate 
                 interpretation. Default: ``1000``.
             batch_size (int, optional): Number of samples to forward each time. Default: ``50``.
@@ -94,7 +97,7 @@ class LIMECVInterpreter(InputOutputInterpreter):
         if interpret_class is None:
             # only interpret top 1 if not provided.
             pred_label = np.argsort(probability)
-            interpret_class = pred_label[-1:]
+            interpret_class = pred_label[-top_k:]
             interpret_class = np.array(interpret_class)
         elif isinstance(interpret_class, list):
             interpret_class = np.array(interpret_class)
