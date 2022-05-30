@@ -10,6 +10,34 @@ from ..data_processor.readers import read_image, load_pickle_file
 from ..common.paddle_utils import FeatureExtractor, extract_superpixel_features, get_pre_models
 
 
+def get_cluster_label(uint8_img, segments):
+    # get features from the first layers.
+    fextractor = FeatureExtractor()
+    paddle.enable_static()
+    feature = fextractor.forward(uint8_img).transpose((1, 2, 0))
+    paddle.disable_static()
+
+    img_size = (uint8_img.shape[1], uint8_img.shape[2])
+    feature = F.resize(feature, img_size)
+
+    X = extract_superpixel_features(feature, segments)
+
+    _, h_pre_models_kmeans = get_pre_models()
+    try:
+        kmeans_model = load_pickle_file(h_pre_models_kmeans)
+    except:
+        raise ValueError("NormLIME needs the KMeans model, where we provided a default one in "
+                         "pre_models/kmeans_model.pkl.")
+
+    try:
+        cluster_labels = kmeans_model.predict(X)
+    except AttributeError:
+        from sklearn.metrics import pairwise_distances_argmin_min
+        cluster_labels, _ = pairwise_distances_argmin_min(X, kmeans_model.cluster_centers_)
+
+    return cluster_labels
+
+
 def data_labels(file_path_list, predict_fn, batch_size):
     print("Initialization for fast NormLIME: Computing each sample in the test list.")
 
@@ -105,32 +133,10 @@ def precompute_global_prior(test_set_file_list, predict_fn, batch_size, gp_metho
     return global_weights_all_labels
 
 
-def use_fast_normlime_as_prior(image_show, segments, label_index, global_weights):
+def cluster_global_weights_to_local_prior(image_show, segments, label_index, global_weights):
     assert isinstance(global_weights, dict)
 
-    _, h_pre_models_kmeans = get_pre_models()
-
-    try:
-        kmeans_model = load_pickle_file(h_pre_models_kmeans)
-    except:
-        raise ValueError("NormLIME needs the KMeans model, where we provided a default one in "
-                         "pre_models/kmeans_model.pkl.")
-
-    fextractor = FeatureExtractor()
-    paddle.enable_static()
-    feature = fextractor.forward(image_show).transpose((1, 2, 0))
-    paddle.disable_static()
-
-    img_size = (image_show.shape[1], image_show.shape[2])
-    feature = F.resize(feature, img_size)
-
-    X = extract_superpixel_features(feature, segments)
-
-    try:
-        cluster_labels = kmeans_model.predict(X)
-    except AttributeError:
-        from sklearn.metrics import pairwise_distances_argmin_min
-        cluster_labels, _ = pairwise_distances_argmin_min(X, kmeans_model.cluster_centers_)
+    cluster_labels = get_cluster_label(image_show, segments)
 
     cluster_weights = global_weights.get(label_index, {})
     local_weights = [cluster_weights.get(k, 0.0) for k in cluster_labels]

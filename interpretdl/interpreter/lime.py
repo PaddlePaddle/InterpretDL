@@ -73,9 +73,7 @@ class LIMECVInterpreter(InputOutputInterpreter):
         """
         # preprocess_inputs
         if isinstance(data, str):
-            crop_size = crop_to
-            target_size = resize_to
-            img = read_image(data, target_size, crop_size)
+            img = read_image(data, resize_to, crop_to)
         else:
             if len(data.shape) == 3:
                 data = np.expand_dims(data, axis=0)
