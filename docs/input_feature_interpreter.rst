@@ -36,6 +36,13 @@ LIME
 .. autoclass:: interpretdl.LIMENLPInterpreter
    :members:
 
+GLIME
+----
+
+.. autoclass:: interpretdl.GLIMECVInterpreter
+   :members:
+
+
 LIME With Global Prior
 ----------------------
 
