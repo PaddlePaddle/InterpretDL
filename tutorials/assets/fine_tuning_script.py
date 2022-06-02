@@ -114,18 +114,20 @@ def run(args, train_set, test_set):
         logging.info(f"EPOCH | {epoch} TOTAL LOSS | {losses / len(train_loader.dataset): .4f}")
 
         print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-        print(f"EPOCH | {epoch} TOTAL LOSS | {losses / len(train_loader.dataset)}: .4f")
+        print(f"EPOCH | {epoch} TOTAL LOSS | {losses / len(train_loader.dataset): .4f}")
 
         # writer.add_scalar('Loss/train', losses / len(train_loader.dataset), epoch)
         
         loss_test, acc_test = evaluate(model, test_loader)
         logging.info(f"TEST ACC| {acc_test}, LOSS| {loss_test}")
+        print(f"TEST ACC| {acc_test}, LOSS| {loss_test}")
         
         if epoch % args.ckpt == 0:
             paddle.save(model.state_dict(), f'./work_dirs/result_{args.name}/ckpt-{epoch}.pd')
 
     loss_test, acc_test = evaluate(model, test_loader)
     logging.info(f"TEST ACC| {acc_test}, LOSS| {loss_test}")
+    print(f"TEST ACC| {acc_test}, LOSS| {loss_test}")
     
     paddle.save(model.state_dict(), f'./work_dirs/result_{args.name}/ckpt-final.pd')
 
