@@ -154,6 +154,7 @@ Two dimensions (representations of explanation results and types of the target m
 |---------------------------------|-----------------------|------------------------------------------------|
 | [LIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/lime.py)                            | Input Features        | Model-Agnostic                                 |
 | [LIME with Prior](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/lime_prior.py)                 | Input Features        | Model-Agnostic                                 |
+| [GLIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/glime.py)                 | Input Features        | Model-Agnostic                                 |
 | [NormLIME/FastNormLIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/_normlime_base.py)           | Input Features        | Model-Agnostic                                 |
 | [LRP](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/lrp.py)                             | Input Features        | Differentiable* |
 | [SmoothGrad](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/smooth_grad.py)                      | Input Features        | Differentiable                                 |

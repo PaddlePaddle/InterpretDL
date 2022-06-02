@@ -27,12 +27,13 @@ __all__ = [
 
 try:
     import paddle
-    from . import lime_prior
     from .lime_prior import LIMEPriorInterpreter
+    from .glime import GLIMECVInterpreter
     from .forgetting_events import ForgettingEventsInterpreter
     from ._normlime_base import NormLIMECVInterpreter, NormLIMENLPInterpreter
     __all__ += [
-        "LIMEPriorInterpreter", "ForgettingEventsInterpreter", "NormLIMECVInterpreter", "NormLIMENLPInterpreter"
+        "LIMEPriorInterpreter", "GLIMECVInterpreter", "ForgettingEventsInterpreter", "NormLIMECVInterpreter",
+        "NormLIMENLPInterpreter"
     ]
 except ModuleNotFoundError:
     print("Warning: Paddle should be installed before using some Interpreters.")

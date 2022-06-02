@@ -13,6 +13,7 @@ Interpretation Algorithms:
 |----------------------------------------------------------------------------------------------------------------------------|-------------------------|------------------------|-------------------|
 | [LIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/lime.py)                            | Input Features          | Model-Agnostic         | [link1](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_lime_cv.ipynb) \| [link2](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_lime_cv_ViT.ipynb) |
 | [LIME with Prior](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/lime_prior.py)           | Input Features          | Model-Agnostic         | [link](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_lime_gp_cv.ipynb) |
+| [GLIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/glime.py)           | Input Features          | Model-Agnostic         | [link](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/LIME_Variants_part2.ipynb) |
 | [NormLIME/FastNormLIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/_normlime_base.py) | Input Features          | Model-Agnostic         | [link1](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_normlime_cv.ipynb) \| [link2](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_normlime_nlp.ipynb) |
 | [LRP](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/lrp.py)                              | Input Features          | Differentiable         | [link](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/lrp_cv.ipynb) |
 | [SmoothGrad](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/smooth_grad.py)               | Input Features          | Differentiable         | [link](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_smooth_grad_cv.ipynb) |
@@ -57,7 +58,7 @@ as examples. For text visualizations, NBViewer gives better and colorful renderi
 
 - [Input Gradient Interpreters](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/Input_Gradient.ipynb). This tutorial introduces the input gradient based interpretation algorithms.
 
-- LIME and Its Variants (to appear). This tutorial introduces the LIME algorithms and many advanced improvements based on LIME.
+- LIME and Its Variants [Part1](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/LIME_Variants_part1.ipynb) (LIME) | [Part2](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/LIME_Variants_part2.ipynb) (GLIME). This tutorial introduces the LIME algorithms and many advanced improvements based on LIME.
 
 - Transformers (to appear).
 
