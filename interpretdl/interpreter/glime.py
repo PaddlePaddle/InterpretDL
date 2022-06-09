@@ -195,7 +195,11 @@ class GLIMECVInterpreter(LIMECVInterpreter):
 
         self.predict_fn_for_lime = predict_fn_for_lime
 
-        segments = compute_segments(img[0])
+        if self.lime_base.segments is None:
+            self.lime_base.segments = compute_segments(img[0])
+
+        segments = self.lime_base.segments
+
         if prior_method == "none":
             prior = np.zeros(len(np.unique(segments)))
         else:

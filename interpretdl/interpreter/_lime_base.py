@@ -66,6 +66,7 @@ class LimeBase(object):
         self.kernel_fn = kernel_fn
         self.verbose = verbose
         self.random_state = check_random_state(random_state)
+        self.segments = None
 
     def _fitting_data(self,
                       neighborhood_data,
@@ -248,7 +249,6 @@ class LimeBase(object):
                            hide_color=None,
                            distance_metric='cosine',
                            model_regressor=None,
-                           segments=None,
                            prior=None,
                            reg_force=1.0):
         """
@@ -257,12 +257,10 @@ class LimeBase(object):
         if len(image.shape) == 2:
             image = gray2rgb(image)
 
-        if segments is None:
-            segments = compute_segments(image)
+        if self.segments is None:
+            self.segments = compute_segments(image)
 
-        self.segments = segments
-
-        data, labels, distances = self._data_labels(image, segments, classifier_fn, num_samples, batch_size, hide_color,
+        data, labels, distances = self._data_labels(image, self.segments, classifier_fn, num_samples, batch_size, hide_color,
                                                     distance_metric)
 
         lime_weights = {}
