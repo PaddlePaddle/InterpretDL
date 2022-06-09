@@ -15,7 +15,7 @@ class TestLIMENLP(unittest.TestCase):
         from paddlenlp.transformers import ErnieForSequenceClassification, ErnieTokenizer
         from tutorials.assets.utils import convert_example, aggregate_subwords_and_importances
         
-        MODEL_NAME = "ernie-2.0-en"
+        MODEL_NAME = "ernie-2.0-base-en"
         model = ErnieForSequenceClassification.from_pretrained(MODEL_NAME, num_classes=2)
         tokenizer = ErnieTokenizer.from_pretrained(MODEL_NAME)
 
