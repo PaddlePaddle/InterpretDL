@@ -34,6 +34,8 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
     def _get_lime_weights(self, data, num_samples, batch_size, save=False):
         if data in self.all_lime_weights:
             return
+        
+        self.lime_base.segments = None  # set to None to force recompute the segmentation.
         lime_weights = self.lime_interpret(data, num_samples=num_samples, batch_size=batch_size, visual=False)
 
         sp_seg = self.lime_results['segmentation']
