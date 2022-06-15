@@ -69,7 +69,15 @@ def main(args):
     interpreter = to_test_list[args.it](paddle_model, device=args.device)
     # interpreter configs
     it_configs = args.it_configs
+    # evaluation configs
     eval_configs = args.eval_configs
+
+    # image resize config.
+    # depreciated set: {"resize_to": 256, "crop_to": 224}
+    if args.img_resize_config is None:
+        img_resize_config = {"resize_to": 224, "crop_to": 224}
+    else:
+        img_resize_config = args.img_resize_config
 
     if 'glime' == args.it:
         interpreter.set_global_weights(args.global_weights)
@@ -102,19 +110,19 @@ def main(args):
             if img_path in eval_results:
                 exp = eval_results[img_path].item()
             else:
-                exp = interpreter.interpret(img_path, **it_configs, resize_to=256, crop_to=224, visual=False)
+                exp = interpreter.interpret(img_path, **it_configs, **img_resize_config, visual=False)
                 if hasattr(interpreter, 'lime_results'):
                     exp = interpreter.lime_results
         else:
-            exp = interpreter.interpret(img_path, **it_configs, resize_to=256, crop_to=224, visual=False)
+            exp = interpreter.interpret(img_path, **it_configs, **img_resize_config, visual=False)
 
         if img_path in num_limit_adapter:
             eval_configs['limit_number_generated_samples'] = num_limit_adapter[img_path]
             print(img_path, 'update eval_configs:', eval_configs)
         
-        results = del_ins_evaluator.evaluate(img_path, exp, **eval_configs, resize_to=256, crop_to=224)
-        del_scores.append(results['del_probas'][:30].mean())
-        ins_scores.append(results['ins_probas'][:30].mean())
+        results = del_ins_evaluator.evaluate(img_path, exp, **eval_configs, **img_resize_config)
+        del_scores.append(results['del_probas'].mean())
+        ins_scores.append(results['ins_probas'].mean())
 
         # print(results['del_probas'])
         # print(results['ins_probas'])
@@ -173,7 +181,7 @@ if __name__ == '__main__':
         type=str, 
         help="arguments for evaluator"
     )
-    # glime
+    # used for glime only.
     parser.add_argument('--global_weights', default=None, type=str, help="./work_dirs/global_weights_normlime.npy")
     args = parser.parse_args()
 
