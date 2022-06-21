@@ -1,6 +1,6 @@
 
 import paddle
-from paddle.vision.models import resnet50, resnet101
+from paddle.vision.models import resnet50, resnet101, vgg16
 import interpretdl as it
 
 from tqdm import tqdm
@@ -17,46 +17,67 @@ from datetime import datetime
 def get_exp_id(args):
     return f'{args.name}_{args.model}_{args.it}_{args.num_images}'
 
-def main(args):
-    # data
-    def sort_key_func(x):
-        # for imagenet val set.
-        return x.split('/')[-1]
-    
+def get_data(args):
     if '*' in args.data_list:
         data_list = args.data_list.replace('\\', '')
         files = glob(data_list)
         np.random.seed(0)
         files = np.random.permutation(files)
         list_image_paths = files[:args.num_images]
-        
-    print(args.data_list)
-    print(len(list_image_paths))
+    elif '.txt' in args.data_list:
+        list_image_paths = []
+        with open(args.data_list, 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                list_image_paths.append(line.strip())
+    else:
+        raise NotImplementedError
 
-    # model
+    return list_image_paths
+
+def get_model(args):
     model_init_args = {'pretrained': True, 'num_classes': args.num_classes}
     if args.model_weights is not None:
         model_init_args['pretrained'] = False
 
-    if args.model.lower() == 'resnet50':
-        if 'lrp' == args.it:
-            from tutorials.assets.lrp_model import resnet50_lrp
-            paddle_model = resnet50_lrp(**model_init_args)
-        else:
-            paddle_model = resnet50(**model_init_args)
-    elif args.model.lower() == 'resnet101':
-        paddle_model = resnet101(**model_init_args)
-    else:
-        paddle_model = resnet50(**model_init_args)
+    models_dict = {
+        'resnet50': resnet50,
+        'resnet101': resnet101,
+        'vgg16': vgg16,
+        'vit': None  # to add.
+    }
+    if 'lrp' == args.it:
+        from tutorials.assets.lrp_model import resnet50 as resnet50_lrp
+        from tutorials.assets.lrp_model import resnet101 as resnet101_lrp
+        from tutorials.assets.lrp_model import vgg16 as vgg16_lrp
+        
+        models_dict = {
+            'resnet50': resnet50_lrp,
+            'resnet101': resnet101_lrp,
+            'vgg16': vgg16_lrp
+        }
+        assert args.model.lower() in models_dict, "LRP supports resnet and vgg only."
+
+    paddle_model = models_dict[args.model.lower()](**model_init_args)
     
     ## load weights if given
     if args.model_weights is not None:
         state_dict = paddle.load(args.model_weights)
         paddle_model.set_dict(state_dict)
         print("Load weights from", args.model_weights)
+    return paddle_model
 
-    # interpreter instance
-    to_test_list = {
+def main(args):
+    # get data
+    list_image_paths = get_data(args)
+    print(args.data_list)
+    print(len(list_image_paths))
+
+    # get model
+    paddle_model = get_model(args)
+
+    # get interpreter instance
+    interpreters_dict = {
         'lime': it.LIMECVInterpreter,
         'gradcam': it.GradCAMInterpreter,
         'intgrad': it.IntGradCVInterpreter,
@@ -66,7 +87,8 @@ def main(args):
         'glime': it.GLIMECVInterpreter,
         'lrp': it.LRPCVInterpreter
     }
-    interpreter = to_test_list[args.it](paddle_model, device=args.device)
+    interpreter = interpreters_dict[args.it](paddle_model, device=args.device)
+    
     # interpreter configs
     it_configs = args.it_configs
     # evaluation configs
@@ -74,10 +96,9 @@ def main(args):
 
     # image resize config.
     # depreciated set: {"resize_to": 256, "crop_to": 224}
-    if args.img_resize_config is None:
-        img_resize_config = {"resize_to": 224, "crop_to": 224}
-    else:
-        img_resize_config = args.img_resize_config
+    img_resize_configs = args.img_resize_config
+    if img_resize_configs is None:
+        img_resize_configs = {"resize_to": 224, "crop_to": 224}
 
     if 'glime' == args.it:
         interpreter.set_global_weights(args.global_weights)
@@ -93,12 +114,10 @@ def main(args):
 
     # evaluator instance
     del_ins_evaluator = it.DeletionInsertion(paddle_model, device=args.device)
-    pert_evaluator = it.Perturbation(paddle_model, device=args.device, compute_MoRF=False)
     
     # compute exp
     del_scores = []
     ins_scores = []
-    LeRF_scores = []
     
     eval_results = {}
     i = 1
@@ -106,41 +125,36 @@ def main(args):
         eval_results = dict(np.load(f'./work_dirs/{get_exp_id(args)}.npz', allow_pickle=True))
 
     for img_path in tqdm(list_image_paths, leave=True, position=0):
-        if args.it == 'lime' or args.it == 'glime':
-            if img_path in eval_results:
-                exp = eval_results[img_path].item()
-            else:
-                exp = interpreter.interpret(img_path, **it_configs, **img_resize_config, visual=False)
-                if hasattr(interpreter, 'lime_results'):
-                    exp = interpreter.lime_results
+        if img_path in eval_results:
+            # load computed exp.
+            eval_result = eval_results[img_path].item()
         else:
-            exp = interpreter.interpret(img_path, **it_configs, **img_resize_config, visual=False)
+            # compute exp. lime_results or array_exp.
+            exp = interpreter.interpret(img_path, **it_configs, **img_resize_configs, visual=False)
+            if hasattr(interpreter, 'lime_results'):
+                exp = interpreter.lime_results
 
-        if img_path in num_limit_adapter:
-            eval_configs['limit_number_generated_samples'] = num_limit_adapter[img_path]
-            print(img_path, 'update eval_configs:', eval_configs)
-        
-        results = del_ins_evaluator.evaluate(img_path, exp, **eval_configs, **img_resize_config)
-        del_scores.append(results['del_probas'].mean())
-        ins_scores.append(results['ins_probas'].mean())
-
-        # print(results['del_probas'])
-        # print(results['ins_probas'])
-
-        # results = pert_evaluator.evaluate(img_path, exp, **eval_configs)
-        # LeRF_scores.append(results['LeRF_score'])
-
-        # print(results['LeRF_probas'])
-        
-        if args.it == 'lime' or args.it == 'glime':
-            exp['del_probas'] = results['del_probas']
-            exp['ins_probas'] = results['ins_probas']
-            eval_results[img_path] = copy.deepcopy(exp)
-            np.savez(f'./work_dirs/{get_exp_id(args)}.npz', **eval_results)
-        else:
-            eval_results[img_path] = {'del_probas': results['del_probas'], 'ins_probas': results['ins_probas']}
-            np.savez(f'./work_dirs/{get_exp_id(args)}.npz', **eval_results)
+            if img_path in num_limit_adapter:
+                eval_configs['limit_number_generated_samples'] = num_limit_adapter[img_path]
+                print(img_path, 'update eval_configs:', eval_configs)
             
+            # evaluate.
+            # eval_result: A dict containing 'deletion_score', 'del_probas', 'deletion_images', 'insertion_score', 
+            # 'ins_probas' and 'insertion_images', if compute_deletion and compute_insertion are both True.
+            eval_result = del_ins_evaluator.evaluate(img_path, exp, **eval_configs, **img_resize_configs)
+
+            if args.save_eval_result:
+                eval_result_to_save = {
+                    'del_probas': eval_result['del_probas'], 
+                    'ins_probas': eval_result['ins_probas'], 
+                    'exp': exp  # lime_results or array_exp.
+                }
+                eval_results[img_path] = copy.deepcopy(eval_result_to_save)
+                np.savez(f'./work_dirs/{get_exp_id(args)}.npz', **eval_results)
+
+        del_scores.append(eval_result['del_probas'].mean())
+        ins_scores.append(eval_result['ins_probas'].mean())
+
         if i % 20 == 0:
             print("Del score:\t", sum(del_scores) / len(del_scores))
             print("Ins score:\t", sum(ins_scores) / len(ins_scores))
@@ -151,14 +165,11 @@ def main(args):
 
     print("Del score:\t", sum(del_scores) / len(del_scores))
     print("Ins score:\t", sum(ins_scores) / len(ins_scores))
-    # print("LeRF score:\t", sum(LeRF_scores) / len(LeRF_scores))
 
     logging.info(f"Del score:\t {sum(del_scores) / len(del_scores): .5f}")
     logging.info(f"Ins score:\t {sum(ins_scores) / len(ins_scores): .5f}")
-    # logging.info(f"LeRF score:\t {sum(LeRF_scores) / len(LeRF_scores): .5f}")
 
     logging.info(f"{sum(del_scores) / len(del_scores): .5f} \t {sum(ins_scores) / len(ins_scores): .5f}")
-    # logging.info(f"{sum(del_scores) / len(del_scores): .5f} \t {sum(ins_scores) / len(ins_scores): .5f} \t {sum(LeRF_scores) / len(LeRF_scores): .5f}")
 
     return
 
@@ -175,12 +186,8 @@ if __name__ == '__main__':
     parser.add_argument('--data_list', default="/root/datasets/ImageNet_org/val/*/*", type=str, help="data_list")
     parser.add_argument('--num_images', default=50, type=int, help="number of images for evaluation")
     parser.add_argument('--num_classes', default=1000, type=int, help="number of classes")
-    parser.add_argument(
-        '--eval_num_limit_adapter', 
-        default=None, 
-        type=str, 
-        help="arguments for evaluator"
-    )
+    parser.add_argument('--eval_num_limit_adapter', default=None, type=str, help="arguments for evaluator")
+    parser.add_argument('--save_eval_result', default=0, type=int, help="save explanations")
     # used for glime only.
     parser.add_argument('--global_weights', default=None, type=str, help="./work_dirs/global_weights_normlime.npy")
     args = parser.parse_args()
