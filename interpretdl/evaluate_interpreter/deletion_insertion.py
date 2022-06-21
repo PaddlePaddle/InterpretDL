@@ -84,7 +84,7 @@ class DeletionInsertion(InterpreterEvaluator):
 
     def evaluate(self,
                  img_path: str,
-                 explanation: list or np.ndarray,
+                 explanation: dict or np.ndarray,
                  batch_size: int or None = None,
                  resize_to: int = 224,
                  crop_to: int or None = None,
@@ -102,7 +102,7 @@ class DeletionInsertion(InterpreterEvaluator):
 
         Args:
             img_path (str): a string for image path.
-            explanation (list or np.ndarray): the explanation result from an interpretation algorithm.
+            explanation (dict or np.ndarray): the explanation result from an interpretation algorithm.
             batch_size (int or None, optional): batch size for each pass. Defaults to ``None``.
             resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
                 ``224``.
