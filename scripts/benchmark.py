@@ -21,8 +21,11 @@ def get_data(args):
     if '*' in args.data_list:
         data_list = args.data_list.replace('\\', '')
         files = glob(data_list)
-        np.random.seed(0)
-        files = np.random.permutation(files)
+        if 'ILSVRC2012_val' in files[0]:
+            files = sorted(files, key=lambda s: s[-10:])
+        else:
+            np.random.seed(0)
+            files = np.random.permutation(files)
         list_image_paths = files[:args.num_images]
     elif '.txt' in args.data_list:
         list_image_paths = []
@@ -30,6 +33,7 @@ def get_data(args):
             lines = f.readlines()
             for line in lines:
                 list_image_paths.append(line.strip())
+        list_image_paths = list_image_paths[:args.num_images]
     else:
         raise NotImplementedError
 
@@ -96,7 +100,7 @@ def main(args):
 
     # image resize config.
     # depreciated set: {"resize_to": 256, "crop_to": 224}
-    img_resize_configs = args.img_resize_config
+    img_resize_configs = args.img_resize_configs
     if img_resize_configs is None:
         img_resize_configs = {"resize_to": 224, "crop_to": 224}
 
@@ -122,6 +126,7 @@ def main(args):
     eval_results = {}
     i = 1
     if os.path.exists(f'./work_dirs/{get_exp_id(args)}.npz'):
+        logging.info(f"Loading computed results from ./work_dirs/{get_exp_id(args)}.npz")
         eval_results = dict(np.load(f'./work_dirs/{get_exp_id(args)}.npz', allow_pickle=True))
 
     for img_path in tqdm(list_image_paths, leave=True, position=0):
@@ -182,6 +187,7 @@ if __name__ == '__main__':
     parser.add_argument('--it', default="lime", type=str, help="interpreter name")
     parser.add_argument('--it_configs', default='{}', type=json.loads, help="arguments for interpreter")
     parser.add_argument('--eval_configs', default='{}', type=json.loads, help="arguments for evaluator")
+    parser.add_argument('--img_resize_configs', default=None, type=json.loads, help="arguments for evaluator")
     parser.add_argument('--device', default="gpu:0", type=str, help="device")
     parser.add_argument('--data_list', default="/root/datasets/ImageNet_org/val/*/*", type=str, help="data_list")
     parser.add_argument('--num_images', default=50, type=int, help="number of images for evaluation")
