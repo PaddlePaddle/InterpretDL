@@ -59,11 +59,10 @@ class BTInterpreter(Interpreter):
         """
 
         imgs, data = images_transform_pipeline(inputs, resize_to, crop_to)
-        bsz = len(data)  # batch size
-        save_path = preprocess_save_path(save_path, bsz)
+        b = len(data)  # batch size
+        assert b==1, "only support single image"
         self._build_predict_fn()
-        assert bsz==1, "only support single image"
-
+        
         attns, grads, inputs, values, projs, preds = self.predict_fn(data)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
 
@@ -124,12 +123,11 @@ class BTInterpreter(Interpreter):
         explanation = (R * W_state)[:, 0, 1:].reshape((-1, 14, 14))
 
         # visualization and save image.
-        for i in range(bsz):
-            vis_explanation = explanation_to_vis(imgs[i], explanation[i], style='overlay_heatmap')
-            if visual:
-                show_vis_explanation(vis_explanation)
-            if save_path[i] is not None:
-                save_image(save_path[i], vis_explanation)
+        vis_explanation = explanation_to_vis(imgs, explanation[0], style='overlay_heatmap')
+        if visual:
+            show_vis_explanation(vis_explanation)
+        if save_path is not None:
+            save_image(save_path, vis_explanation)
 
         return explanation
 
