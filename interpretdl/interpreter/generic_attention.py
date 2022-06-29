@@ -128,7 +128,7 @@ class GAInterpreter(InputGradientInterpreter):
             show_vis_explanation(vis_explanation)
             # TODO: visualizing the texts.
         if save_path is not None:
-            save_image(save_path[i], vis_explanation)
+            save_image(save_path, vis_explanation)
 
         return text_relevance, image_relevance
 

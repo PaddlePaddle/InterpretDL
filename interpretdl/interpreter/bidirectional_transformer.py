@@ -59,14 +59,12 @@ class BTInterpreter(Interpreter):
         """
 
         imgs, data = images_transform_pipeline(inputs, resize_to, crop_to)
-        bsz = len(data)  # batch size
-        save_path = preprocess_save_path(save_path, bsz)
+        b = len(data)  # batch size
+        assert b==1, "only support single image"
         self._build_predict_fn()
-
+        
         attns, grads, inputs, values, projs, preds = self.predict_fn(data)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
-        
-
 
         if label is None:
             label = preds
@@ -86,8 +84,8 @@ class BTInterpreter(Interpreter):
                 grad = grad.reshape((-1, grad.shape[-1], grad.shape[-1]))
 
                 Ih = np.mean(np.abs(np.matmul(np.transpose(cam, [0, 2, 1]), grad)), axis=(-1,-2))
-                Ih = Ih/np.sum(Ih)
-                cam = np.matmul(Ih,cam.reshape([h,-1])).reshape([s,s])
+                Ih = Ih.reshape([b, h])/np.sum(Ih, axis=-1)
+                cam = np.matmul(Ih.reshape([b,1,h]),cam.reshape([b,h,-1])).reshape([b,s,s])
 
                 R = R + np.matmul(cam, R)
         elif ap_mode == 'token':
@@ -97,8 +95,10 @@ class BTInterpreter(Interpreter):
                 grad = grads[i]
                 cam = blk
                 inp = inputs[i]
-                v = np.transpose(values[i].reshape([1, s, 3, h, -1]), [2, 0, 1, 3, 4])[2]
+                v = np.transpose(values[i].reshape([b, s, 3, h, -1]), [2, 0, 1, 3, 4])[2]
                 proj = projs[i]
+                proj = np.expand_dims(proj, 0)
+                proj = np.repeat(proj, repeats=b, axis=0)
                 vproj = np.matmul(v.reshape([b, s, -1]), proj)
                 
                 order = np.linalg.norm(vproj, axis=-1).squeeze()/np.linalg.norm(inp, axis=-1).squeeze()
@@ -123,12 +123,11 @@ class BTInterpreter(Interpreter):
         explanation = (R * W_state)[:, 0, 1:].reshape((-1, 14, 14))
 
         # visualization and save image.
-        for i in range(bsz):
-            vis_explanation = explanation_to_vis(imgs[i], explanation[i], style='overlay_heatmap')
-            if visual:
-                show_vis_explanation(vis_explanation)
-            if save_path[i] is not None:
-                save_image(save_path[i], vis_explanation)
+        vis_explanation = explanation_to_vis(imgs, explanation[0], style='overlay_heatmap')
+        if visual:
+            show_vis_explanation(vis_explanation)
+        if save_path is not None:
+            save_image(save_path, vis_explanation)
 
         return explanation
 
@@ -192,13 +191,13 @@ class BTInterpreter(Interpreter):
                 target.clear_gradient()
                 
                 for i, blk in enumerate(inputs):
-                    inputs[i] = blk[-1].numpy()
+                    inputs[i] = blk[0].numpy()
                 
                 for i, blk in enumerate(values):
-                    values[i] = blk[-1].numpy()
+                    values[i] = blk[0].numpy()
                 
                 for i, blk in enumerate(projs):
-                    projs[i] = blk[-1].numpy()
+                    projs[i] = blk.numpy()
                 
                 return attns, attns_grads, inputs, values, projs, label
 
