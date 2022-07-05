@@ -201,3 +201,135 @@ class GAInterpreter(InputGradientInterpreter):
                 return img_attns, txt_attns, img_attns_grads, txt_attns_grads
 
             self.predict_fn = predict_fn
+
+            
+class GANLPInterpreter(Interpreter):
+    """
+    The following implementation is specially designed for Ernie.
+    """
+
+    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None) -> None:
+        """
+
+        Args:
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc.
+        """
+        Interpreter.__init__(self, paddle_model, device, use_cuda)
+
+    def interpret(self,
+                  data: np.ndarray,
+                  start_layer: int = 11,
+                  label: int or None = None,
+                  save_path: str or None = None):
+        """
+        Args:
+            inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy 
+                array of read images.
+            ap_mode (str, default to head-wise): The approximation method of attentioanl perception stage, "head" for head-wise, "token" for token-wise.
+            start_layer (int, optional): Compute the state from the start layer. Default: ``4``.
+            steps (int, optional): number of steps in the Riemann approximation of the integral. Default: ``20``.
+            labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels 
+                should be equal to the number of images. If None, the most likely label for each image will be used. 
+                Default: ``None``.
+            resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
+                ``224``.
+            crop_to (int, optional): After resize, images will be center cropped to a square image with the size 
+                ``crop_to``. If None, no crop will be performed. Defaults to ``None``.
+            visual (bool, optional): Whether or not to visualize the processed image. Default: ``True``.
+            save_path (str, optional): The filepath(s) to save the processed image(s). If None, the image will not be 
+                saved. Default: ``None``.
+
+        Returns:
+            [numpy.ndarray]: interpretations/heatmap for images
+        """
+
+        b = data[0].shape[0]  # batch size
+        assert b==1, "only support single image"
+        self._build_predict_fn()
+        
+        attns, grads, preds = self.predict_fn(data, alpha=None)
+        assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
+
+        if label is None:
+            label = preds
+
+        b, h, s, _ = attns[0].shape
+        num_blocks = len(attns)
+        R = np.eye(s, s, dtype=attns[0].dtype)
+        R = np.expand_dims(R, 0)
+              
+        for i, blk in enumerate(attns):
+            if i < start_layer-1:
+                continue
+            grad = grads[i]
+            cam = blk
+            cam = cam.reshape((b, h, cam.shape[-1], cam.shape[-1])).mean(1)
+            grad = grad.reshape((b, h, grad.shape[-1], grad.shape[-1])).mean(1)
+            
+            cam = (cam*grad).reshape([b,s,s]).clip(min=0)
+
+            R = R + np.matmul(cam, R)
+
+        explanation = R[:, 0, 1:]
+
+        return explanation
+
+    def _build_predict_fn(self, rebuild: bool = False):
+        if self.predict_fn is not None:
+            assert callable(self.predict_fn), "predict_fn is predefined before, but is not callable." \
+                "Check it again."
+
+        if self.predict_fn is None or rebuild:
+            import paddle
+            self._paddle_env_setup()  # inherit from InputGradientInterpreter
+
+            def predict_fn(data, label=None, alpha: float = 1.0):
+                data = paddle.to_tensor(data)
+                data.stop_gradient = False
+                
+                target_feature_map = []
+
+                def hook(layer, input, output):
+                    if alpha is not None:
+                        output = alpha * output
+                    target_feature_map.append(output)
+                    return output
+
+                attns = []
+                def attn_hook(layer, input, output):
+                    attns.append(output)
+                    
+                hooks = []
+                for n, v in self.paddle_model.named_sublayers():
+                    if re.match('^ernie.encoder.layers.*.self_attn.attn_drop$', n):
+                        h = v.register_forward_post_hook(attn_hook)
+                        hooks.append(h)
+                    elif re.match('^ernie.embeddings.word_embeddings$', n):
+                        h = v.register_forward_post_hook(hook)
+                        hooks.append(h)
+
+                out = self.paddle_model(*data)
+                for h in hooks:
+                    h.remove()
+
+                out = paddle.nn.functional.softmax(out, axis=1)
+                preds = paddle.argmax(out, axis=1)
+                if label is None:
+                    label = preds.numpy()
+
+                attns_grads = []
+                
+                label_onehot = paddle.nn.functional.one_hot(paddle.to_tensor(label), num_classes=out.shape[1])
+                target = paddle.sum(out * label_onehot, axis=1)
+                target.backward()
+                for i, blk in enumerate(attns):
+                    grad = blk.grad.numpy()
+                    attns_grads.append(grad)
+                    attns[i] = blk.numpy()
+                target.clear_gradient()
+                
+                return attns, attns_grads, label
+
+            self.predict_fn = predict_fn
