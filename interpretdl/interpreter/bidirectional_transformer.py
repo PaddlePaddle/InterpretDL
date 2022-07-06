@@ -228,6 +228,10 @@ class BTNLPInterpreter(Interpreter):
                   ap_mode: str = "head",
                   start_layer: int = 11,
                   steps: int = 20,
+                  attn_dropout_name='^ernie.encoder.layers.*.self_attn.attn_drop$', 
+                  embedding_name='^ernie.embeddings.word_embeddings$', 
+                  attn_proj_name='^ernie.encoder.layers.*.self_attn.out_proj$', 
+                  attn_v_name='^ernie.encoder.layers.*.self_attn.v_proj$',
                   label: int or None = None,
                   save_path: str or None = None):
         """
@@ -256,7 +260,11 @@ class BTNLPInterpreter(Interpreter):
         assert b==1, "only support single image"
         self._build_predict_fn()
         
-        attns, grads, inputs, values, projs, preds = self.predict_fn(data, alpha=None)
+        attns, grads, inputs, values, projs, preds = self.predict_fn(data, attn_dropout_name=attn_dropout_name,
+                                                                     embedding_name=embedding_name,
+                                                                     attn_proj_name=attn_proj_name,
+                                                                     attn_v_name=attn_v_name,
+                                                                     alpha=None)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
 
         if label is None:
@@ -306,7 +314,11 @@ class BTNLPInterpreter(Interpreter):
         total_gradients = np.zeros((b, h, s, s))
         for alpha in np.linspace(0, 1, steps):
             # forward propagation
-            _, gradients, _, _, _, _ = self.predict_fn(data, label=label, alpha=alpha)
+            _, gradients, _, _, _, _ = self.predict_fn(data, attn_dropout_name=attn_dropout_name,
+                                                    embedding_name=embedding_name,
+                                                    attn_proj_name=attn_proj_name,
+                                                    attn_v_name=attn_v_name,
+                                                       label=label, alpha=alpha)
             total_gradients += gradients[-1]
 
         W_state = np.mean((total_gradients / steps).clip(min=0), axis=1)[:, 0, :].reshape((b, 1, s))
@@ -324,7 +336,12 @@ class BTNLPInterpreter(Interpreter):
             import paddle
             self._paddle_env_setup()  # inherit from InputGradientInterpreter
 
-            def predict_fn(data, label=None, alpha: float = 1.0):
+            def predict_fn(data, attn_dropout_name=None, 
+                           embedding_name=None, 
+                           attn_proj_name=None, 
+                           attn_v_name=None, 
+                           label=None, alpha: float = 1.0):
+                
                 data = paddle.to_tensor(data)
                 data.stop_gradient = False
                 
@@ -351,15 +368,15 @@ class BTNLPInterpreter(Interpreter):
             
                 hooks = []
                 for n, v in self.paddle_model.named_sublayers():
-                    if re.match('^ernie.encoder.layers.*.self_attn.attn_drop$', n):
+                    if re.match(attn_dropout_name, n):
                         h = v.register_forward_post_hook(attn_hook)
                         hooks.append(h)
-                    elif re.match('^ernie.embeddings.word_embeddings$', n):
+                    elif re.match(embedding_name, n):
                         h = v.register_forward_post_hook(hook)
                         hooks.append(h)
-                    elif re.match('^ernie.encoder.layers.*.self_attn.out_proj$', n):
+                    elif re.match(attn_proj_name, n):
                         projs.append(v.weight)
-                    elif re.match('^ernie.encoder.layers.*.self_attn.v_proj$', n):
+                    elif re.match(attn_v_name, n):
                         h = v.register_forward_pre_hook(input_hook)
                         hooks.append(h)
                         h = v.register_forward_post_hook(v_hook)

@@ -222,6 +222,10 @@ class GANLPInterpreter(Interpreter):
                   data: np.ndarray,
                   start_layer: int = 11,
                   label: int or None = None,
+                  attn_dropout_name='^ernie.encoder.layers.*.self_attn.attn_drop$', 
+                  embedding_name='^ernie.embeddings.word_embeddings$', 
+                  attn_proj_name='^ernie.encoder.layers.*.self_attn.out_proj$', 
+                  attn_v_name='^ernie.encoder.layers.*.self_attn.v_proj$',
                   save_path: str or None = None):
         """
         Args:
@@ -249,7 +253,12 @@ class GANLPInterpreter(Interpreter):
         assert b==1, "only support single image"
         self._build_predict_fn()
         
-        attns, grads, preds = self.predict_fn(data, alpha=None)
+        attns, grads, preds = self.predict_fn(data, attn_dropout_name=attn_dropout_name,
+                                            embedding_name=embedding_name,
+                                            attn_proj_name=attn_proj_name,
+                                            attn_v_name=attn_v_name,
+                                            alpha=None)
+        
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
 
         if label is None:
@@ -285,7 +294,12 @@ class GANLPInterpreter(Interpreter):
             import paddle
             self._paddle_env_setup()  # inherit from InputGradientInterpreter
 
-            def predict_fn(data, label=None, alpha: float = 1.0):
+            def predict_fn(data, attn_dropout_name=None, 
+                           embedding_name=None, 
+                           attn_proj_name=None, 
+                           attn_v_name=None, 
+                           label=None, alpha: float = 1.0):
+                
                 data = paddle.to_tensor(data)
                 data.stop_gradient = False
                 
