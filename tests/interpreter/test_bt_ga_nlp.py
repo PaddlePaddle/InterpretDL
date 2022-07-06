@@ -6,7 +6,7 @@ import interpretdl as it
 from tests.utils import assert_arrays_almost_equal
 
 
-class TestBTNLP(unittest.TestCase):
+class TestGABTNLP(unittest.TestCase):
 
     def prepare(self):
         import paddle
