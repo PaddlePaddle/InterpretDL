@@ -12,14 +12,14 @@ class TestGABTNLP(unittest.TestCase):
         import paddle
         import paddlenlp
         from paddlenlp.data import Stack, Tuple, Pad
-        from tutorials.assets.ernie import ErnieForSequenceClassification
-        from paddlenlp.transformers import ErnieTokenizer
-        from tutorials.assets.utils import convert_example, aggregate_subwords_and_importances
+        from paddlenlp.transformers import ErnieTokenizer, ErnieForSequenceClassification
+        from tutorials.assets.utils import convert_example, aggregate_subwords_and_importances, layer_replacement
         
         MODEL_NAME = "ernie-2.0-base-en"
         paddle.device.set_device('cpu')
         model = ErnieForSequenceClassification.from_pretrained(MODEL_NAME, num_classes=2)
         tokenizer = ErnieTokenizer.from_pretrained(MODEL_NAME)
+        model = layer_replacement(model)
 
         self.paddle_model = model
         self.tokenizer = tokenizer
