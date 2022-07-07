@@ -1,5 +1,6 @@
 import abc
 import sys
+import re
 import numpy as np
 import warnings
 
@@ -369,5 +370,166 @@ class IntermediateLayerInterpreter(Interpreter):
                     predict_label = paddle.argmax(probas, axis=1)  # get predictions.
 
                 return target_feature_maps, probas.numpy(), predict_label.numpy()
+
+            self.predict_fn = predict_fn
+
+            
+class TransformerInterpreter(Interpreter):
+    """This is one of the sub-abstract Interpreters. 
+    
+    :class:`TransformerNLPInterpreter` are used by Interpreters for Transformer based model. Interpreters that are derived from 
+    :class:`TransformerNLPInterpreter` include :class:`BTNLPInterpreter`, :class:`GANLPInterpreter`.
+
+    This Interpreter implements :py:func:`_build_predict_fn` that returns servral variables and gradients in each layer. 
+    """
+
+    def __init__(self, paddle_model: callable, device: str, use_cuda: bool = None, **kwargs):
+        """
+        
+        Args:
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc.
+        """
+        Interpreter.__init__(self, paddle_model, device, use_cuda, **kwargs)
+        assert hasattr(paddle_model, 'forward'), \
+            "paddle_model has to be " \
+            "an instance of paddle.nn.Layer or a compatible one."
+
+    def _paddle_env_setup(self):
+        """Prepare the environment setup. 
+        """
+        import paddle
+        if not paddle.is_compiled_with_cuda() and self.device[:3] == 'gpu':
+            print("Paddle is not installed with GPU support. Change to CPU version now.")
+            self.device = 'cpu'
+
+        # globally set device.
+        paddle.set_device(self.device)
+        if versiontuple2tuple(paddle.__version__) >= (2, 2, 1):
+            # From Paddle2.2.1, gradients are supported in eval mode.
+            self.paddle_model.eval()
+        else:
+            # Former versions.
+            self.paddle_model.train()
+            for n, v in self.paddle_model.named_sublayers():
+                if "batchnorm" in v.__class__.__name__.lower():
+                    v._use_global_stats = True
+                if "dropout" in v.__class__.__name__.lower():
+                    v.p = 0
+
+    def _build_predict_fn(self, rebuild: bool = False, embedding_name: str or None = None, attn_map_name: str or None = None, 
+                                 attn_v_name: str or None = None, attn_proj_name: str or None = None, nlp: bool = False):
+        
+        """Build ``predict_fn`` for transformer based algorithms.
+        The model is supposed to be a classification model.
+
+        Args:
+            rebuild (bool, optional): forces to rebuild. Defaults to ``False``.
+            embedding_name (str, optional): the layer name for embedding, if in need.
+            attn_map_name (str, optional): the layer name for attention weights, if in need.
+            attn_v_name (str, optional): the layer name for attention value.
+            attn_proj_name (str, optional): the layer name for attention projection, if in need.
+            nlp (bool, default to False): whether the input data is for language test.
+        """
+
+        if self.predict_fn is not None:
+            assert callable(self.predict_fn), "predict_fn is predefined before, but is not callable." \
+                "Check it again."
+
+        if self.predict_fn is None or rebuild:
+
+            self._paddle_env_setup()
+
+            def predict_fn(data, labels=None, alpha: float or None=None):
+                """predict_fn for input gradients based interpreters,
+                    for image classification models only.
+
+                Args:
+                    data ([type]): scaled input data.
+                    labels ([type]): can be None.
+                    alpha (float, optional): noise scale for intergrated gradient and smooth gradient 
+
+                Returns:
+                    [type]: gradients, labels
+                """
+                import paddle
+
+                data = paddle.to_tensor(data)
+                data.stop_gradient = False
+                
+                # when alpha is not None
+                def hook(layer, input, output):
+                    if alpha is not None:
+                        output = alpha * output
+                    return output
+
+                # to obtain the attention weights
+                attns = []
+                def attn_hook(layer, input, output):
+                    attns.append(output)
+                    
+                # to obtain the input of each attention block
+                inputs = []
+                def input_hook(layer, input):
+                    inputs.append(input)
+                    
+                # to obtain the value and projection weights
+                values = []
+                projs = []
+                def v_hook(layer, input, output):
+                    values.append(output)
+                    
+                # apply hooks in the forward pass
+                hooks = []
+                for n, v in self.paddle_model.named_sublayers():
+                    if attn_map_name is not None and re.match(attn_map_name, n):
+                        h = v.register_forward_post_hook(attn_hook)
+                        hooks.append(h)
+                    elif alpha is not None and re.match(embedding_name, n):
+                        h = v.register_forward_post_hook(hook)
+                        hooks.append(h)
+                    elif attn_proj_name is not None and re.match(attn_proj_name, n):
+                        projs.append(v.weight)
+                    elif attn_v_name is not None and re.match(attn_v_name, n):
+                        h = v.register_forward_pre_hook(input_hook)
+                        hooks.append(h)
+                        h = v.register_forward_post_hook(v_hook)
+                        hooks.append(h)
+                
+                if nlp:
+                    out = self.paddle_model(*data)
+                else:
+                    out = self.paddle_model(data)
+                
+                for h in hooks:
+                    h.remove()
+
+                out = paddle.nn.functional.softmax(out, axis=1)
+                preds = paddle.argmax(out, axis=1)
+                if labels is None:
+                    labels = preds.numpy()
+
+                attns_grads = []
+                
+                label_onehot = paddle.nn.functional.one_hot(paddle.to_tensor(labels), num_classes=out.shape[1])
+                target = paddle.sum(out * label_onehot, axis=1)
+                target.backward()
+                for i, blk in enumerate(attns):
+                    grad = blk.grad.numpy()
+                    attns_grads.append(grad)
+                    attns[i] = blk.numpy()
+                target.clear_gradient()
+                
+                for i, blk in enumerate(inputs):
+                    inputs[i] = blk[0].numpy()
+                
+                for i, blk in enumerate(values):
+                    values[i] = blk[0].numpy()
+                
+                for i, blk in enumerate(projs):
+                    projs[i] = blk.numpy()
+                
+                return attns, attns_grads, inputs, values, projs, labels
 
             self.predict_fn = predict_fn

@@ -1,7 +1,7 @@
 import numpy as np
 import re
 
-from .abc_interpreter import Interpreter, InputGradientInterpreter
+from .abc_interpreter import Interpreter, InputGradientInterpreter, TransformerInterpreter
 from ..data_processor.readers import images_transform_pipeline
 from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
 
@@ -203,7 +203,7 @@ class GAInterpreter(InputGradientInterpreter):
             self.predict_fn = predict_fn
 
             
-class GANLPInterpreter(Interpreter):
+class GANLPInterpreter(TransformerInterpreter):
     """
     The following implementation is specially designed for Ernie.
     """
@@ -216,16 +216,14 @@ class GANLPInterpreter(Interpreter):
             device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        Interpreter.__init__(self, paddle_model, device, use_cuda)
+        TransformerInterpreter.__init__(self, paddle_model, device, use_cuda)
 
     def interpret(self,
                   data: np.ndarray,
                   start_layer: int = 11,
                   label: int or None = None,
-                  attn_dropout_name='^ernie.encoder.layers.*.self_attn.attn_drop$', 
-                  embedding_name='^ernie.embeddings.word_embeddings$', 
-                  attn_proj_name='^ernie.encoder.layers.*.self_attn.out_proj$', 
-                  attn_v_name='^ernie.encoder.layers.*.self_attn.v_proj$',
+                  embedding_name='^ernie.embeddings.word_embeddings$',
+                  attn_map_name='^ernie.encoder.layers.*.self_attn.attn_drop$', 
                   save_path: str or None = None):
         """
         Args:
@@ -250,14 +248,10 @@ class GANLPInterpreter(Interpreter):
         """
 
         b = data[0].shape[0]  # batch size
-        assert b==1, "only support single image"
-        self._build_predict_fn()
+        assert b==1, "only support single sentence"
+        self._build_predict_fn(embedding_name=embedding_name, attn_map_name=attn_map_name, nlp=True)
         
-        attns, grads, preds = self.predict_fn(data, attn_dropout_name=attn_dropout_name,
-                                            embedding_name=embedding_name,
-                                            attn_proj_name=attn_proj_name,
-                                            attn_v_name=attn_v_name,
-                                            alpha=None)
+        attns, grads, _, _, _, preds = self.predict_fn(data)
         
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
 
@@ -285,65 +279,89 @@ class GANLPInterpreter(Interpreter):
 
         return explanation
 
-    def _build_predict_fn(self, rebuild: bool = False):
-        if self.predict_fn is not None:
-            assert callable(self.predict_fn), "predict_fn is predefined before, but is not callable." \
-                "Check it again."
 
-        if self.predict_fn is None or rebuild:
-            import paddle
-            self._paddle_env_setup()  # inherit from InputGradientInterpreter
+class GACVInterpreter(TransformerInterpreter):
+    """
+    The following implementation is specially designed for Vision Transformer.
+    """
 
-            def predict_fn(data, attn_dropout_name=None, 
-                           embedding_name=None, 
-                           attn_proj_name=None, 
-                           attn_v_name=None, 
-                           label=None, alpha: float = 1.0):
-                
-                data = paddle.to_tensor(data)
-                data.stop_gradient = False
-                
-                target_feature_map = []
+    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None) -> None:
+        """
 
-                def hook(layer, input, output):
-                    if alpha is not None:
-                        output = alpha * output
-                    target_feature_map.append(output)
-                    return output
+        Args:
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc.
+        """
+        TransformerInterpreter.__init__(self, paddle_model, device, use_cuda)
 
-                attns = []
-                def attn_hook(layer, input, output):
-                    attns.append(output)
-                    
-                hooks = []
-                for n, v in self.paddle_model.named_sublayers():
-                    if re.match('^ernie.encoder.layers.*.self_attn.attn_drop$', n):
-                        h = v.register_forward_post_hook(attn_hook)
-                        hooks.append(h)
-                    elif re.match('^ernie.embeddings.word_embeddings$', n):
-                        h = v.register_forward_post_hook(hook)
-                        hooks.append(h)
+    def interpret(self,
+                  inputs: str or list(str) or np.ndarray,
+                  ap_mode: str = "head",
+                  start_layer: int = 4,
+                  attn_map_name='^blocks.*.attn.attn_drop$', 
+                  label: int or None = None,
+                  resize_to: int = 224,
+                  crop_to: int or None = None,
+                  visual: bool = True,
+                  save_path: str or None = None):
+        """
+        Args:
+            inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy 
+                array of read images.
+            ap_mode (str, default to head-wise): The approximation method of attentioanl perception stage, "head" for head-wise, "token" for token-wise.
+            start_layer (int, optional): Compute the state from the start layer. Default: ``4``.
+            steps (int, optional): number of steps in the Riemann approximation of the integral. Default: ``20``.
+            labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels 
+                should be equal to the number of images. If None, the most likely label for each image will be used. 
+                Default: ``None``.
+            resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
+                ``224``.
+            crop_to (int, optional): After resize, images will be center cropped to a square image with the size 
+                ``crop_to``. If None, no crop will be performed. Defaults to ``None``.
+            visual (bool, optional): Whether or not to visualize the processed image. Default: ``True``.
+            save_path (str, optional): The filepath(s) to save the processed image(s). If None, the image will not be 
+                saved. Default: ``None``.
 
-                out = self.paddle_model(*data)
-                for h in hooks:
-                    h.remove()
+        Returns:
+            [numpy.ndarray]: interpretations/heatmap for images
+        """
 
-                out = paddle.nn.functional.softmax(out, axis=1)
-                preds = paddle.argmax(out, axis=1)
-                if label is None:
-                    label = preds.numpy()
+        imgs, data = images_transform_pipeline(inputs, resize_to, crop_to)
+        b = len(data)  # batch size
+        assert b==1, "only support single image"
+        self._build_predict_fn(attn_map_name=attn_map_name)
+        
+        attns, grads, inputs, values, projs, preds = self.predict_fn(data, labels=label)
+        assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
 
-                attns_grads = []
-                
-                label_onehot = paddle.nn.functional.one_hot(paddle.to_tensor(label), num_classes=out.shape[1])
-                target = paddle.sum(out * label_onehot, axis=1)
-                target.backward()
-                for i, blk in enumerate(attns):
-                    grad = blk.grad.numpy()
-                    attns_grads.append(grad)
-                    attns[i] = blk.numpy()
-                target.clear_gradient()
-                
-                return attns, attns_grads, label
+        if label is None:
+            label = preds
 
-            self.predict_fn = predict_fn
+        b, h, s, _ = attns[0].shape
+        num_blocks = len(attns)
+        R = np.eye(s, s, dtype=attns[0].dtype)
+        R = np.expand_dims(R, 0)
+              
+        for i, blk in enumerate(attns):
+            if i < start_layer-1:
+                continue
+            grad = grads[i]
+            cam = blk
+            cam = cam.reshape((b, h, cam.shape[-1], cam.shape[-1])).mean(1)
+            grad = grad.reshape((b, h, grad.shape[-1], grad.shape[-1])).mean(1)
+            
+            cam = (cam*grad).reshape([b,s,s]).clip(min=0)
+
+            R = R + np.matmul(cam, R)
+
+        explanation = R[:, 0, 1:].reshape((-1, 14, 14))
+
+        # visualization and save image.
+        vis_explanation = explanation_to_vis(imgs, explanation[0], style='overlay_heatmap')
+        if visual:
+            show_vis_explanation(vis_explanation)
+        if save_path is not None:
+            save_image(save_path, vis_explanation)
+
+        return explanation
