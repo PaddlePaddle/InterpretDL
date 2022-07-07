@@ -4,6 +4,7 @@ import paddle.nn as nn
 import paddle.nn.functional as F
 import paddlenlp as nlp
 from functools import partial
+import functools
 
 from paddlenlp.data import Stack, Tuple, Pad
 
@@ -274,3 +275,33 @@ def aggregate_subwords_and_importances(subwords, subword_importances):
     words = agg_words
     word_importances = agg_word_importances
     return words, word_importances
+
+
+def rsetattr(obj, attr, val):
+    pre, _, post = attr.rpartition('.')
+    return setattr(rgetattr(obj, pre) if pre else obj, post, val)
+
+
+def rgetattr(obj, attr, *args):
+    def _getattr(obj, attr):
+        return getattr(obj, attr, *args)
+    return functools.reduce(_getattr, [obj] + attr.split('.'))
+
+
+def layer_replacement(model):
+    from .multihead import MultiHeadAttention
+    state_dict = model.state_dict()
+
+    for n, v in model.named_sublayers():
+        if isinstance(v, paddle.nn.layer.transformer.MultiHeadAttention):
+            rsetattr(model, n, MultiHeadAttention(v.embed_dim, v.num_heads, dropout=v.dropout,
+                 kdim=v.kdim,
+                 vdim=v.vdim,
+                 need_weights=v.need_weights,
+                 weight_attr=None,
+                 bias_attr=None))
+
+    model.set_dict(state_dict)
+    
+    return model
+    
