@@ -1,6 +1,6 @@
 import os
 import sys
-import cv2
+import cv2  # https://stackoverflow.com/questions/47113029/importerror-libsm-so-6-cannot-open-shared-object-file-no-such-file-or-directo
 import numpy as np
 import glob
 from PIL import Image
