@@ -70,9 +70,8 @@ class IntGradCVInterpreter(InputGradientInterpreter):
         """
 
         imgs, data = images_transform_pipeline(inputs, resize_to, crop_to)
-
+        bsz = len(data)
         self.data_type = np.array(data).dtype
-        self.input_type = type(data)
 
         self._build_predict_fn(gradient_of='probability')
 
@@ -83,7 +82,6 @@ class IntGradCVInterpreter(InputGradientInterpreter):
             self.baselines = np.random.normal(size=(num_random_trials, ) + data.shape).astype(self.data_type)
         else:
             self.baselines = baselines
-        bsz = len(data)
 
         # obtain the labels (and initialization).
         if labels is None:
