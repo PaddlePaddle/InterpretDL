@@ -5,7 +5,7 @@ import paddle
 
 from tqdm import tqdm
 import pandas as pd
-from interpretdl.common.file_utils import download
+from interpretdl.common.file_utils import download_and_decompress
 
 from .abc_interpreter import Interpreter
 
@@ -188,9 +188,9 @@ class TrainingDynamics():
         return self
 
     
-class Detector(paddle.nn.Layer):
+class LSTM(paddle.nn.Layer):
     def __init__(self,input_size=1,hidden_size=64,num_layers=2):
-        super(Detector, self).__init__()
+        super(LSTM, self).__init__()
         
         # maybe need initialisation
         self.classifier = paddle.nn.Linear(in_features=hidden_size,out_features=2)
@@ -216,31 +216,27 @@ class BHDFinterpreter():
         which is transferable to different datasets.
     """
 
-    def __init__(self, detector_path: str, device: str = 'gpu:0', use_cuda=None):
+    def __init__(self, detector: callable = None, device: str = 'gpu:0', use_cuda=None):
         """
         Args:
-            detector_path (str): path to detector file.
-            device (str): The device used for running ``detector``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
-                etc.
+            detector (callable, optional): A detector model for identifying the mislabeled samples. Defaults to None.
+            device (str, optional): The device used for running ``detector``, options: ``"cpu"``, ``"gpu:0"``, 
+                ``"gpu:1"`` etc. Defaults to 'gpu:0'.
         """
         
-        download(url="https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/assets/noise_detector_trained.pdparams",
-                 path="assets/noise_detector_trained.pdparams",
-                 md5sum=None)
-            
         paddle.set_device(device)
                 
-        self.detector = Detector()
-        if detector_path is not None:
-            paddle.Model(self.detector).load(detector_path)
+        if detector is not None:
+            self.detector = detector
         else:
+            self.detector = LSTM()
+            download_and_decompress(url="https://github.com/PaddlePaddle/InterpretDL/files/9120427/noise_detector_trained.pdparams.zip",
+                    path="assets/")
             paddle.Model(self.detector).load("assets/noise_detector_trained")
 
     def interpret(self,
                   training_dynamics=None,
                   training_dynamics_path="assets/training_dynamics.npz"):
-        
-        
         """Call this function to rank samples' correctness.
 
         Args:
@@ -258,7 +254,6 @@ class BHDFinterpreter():
 
         if training_dynamics is not None:
             training_dynamics = paddle.to_tensor(training_dynamics['td'][:,:,0]).astype(paddle.float32)
-            
         elif training_dynamics_path is not None:
             training_dynamics = paddle.to_tensor(np.load(training_dynamics_path)['td'][:,:,0]).astype(paddle.float32)
         else:
@@ -277,5 +272,3 @@ class BHDFinterpreter():
         order = np.argsort(predictions)
         
         return order,predictions
-        
-
