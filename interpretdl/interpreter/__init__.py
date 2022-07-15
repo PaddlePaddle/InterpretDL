@@ -17,13 +17,14 @@ from .transition_attention_maps import TAMInterpreter
 from .consensus import ConsensusInterpreter
 from .generic_attention import GAInterpreter, GANLPInterpreter, GACVInterpreter
 from .bidirectional_transformer import BTCVInterpreter, BTNLPInterpreter
+from .training_dynamics import TrainingDynamics,BHDFinterpreter
 
 __all__ = [
     "Interpreter", "InputGradientInterpreter", "InputOutputInterpreter", "IntermediateLayerInterpreter",
     "LIMECVInterpreter", "LIMENLPInterpreter", "GradCAMInterpreter", "IntGradCVInterpreter", "IntGradNLPInterpreter",
     "SmoothGradInterpreter", "OcclusionInterpreter", "GradShapCVInterpreter", "GradShapNLPInterpreter",
     "ScoreCAMInterpreter", "LRPCVInterpreter", "RolloutInterpreter", "TAMInterpreter", "SmoothGradInterpreterV2",
-    'ConsensusInterpreter', 'GAInterpreter', "BTCVInterpreter", "BTNLPInterpreter", 'GANLPInterpreter', 'GACVInterpreter'
+    'ConsensusInterpreter', 'GAInterpreter', "BTCVInterpreter", "BTNLPInterpreter", 'GANLPInterpreter', 'GACVInterpreter',"BHDFinterpreter",
 ]
 
 try:
