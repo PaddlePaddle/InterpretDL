@@ -25,7 +25,7 @@ __all__ = [
     "SmoothGradInterpreter", "OcclusionInterpreter", "GradShapCVInterpreter", "GradShapNLPInterpreter",
     "ScoreCAMInterpreter", "LRPCVInterpreter", "RolloutInterpreter", "TAMInterpreter", "SmoothGradInterpreterV2",
     "ConsensusInterpreter", "GAInterpreter", "BTCVInterpreter", "BTNLPInterpreter", "GANLPInterpreter", "GACVInterpreter",
-    "BHDFinterpreter","LSTM","TrainingDynamics",
+    "BHDFinterpreter","TrainingDynamics",
 ]
 
 try:
