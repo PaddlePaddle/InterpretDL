@@ -24,7 +24,8 @@ __all__ = [
     "LIMECVInterpreter", "LIMENLPInterpreter", "GradCAMInterpreter", "IntGradCVInterpreter", "IntGradNLPInterpreter",
     "SmoothGradInterpreter", "OcclusionInterpreter", "GradShapCVInterpreter", "GradShapNLPInterpreter",
     "ScoreCAMInterpreter", "LRPCVInterpreter", "RolloutInterpreter", "TAMInterpreter", "SmoothGradInterpreterV2",
-    'ConsensusInterpreter', 'GAInterpreter', "BTCVInterpreter", "BTNLPInterpreter", 'GANLPInterpreter', 'GACVInterpreter',"BHDFinterpreter",
+    "ConsensusInterpreter", "GAInterpreter", "BTCVInterpreter", "BTNLPInterpreter", "GANLPInterpreter", "GACVInterpreter",
+    "BHDFinterpreter","LSTM","TrainingDynamics",
 ]
 
 try:
