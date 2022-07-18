@@ -17,14 +17,13 @@ from .transition_attention_maps import TAMInterpreter
 from .consensus import ConsensusInterpreter
 from .generic_attention import GAInterpreter, GANLPInterpreter, GACVInterpreter
 from .bidirectional_transformer import BTCVInterpreter, BTNLPInterpreter
-from .training_dynamics import TrainingDynamics,BHDFinterpreter
 
 __all__ = [
     "Interpreter", "InputGradientInterpreter", "InputOutputInterpreter", "IntermediateLayerInterpreter",
     "LIMECVInterpreter", "LIMENLPInterpreter", "GradCAMInterpreter", "IntGradCVInterpreter", "IntGradNLPInterpreter",
     "SmoothGradInterpreter", "OcclusionInterpreter", "GradShapCVInterpreter", "GradShapNLPInterpreter",
     "ScoreCAMInterpreter", "LRPCVInterpreter", "RolloutInterpreter", "TAMInterpreter", "SmoothGradInterpreterV2",
-    'ConsensusInterpreter', 'GAInterpreter', "BTCVInterpreter", "BTNLPInterpreter", 'GANLPInterpreter', 'GACVInterpreter',"BHDFinterpreter",
+    "ConsensusInterpreter", "GAInterpreter", "BTCVInterpreter", "BTNLPInterpreter", "GANLPInterpreter", "GACVInterpreter"
 ]
 
 try:
@@ -33,9 +32,10 @@ try:
     from .glime import GLIMECVInterpreter
     from .forgetting_events import ForgettingEventsInterpreter
     from ._normlime_base import NormLIMECVInterpreter, NormLIMENLPInterpreter
+    from .training_dynamics import TrainingDynamics,BHDFinterpreter
     __all__ += [
         "LIMEPriorInterpreter", "GLIMECVInterpreter", "ForgettingEventsInterpreter", "NormLIMECVInterpreter",
-        "NormLIMENLPInterpreter"
+        "NormLIMENLPInterpreter", "BHDFinterpreter","TrainingDynamics"
     ]
 except ModuleNotFoundError:
     print("Warning: Paddle should be installed before using some Interpreters.")

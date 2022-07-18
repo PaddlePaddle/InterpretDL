@@ -1,10 +1,8 @@
+import paddle
 import numpy as np
 import os, sys
-import pickle
-import paddle
 
 from tqdm import tqdm
-import pandas as pd
 from interpretdl.common.file_utils import download_and_decompress
 
 from .abc_interpreter import Interpreter
@@ -20,38 +18,8 @@ class TrainingDynamics():
     After interpretation on the level of data, we can handle better the datasets 
     with underlying label noises, thus can achieve a better performance on it.
     
-    MOre training dynamics based methods will be available in this interpreter.
-    
-    
-    [Forgetting Events]
-    
-    The training sample undergoes a forgetting event if it is misclassified 
-    at step t+1 after having been correctly classified at step t. 
-
-    A training sample would be more probable to be mislabeled or hard to learn 
-    if it has more forgetting events happened.
-
-    More details regarding the Forgetting Events method can be found in the original paper:
-    https://arxiv.org/abs/1812.05159.
-    
-    
-    [Dataset Mapping]
-    
-    The model-dependent measures reveal three distinct regions in the data map, 
-    by computing point-wise confidence, variability and correctness.
-    
-    A region with instances that the model finds hard to learn; 
-    these often correspond to labeling errors.
-    
-    More details regarding the Dataset Mapping method can be found in the original paper:
-    https://arxiv.org/abs/2009.10795.
-    
-    
-    [Beyond hand-designed Feature]
-    
-    Representation learning from training dynamics leads to a LSTM-instanced noise detector,
-    which is transferable to different datasets.
-    
+    More training dynamics based methods including [Forgetting Events] 
+    and [Dataset Mapping] will be available in this interpreter.
     """
 
     def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None):
@@ -145,16 +113,16 @@ class TrainingDynamics():
         """
         logits = [(k, logits[k]) for k in sorted(logits.keys())]
         logits = np.asarray([logits[i][1] for i in range(len(logits))])
-    
-        interpolated = np.ones_like(logits)
-        for i in range(len(interpolated)):
-            statsPerSample = pd.DataFrame(logits[i])
-            statsPerSample.interpolate(method='linear', axis=0, inplace=True, limit_direction='both')
-            interpolated[i] = statsPerSample
-        logits = interpolated.astype(np.float16)
-        
-        targets_list = np.argsort(-logits.mean(axis=1), axis=1)
 
+        # Linear interpolation of logits given
+        for logit in logits:
+            bad_indexes = np.isnan(logit)
+            good_indexes = np.logical_not(bad_indexes)
+            interpolated = np.interp(bad_indexes.nonzero()[0], good_indexes.nonzero()[0], logit[good_indexes])
+            logit[bad_indexes] = interpolated
+        logits = logits.astype(np.float16)
+
+        targets_list = np.argsort(-logits.mean(axis=1), axis=1)
         self.training_dynamics = np.ones_like(logits,dtype=np.float16)
         self.labels = np.ones_like(logits[:,0,:],dtype=np.int16)
         
