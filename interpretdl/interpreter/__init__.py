@@ -32,10 +32,10 @@ try:
     from .glime import GLIMECVInterpreter
     from .forgetting_events import ForgettingEventsInterpreter
     from ._normlime_base import NormLIMECVInterpreter, NormLIMENLPInterpreter
-    from .training_dynamics import TrainingDynamics,BHDFinterpreter
+    from .training_dynamics import TrainingDynamics, BHDFInterpreter
     __all__ += [
         "LIMEPriorInterpreter", "GLIMECVInterpreter", "ForgettingEventsInterpreter", "NormLIMECVInterpreter",
-        "NormLIMENLPInterpreter", "BHDFinterpreter","TrainingDynamics"
+        "NormLIMENLPInterpreter", "BHDFInterpreter","TrainingDynamics"
     ]
 except ModuleNotFoundError:
     print("Warning: Paddle should be installed before using some Interpreters.")

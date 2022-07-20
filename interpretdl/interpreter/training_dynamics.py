@@ -175,7 +175,7 @@ class LSTM(paddle.nn.Layer):
         out = self.softmax(out)
         return out
     
-class BHDFinterpreter():
+class BHDFInterpreter():
 
     """
         [Beyond hand-designed Feature Interpreter]
