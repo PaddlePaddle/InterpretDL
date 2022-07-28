@@ -20,9 +20,3 @@ Rollout
 
 .. autoclass:: interpretdl.RolloutInterpreter
    :members:
-
-TAM
---------
-
-.. autoclass:: interpretdl.TAMInterpreter
-   :members:

@@ -30,3 +30,9 @@ Sub-abstract: Intermediate-Layer Interpreter
    :members:
    :private-members:
 
+
+Sub-abstract: Transformer Interpreter
+---------------------------------------------
+.. autoclass:: interpretdl.TransformerInterpreter
+   :members:
+   :private-members:

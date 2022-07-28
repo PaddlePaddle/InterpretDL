@@ -17,7 +17,8 @@ InterpretDL also provides the evaluation metrics to verify the trustworthiness o
    :caption: Contents:
 
    interpreter
-   evaluator
+   trustworthiness_evaluator
+   interpretability_evalutor
 
 Indices and tables
 ==================

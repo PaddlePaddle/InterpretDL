@@ -82,8 +82,29 @@ NormLIME
 .. autoclass:: interpretdl.NormLIMENLPInterpreter
   :members:
 
+TAM
+--------
+
+.. autoclass:: interpretdl.TAMInterpreter
+   :members:
+
 Generic Attention
 ------------------
 
 .. autoclass:: interpretdl.GAInterpreter
+   :members:
+
+.. autoclass:: interpretdl.GANLPInterpreter
+   :members:
+
+.. autoclass:: interpretdl.GACVInterpreter
+   :members:
+
+Bidirectional Transformer Interpreter
+------------------
+
+.. autoclass:: interpretdl.BTCVInterpreter
+   :members:
+
+.. autoclass:: interpretdl.BTNLPInterpreter
    :members:

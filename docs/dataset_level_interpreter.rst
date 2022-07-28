@@ -1,6 +1,13 @@
 Dataset-Level Interpreters
 ============================================
 
+
+Beyond Hand-designed Feature Interpreter 
+-----------------------------------------
+
+.. autoclass:: interpretdl.BHDFInterpreter
+   :members:
+
 Forgetting Events
 -----------------
 

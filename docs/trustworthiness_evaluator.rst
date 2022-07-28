@@ -1,4 +1,4 @@
-Evaluation Metrics
+Interpreter Trustworthiness Evaluation Metrics
 ===========================
 
 Abstract Evaluator
@@ -21,17 +21,3 @@ Perturbation
 .. autoclass:: interpretdl.Perturbation
    :members:
    :private-members:
-
-PointGame
---------------------------
-
-.. autoclass:: interpretdl.PointGame
-   :members:
-   :private-members:
-
-PointGameSegmentation
---------------------------
-
-.. autoclass:: interpretdl.PointGameSegmentation
-   :members:
-   :private-members:   

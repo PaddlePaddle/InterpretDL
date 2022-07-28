@@ -1,7 +1,7 @@
 # Files within this path, contain the interpretation algorithms.
 
 from .abc_interpreter import Interpreter
-from .abc_interpreter import InputGradientInterpreter, InputOutputInterpreter, IntermediateLayerInterpreter
+from .abc_interpreter import InputGradientInterpreter, InputOutputInterpreter, IntermediateLayerInterpreter, TransformerInterpreter
 
 from .lime import LIMECVInterpreter, LIMENLPInterpreter
 from .gradient_cam import GradCAMInterpreter
@@ -19,7 +19,7 @@ from .generic_attention import GAInterpreter, GANLPInterpreter, GACVInterpreter
 from .bidirectional_transformer import BTCVInterpreter, BTNLPInterpreter
 
 __all__ = [
-    "Interpreter", "InputGradientInterpreter", "InputOutputInterpreter", "IntermediateLayerInterpreter",
+    "Interpreter", "InputGradientInterpreter", "InputOutputInterpreter", "IntermediateLayerInterpreter", "TransformerInterpreter",
     "LIMECVInterpreter", "LIMENLPInterpreter", "GradCAMInterpreter", "IntGradCVInterpreter", "IntGradNLPInterpreter",
     "SmoothGradInterpreter", "OcclusionInterpreter", "GradShapCVInterpreter", "GradShapNLPInterpreter",
     "ScoreCAMInterpreter", "LRPCVInterpreter", "RolloutInterpreter", "TAMInterpreter", "SmoothGradInterpreterV2",
