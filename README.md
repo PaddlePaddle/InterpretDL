@@ -164,30 +164,39 @@ Two dimensions (representations of explanation results and types of the target m
 | [GradCAM/CAM](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/gradient_cam.py)                     | Intermediate Features | Specific: CNNs                                 |
 | [ScoreCAM](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/score_cam.py)                        | Intermediate Features | Specific: CNNs                                 |
 | [Rollout](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/rollout.py)                         | Intermediate Features | Specific: Transformers                         |
-| [TAM](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/transition_attention_maps.py)                             | Intermediate Features | Specific: Transformers                         |
+| [TAM](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/transition_attention_maps.py)                             | Input Features | Specific: Transformers                         |
+| [Generic Attention](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/generic_attention.py)                  | Input Features                | Specific: Transformers |
+| [Bidirectional](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/bidirectional_transformer.py)                  | Input Features                | Specific: Transformers |
 | [ForgettingEvents](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/forgetting_events.py)                | Dataset-Level         | Differentiable                                 |
 | [TIDY (Training Data Analyzer)](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/TIDY.ipynb) | Dataset-Level         | Differentiable                                 |
+| [BHDF](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/training_dynamics.py) | Dataset-Level**        | Differentiable                                 |
 | [Consensus](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/consensus.py)                       | Features              | Cross-Model                                    |
-| [Generic Attention](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/generic_attention.py)                  | Input Features                | Specific: Bi-Modal Transformers |
 
 \* LRP requires that the model is of specific implementations for relevance back-propagation.
+
+\*\* Dataset-Level Interpreters require a training process.
 
 ## Implemented Trustworthiness Evaluation Algorithms
 
 - [x] [Perturbation Tests](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/evaluate_interpreter/perturbation.py)
 - [x] [Deletion & Insertion](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/evaluate_interpreter/deletion_insertion.py)
+
+## Interpretability Evaluation Algorithms
+
 - [x] [Localization Ability](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/evaluate_interpreter/localization.py)
 
 ## Planning Alorithms
 
 * Intermediate Features Interpretation Algorithm
-  - [ ] More Transformers Specific Interpreters
+  - [x] More Transformers Specific Interpreters
 
 * Dataset-Level Interpretation Algorithms
   - [ ] Influence Function
 
 * Evaluations
   - [ ] Local Fidelity
+  - [ ] Monotonicity
+  - [ ] Infidelity
   - [ ] Sensitivity
 
 # Presentations
