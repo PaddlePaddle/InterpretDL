@@ -79,9 +79,11 @@ class SmoothGradInterpreterV2(InputGradientInterpreter):
         self._build_predict_fn(gradient_of='probability')
 
         # obtain the labels (and initialization).
+        _, predcited_labels, predcited_probas = self.predict_fn(data, labels)
+        self.predcited_labels = predcited_labels
+        self.predcited_probas = predcited_probas
         if labels is None:
-            _, preds = self.predict_fn(data, None)
-            labels = preds
+            labels = predcited_labels
 
         labels = np.array(labels).reshape((1, ))
 
@@ -104,15 +106,15 @@ class SmoothGradInterpreterV2(InputGradientInterpreter):
             chunk = n_samples // split
             gradient_chunks = []
             for i in range(split - 1):
-                gradients_i, _ = self.predict_fn(data_noised[i * chunk:(i + 1) * chunk], np.repeat(labels, chunk))
+                gradients_i, _, _ = self.predict_fn(data_noised[i * chunk:(i + 1) * chunk], np.repeat(labels, chunk))
                 gradient_chunks.append(gradients_i)
-            gradients_s, _ = self.predict_fn(data_noised[chunk * (split - 1):],
+            gradients_s, _, _ = self.predict_fn(data_noised[chunk * (split - 1):],
                                              np.repeat(labels, n_samples - chunk * (split - 1)))
             gradient_chunks.append(gradients_s)
             gradients = np.concatenate(gradient_chunks, axis=0)
         else:
             # one split.
-            gradients, _ = self.predict_fn(data_noised, np.repeat(labels, n_samples))
+            gradients, _, _ = self.predict_fn(data_noised, np.repeat(labels, n_samples))
 
         avg_gradients = np.mean(gradients, axis=0, keepdims=True)
         # visualize and save image.

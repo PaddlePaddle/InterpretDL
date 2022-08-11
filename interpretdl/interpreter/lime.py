@@ -88,7 +88,7 @@ class LIMECVInterpreter(InputOutputInterpreter):
 
         self._build_predict_fn(output='probability')
 
-        probability, _ = self.predict_fn(data, None)
+        probability, _, _ = self.predict_fn(data, None)
         # only one example here
         probability = probability[0]
 
@@ -105,7 +105,7 @@ class LIMECVInterpreter(InputOutputInterpreter):
         def predict_fn_for_lime(_imgs):
             _data = preprocess_image(_imgs)  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
 
-            output, _ = self.predict_fn(_data, None)
+            output, _, _ = self.predict_fn(_data, None)
             return output
 
         self.predict_fn_for_lime = predict_fn_for_lime
@@ -138,7 +138,7 @@ class LIMECVInterpreter(InputOutputInterpreter):
         return lime_weights
 
 
-class LIMENLPInterpreter(Interpreter):
+class LIMENLPInterpreter(InputOutputInterpreter):
     """
     LIME Interpreter for NLP tasks.
 
@@ -167,12 +167,11 @@ class LIMENLPInterpreter(Interpreter):
         """
         Interpreter.__init__(self, paddle_model, device, use_cuda)
         self.paddle_model = paddle_model
-        self.paddle_prepared = False
 
         # use the default LIME setting
         self.lime_base = LimeBase(random_state=random_seed)
 
-        self.lime_intermediate_results = {}
+        self.lime_results = {}
 
     def interpret(self,
                   data: str,
@@ -217,10 +216,14 @@ class LIMENLPInterpreter(Interpreter):
         else:
             self.model_inputs = tuple(inp.numpy() for inp in model_inputs)
 
-        if not self.paddle_prepared:
-            self._paddle_prepare()
+        self._build_predict_fn(output='probability')
+        def predict_fn_for_lime(*inputs):
+            probability, _, _ = self.predict_fn(inputs, None)
+            return probability        
+
         # only one example here
-        probability = self.predict_fn(*self.model_inputs)[0]
+        probability, _, _ = self.predict_fn(self.model_inputs, interpret_class)
+        probability = probability[0]
 
         # only interpret top 1
         if interpret_class is None:
@@ -228,7 +231,7 @@ class LIMENLPInterpreter(Interpreter):
             interpret_class = pred_label[-1:]
 
         lime_weights, r2_scores = self.lime_base.interpret_instance_text(self.model_inputs,
-                                                                         classifier_fn=self.predict_fn,
+                                                                         classifier_fn=predict_fn_for_lime,
                                                                          interpret_labels=interpret_class,
                                                                          unk_id=unk_id,
                                                                          pad_id=pad_id,
@@ -242,27 +245,14 @@ class LIMENLPInterpreter(Interpreter):
             weights_new = [(data_array[tup[0]], tup[1]) for tup in weights_c]
             lime_weights[c] = weights_new
 
+        # intermediate results, for possible further usages.
+        self.lime_results['probability'] = {c: probability[c] for c in interpret_class.ravel()}
+        self.lime_results['r2_scores'] = r2_scores
+        self.lime_results['lime_weights'] = lime_weights
+
         # Visualization is currently not supported here.
         # See the tutorial for more information:
         # https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2.ipynb
         if return_pred:
             return (interpret_class, probability[interpret_class], lime_weights)
         return lime_weights
-
-    def _paddle_prepare(self, predict_fn=None):
-        if predict_fn is None:
-            import paddle
-            if not paddle.is_compiled_with_cuda() and self.device[:3] == 'gpu':
-                print("Paddle is not installed with GPU support. Change to CPU version now.")
-                self.device = 'cpu'
-            paddle.set_device(self.device)
-            self.paddle_model.eval()
-
-            def predict_fn(*params):
-                params = tuple(paddle.to_tensor(inp) for inp in params)
-                logits = self.paddle_model(*params)
-                probs = paddle.nn.functional.softmax(logits)
-                return probs.numpy()
-
-        self.predict_fn = predict_fn
-        self.paddle_prepared = True

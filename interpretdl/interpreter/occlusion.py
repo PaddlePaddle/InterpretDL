@@ -82,12 +82,14 @@ class OcclusionInterpreter(InputOutputInterpreter):
         if len(baselines) == 1:
             baselines = np.repeat(baselines, len(data), 0)
 
-        probs, _ = self.predict_fn(data, None)
+        probas, label, _ = self.predict_fn(data, None)
+        self.predcited_labels = labels
+        self.predcited_probas = probas        
 
         sliding_windows = np.ones(sliding_window_shapes)
 
         if labels is None:
-            labels = np.argmax(probs, axis=1)
+            labels = np.argmax(probas, axis=1)
         elif isinstance(labels, int):
             labels = [labels]
 
@@ -95,7 +97,7 @@ class OcclusionInterpreter(InputOutputInterpreter):
         current_shape = np.subtract(img_size, sliding_window_shapes)
         shift_counts = tuple(np.add(np.ceil(np.divide(current_shape, strides)).astype(int), 1))
 
-        initial_eval = np.array([probs[i][labels[i]] for i in range(bsz)]).reshape((1, bsz))
+        initial_eval = np.array([probas[i][labels[i]] for i in range(bsz)]).reshape((1, bsz))
         total_interp = np.zeros_like(data)
 
         num_features = np.prod(shift_counts)
@@ -103,7 +105,7 @@ class OcclusionInterpreter(InputOutputInterpreter):
             for (ablated_features, current_mask) in self._ablation_generator(data, sliding_windows, strides, baselines,
                                                                              shift_counts, perturbations_per_eval):
                 ablated_features = ablated_features.reshape((-1, ) + ablated_features.shape[2:])
-                modified_probs, _ = self.predict_fn(np.float32(ablated_features), None)
+                modified_probs, _, _ = self.predict_fn(np.float32(ablated_features), None)
                 modified_eval = [p[labels[i % bsz]] for i, p in enumerate(modified_probs)]
                 eval_diff = initial_eval - np.array(modified_eval).reshape((-1, bsz))
                 eval_diff = eval_diff.T

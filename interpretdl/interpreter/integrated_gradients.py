@@ -84,9 +84,12 @@ class IntGradCVInterpreter(InputGradientInterpreter):
             self.baselines = baselines
 
         # obtain the labels (and initialization).
+        _, predcited_labels, predcited_probas = self.predict_fn(data, labels)
+        self.predcited_labels = predcited_labels
+        self.predcited_probas = predcited_probas
         if labels is None:
-            gradients, preds = self.predict_fn(data, labels)
-            labels = preds
+            labels = predcited_labels
+
         labels = np.array(labels).reshape((bsz, ))
 
         # IntGrad.
@@ -96,7 +99,7 @@ class IntGradCVInterpreter(InputGradientInterpreter):
                 total_gradients = np.zeros_like(data)
                 for alpha in np.linspace(0, 1, steps):
                     data_scaled = data * alpha + self.baselines[i] * (1 - alpha)
-                    gradients, _ = self.predict_fn(data_scaled, labels)
+                    gradients, _, _ = self.predict_fn(data_scaled, labels)
                     total_gradients += gradients
                     pbar.update(1)
 
@@ -118,9 +121,6 @@ class IntGradCVInterpreter(InputGradientInterpreter):
                     show_vis_explanation(vis_explanation)
                 if save_path[i] is not None:
                     save_image(save_path[i], vis_explanation)
-
-        # intermediate results, for possible further usages.
-        self.labels = labels
 
         return avg_gradients
 
@@ -182,6 +182,9 @@ class IntGradNLPInterpreter(Interpreter):
             bs = data.shape[0]
 
         gradients, labels, data_out, probas = self.predict_fn(data, labels, None)
+        self.predcited_labels = labels
+        self.predcited_probas = probas
+
         labels = labels.reshape((bs, ))
         total_gradients = np.zeros_like(gradients)
         for alpha in np.linspace(0, 1, steps):
@@ -211,22 +214,7 @@ class IntGradNLPInterpreter(Interpreter):
         if self.predict_fn is None or rebuild:
             assert gradient_of in ['loss', 'logit', 'probability']
 
-            if not paddle.is_compiled_with_cuda() and self.device[:3] == 'gpu':
-                print("Paddle is not installed with GPU support. Change to CPU version now.")
-                self.device = 'cpu'
-
-            # set device. self.device is one of ['cpu', 'gpu:0', 'gpu:1', ...]
-            paddle.set_device(self.device)
-
-            # to get gradients, the ``train`` mode must be set.
-            self.paddle_model.train()
-
-            # later version will be simplied.
-            for n, v in self.paddle_model.named_sublayers():
-                if "batchnorm" in v.__class__.__name__.lower():
-                    v._use_global_stats = True
-                if "dropout" in v.__class__.__name__.lower():
-                    v.p = 0
+            self._paddle_env_setup()
 
             def predict_fn(data, labels, noise_scale=1.0):
                 if isinstance(data, tuple):

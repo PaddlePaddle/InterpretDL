@@ -51,16 +51,6 @@ class TestIG(unittest.TestCase):
 
         assert_arrays_almost_equal(self, result, desired)
 
-    def test_algo_2(self):
-        paddle_model = mobilenet_v2(pretrained=True)
-        np.random.seed(42)
-        algo = it.IntGradNLPInterpreter(paddle_model, device='cpu')
-        data = np.random.random(size=(1, 3, 64, 64)).astype(np.float32)
-        exp = algo.interpret(data, steps=3, embedding_name='features.18.2', return_pred=False)
-        result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
-        desired = np.array([ 4.4516042e-07,  4.2583229e-06, -2.4716886e-05,  8.8872534e-05])
-        assert_arrays_almost_equal(self, result, desired)
-
     def test_save(self):
         import matplotlib
         matplotlib.use('agg')  # non-GUI, for skipping.

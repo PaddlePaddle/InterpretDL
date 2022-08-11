@@ -72,8 +72,11 @@ class GradShapCVInterpreter(InputGradientInterpreter):
 
         self._build_predict_fn(gradient_of='probability')
 
+        _, predcited_labels, predcited_probas = self.predict_fn(data, labels)
+        self.predcited_labels = predcited_labels
+        self.predcited_probas = predcited_probas
         if labels is None:
-            _, labels = self.predict_fn(data, labels)
+            labels = predcited_labels
 
         def add_noise_to_inputs(data):
             max_axis = tuple(np.arange(1, data.ndim))
@@ -98,7 +101,7 @@ class GradShapCVInterpreter(InputGradientInterpreter):
         input_baseline_points = np.array(
             [d * r + b * (1 - r) for d, r, b in zip(data_with_noise, rand_scales, baselines)])
 
-        gradients, _ = self.predict_fn(input_baseline_points, labels)
+        gradients, _, _ = self.predict_fn(input_baseline_points, labels)
 
         input_baseline_diff = data_with_noise - baselines
         explanations = gradients * input_baseline_diff
@@ -178,6 +181,9 @@ class GradShapNLPInterpreter(Interpreter):
             bs = data.shape[0]
 
         gradients, labels, data_out, probas = self.predict_fn(data, labels, None)
+        self.predcited_labels = labels
+        self.predcited_probas = probas
+
         labels = labels.reshape((bs, ))
         total_gradients = np.zeros_like(gradients)
 
@@ -208,22 +214,7 @@ class GradShapNLPInterpreter(Interpreter):
         import paddle
         if self.predict_fn is None or rebuild:
 
-            if not paddle.is_compiled_with_cuda() and self.device[:3] == 'gpu':
-                print("Paddle is not installed with GPU support. Change to CPU version now.")
-                self.device = 'cpu'
-
-            # set device. self.device is one of ['cpu', 'gpu:0', 'gpu:1', ...]
-            paddle.set_device(self.device)
-
-            # to get gradients, the ``train`` mode must be set.
-            self.paddle_model.train()
-
-            # later version will be simplied.
-            for n, v in self.paddle_model.named_sublayers():
-                # if "batchnorm" in v.__class__.__name__.lower():
-                #     v._use_global_stats = True
-                if "dropout" in v.__class__.__name__.lower():
-                    v.p = 0
+            self._paddle_env_setup()
 
             def predict_fn(data, labels, scale=None, noise_amount=None):
                 if isinstance(data, tuple):

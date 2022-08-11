@@ -72,9 +72,11 @@ class SmoothGradInterpreter(InputGradientInterpreter):
         self._build_predict_fn(gradient_of='probability')
 
         # obtain the labels (and initialization).
+        _, predcited_labels, predcited_probas = self.predict_fn(data, labels)
+        self.predcited_labels = predcited_labels
+        self.predcited_probas = predcited_probas
         if labels is None:
-            _, preds = self.predict_fn(data, None)
-            labels = preds
+            labels = predcited_labels
         labels = np.array(labels).reshape((bsz, ))
 
         # SmoothGrad
@@ -86,7 +88,7 @@ class SmoothGradInterpreter(InputGradientInterpreter):
             noise = np.concatenate(
                 [np.float32(np.random.normal(0.0, stds[j], (1, ) + tuple(d.shape))) for j, d in enumerate(data)])
             data_noised = data + noise
-            gradients, _ = self.predict_fn(data_noised, labels)
+            gradients, _, _ = self.predict_fn(data_noised, labels)
             total_gradients += gradients
 
         avg_gradients = total_gradients / n_samples

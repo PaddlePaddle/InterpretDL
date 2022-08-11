@@ -174,7 +174,7 @@ class GLIMECVInterpreter(LIMECVInterpreter):
         data = preprocess_image(img)
 
         self._build_predict_fn(output='probability')  # create self.predict_fn.
-        probability, _ = self.predict_fn(data, None)
+        probability, _, _ = self.predict_fn(data, None)
         probability = probability[0]  # only one example here
 
         if interpret_class is None:
@@ -190,7 +190,7 @@ class GLIMECVInterpreter(LIMECVInterpreter):
         def predict_fn_for_lime(_imgs):
             _data = preprocess_image(_imgs)  # transpose to [N, 3, H, W], scaled to [0.0, 1.0]
 
-            output, _ = self.predict_fn(_data, None)
+            output, _, _ = self.predict_fn(_data, None)
             return output
 
         self.predict_fn_for_lime = predict_fn_for_lime

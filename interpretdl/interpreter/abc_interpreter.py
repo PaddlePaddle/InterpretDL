@@ -79,6 +79,7 @@ class Interpreter(ABC):
         # This is a simple implementation for disabling gradient computation. #
         #######################################################################
         import paddle
+        assert versiontuple2tuple(paddle.__version__) >= (2, 2, 1)
         if not paddle.is_compiled_with_cuda() and self.device[:3] == 'gpu':
             print("Paddle is not installed with GPU support. Change to CPU version now.")
             self.device = 'cpu'
@@ -113,29 +114,6 @@ class InputGradientInterpreter(Interpreter):
             "paddle_model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
 
-    def _paddle_env_setup(self):
-        """Prepare the environment setup. 
-        This function is an implementation for gradient computation.
-        """
-        import paddle
-        if not paddle.is_compiled_with_cuda() and self.device[:3] == 'gpu':
-            print("Paddle is not installed with GPU support. Change to CPU version now.")
-            self.device = 'cpu'
-
-        # globally set device.
-        paddle.set_device(self.device)
-        if versiontuple2tuple(paddle.__version__) >= (2, 2, 1):
-            # From Paddle2.2.1, gradients are supported in eval mode.
-            self.paddle_model.eval()
-        else:
-            # Former versions.
-            self.paddle_model.train()
-            for n, v in self.paddle_model.named_sublayers():
-                if "batchnorm" in v.__class__.__name__.lower():
-                    v._use_global_stats = True
-                if "dropout" in v.__class__.__name__.lower():
-                    v.p = 0
-
     def _build_predict_fn(self, rebuild: bool = False, gradient_of: str = 'probability'):
         """Build ``predict_fn`` for input gradients based algorithms.
         The model is supposed to be a classification model.
@@ -156,28 +134,38 @@ class InputGradientInterpreter(Interpreter):
 
             self._paddle_env_setup()
 
-            def predict_fn(data, labels=None):
+            def predict_fn(inputs, labels=None):
                 """predict_fn for input gradients based interpreters,
                     for image classification models only.
 
                 Args:
-                    data ([type]): scaled input data.
+                    inputs ([type]): scaled inputs.
                     labels ([type]): can be None.
 
                 Returns:
                     [type]: gradients, labels
                 """
                 import paddle
-                assert len(data.shape) == 4  # [bs, h, w, 3]
+                # assert len(data.shape) == 4  # [bs, h, w, 3]
                 assert labels is None or \
-                    (isinstance(labels, (list, np.ndarray)) and len(labels) == data.shape[0])
+                    (isinstance(labels, (list, np.ndarray)) and len(labels) == inputs.shape[0])
 
-                data = paddle.to_tensor(data)
-                data.stop_gradient = False
+                if isinstance(inputs, tuple):
+                    tensor_inputs = []
+                    for inp in inputs:
+                        tmp = paddle.to_tensor(inp)
+                        tmp.stop_gradient = False
+                        tensor_inputs.append(tmp)
+                    tensor_inputs = tuple(tensor_inputs)
+                else:
+                    tensor_inputs = paddle.to_tensor(inputs)
+                    tensor_inputs.stop_gradient = False
+                    tensor_inputs = (tensor_inputs, )
 
-                # get logits, [bs, num_c]
-                logits = self.paddle_model(data)
+                # get logits and probas, [bs, num_c]
+                logits = self.paddle_model(*tensor_inputs)
                 num_samples, num_classes = logits.shape[0], logits.shape[1]
+                probas = paddle.nn.functional.softmax(logits, axis=-1)
 
                 # get predictions.
                 pred = paddle.argmax(logits, axis=1)
@@ -195,15 +183,14 @@ class InputGradientInterpreter(Interpreter):
                     if gradient_of == 'logit':
                         loss = paddle.sum(logits * labels_onehot, axis=1)
                     else:
-                        probas = paddle.nn.functional.softmax(logits, axis=1)
                         loss = paddle.sum(probas * labels_onehot, axis=1)
 
                 loss.backward()
-                gradients = data.grad
+                gradients = tensor_inputs[0].grad
                 if isinstance(gradients, paddle.Tensor):
                     gradients = gradients.numpy()
 
-                return gradients, labels
+                return gradients, labels, probas
 
             self.predict_fn = predict_fn
 
@@ -251,32 +238,34 @@ class InputOutputInterpreter(Interpreter):
 
             self._paddle_env_setup()
 
-            def predict_fn(data, label):
+            def predict_fn(inputs, label):
                 """predict_fn for input gradients based interpreters,
                     for image classification models only.
 
                 Args:
-                    data ([type]): [description]
+                    inputs ([type]): [description]
                     label ([type]): can be None.
 
                 Returns:
                     [type]: [description]
                 """
                 import paddle
-                assert len(data.shape) == 4  # [bs, h, w, 3]
+                # assert len(inputs.shape) == 4  # [bs, h, w, 3]
 
                 with paddle.no_grad():
-                    logits = self.paddle_model(paddle.to_tensor(data))  # get logits, [bs, num_c]
-                    probas = paddle.nn.functional.softmax(logits, axis=1)  # get probabilities.
-                    pred = paddle.argmax(probas, axis=1)  # get predictions.
+                    inputs = tuple(paddle.to_tensor(inp) for inp in inputs) if isinstance(inputs, tuple) \
+                        else (paddle.to_tensor(inputs), )
+                    logits = self.paddle_model(*inputs)  # get logits, [bs, num_c]
+                    probas = paddle.nn.functional.softmax(logits, axis=-1)  # get probabilities.
+                    pred = paddle.argmax(probas, axis=-1)  # get predictions.
 
                     if label is None:
                         label = pred.numpy()  # label is an integer.
 
                     if output == 'logit':
-                        return logits.numpy(), label
+                        return logits.numpy(), label, probas
                     else:
-                        return probas.numpy(), label
+                        return probas.numpy(), label, probas
 
             self.predict_fn = predict_fn
 
