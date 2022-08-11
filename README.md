@@ -254,61 +254,6 @@ InterpretDL is provided under the [Apache-2.0 license](https://github.com/Paddle
 # Recent News
 
 
-- (2021/10/20) Implemented the Transition Attention Maps (TAM) explanation method for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/model_zoo/vision_transformer.py). As always, several lines call this interpreter. See details from the [example](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_tam_cv_ViT.ipynb), and the [paper](https://openreview.net/forum?id=TT-cf6QSDaQ):
-
-  * `TAM`: Tingyi Yuan, Xuhong Li, Haoyi Xiong, Hui Cao, Dejing Dou. Explaining Information Flow Inside Vision Transformers Using Markov Chain. In *Neurips 2021 XAI4Debugging Workshop*. 
-
-```python
-import paddle
-import interpretdl as it
-
-# load vit model and weights
-# !wget -c https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/ViT_base_patch16_224_pretrained.pdparams -P assets/
-from assets.vision_transformer import ViT_base_patch16_224
-paddle_model = ViT_base_patch16_224()
-MODEL_PATH = 'assets/ViT_base_patch16_224_pretrained.pdparams'
-paddle_model.set_dict(paddle.load(MODEL_PATH))
-
-# Call the interpreter.
-tam = it.TAMInterpreter(paddle_model, use_cuda=True)
-img_path = 'samples/el1.png'
-heatmap = tam.interpret(
-        img_path,
-        start_layer=4,
-        label=None,  # elephant
-        visual=True,
-        save_path=None)
-heatmap = tam.interpret(
-        img_path,
-        start_layer=4,
-        label=340,  # zebra
-        visual=True,
-        save_path=None)
-```
-| image | elephant | zebra |
-:-----------:|:-----------:|:-----------:
-![image](https://user-images.githubusercontent.com/13829174/139223230-66094dbf-cbc8-450c-acd8-0c0ec40c5fef.png) | ![elephant](https://user-images.githubusercontent.com/13829174/138049903-8106d879-3c70-437b-a580-cf8e9c17f974.png) | ![zebra](https://user-images.githubusercontent.com/13829174/138049895-6d52b97d-c4fd-40da-be88-f5c956cb9fcb.png)
-
-
-
-- (2021/07/22) Implemented Rollout Explanations for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/model_zoo/vision_transformer.py). See the [notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_rollout_cv_ViT.ipynb) for the visualization.
-
-```python
-import paddle
-import interpretdl as it
-
-# wget -c https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/ViT_small_patch16_224_pretrained.pdparams -P assets/
-from assets.vision_transformer import ViT_small_patch16_224
-paddle_model = ViT_small_patch16_224()
-MODEL_PATH = 'assets/ViT_small_patch16_224_pretrained.pdparams'
-paddle_model.set_dict(paddle.load(MODEL_PATH))
-
-img_path = 'assets/catdog.png'
-rollout = it.RolloutInterpreter(paddle_model, use_cuda=True)
-heatmap = rollout.interpret(img_path, start_layer=0, visual=True)
-```
-
-
 - (2022/04/27) A getting-started tutorial is provided. Check it from [GitHub](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/Getting_Started.ipynb) or [NBViewer](https://nbviewer.org/github/PaddlePaddle/InterpretDL/blob/master/tutorials/Getting_Started.ipynb). Usage examples have been provided for each algorithm (both Interpreter and Evaluator). We are currently preparing tutorials for easy usages of InterpretDL. Both tutorials and examples can be assessed under the [tutorial](https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials) folder.
 
 - (2022/01/06) Implemented the Cross-Model Consensus Explanation method. In brief, this method averages the explanation results from several models. Instead of interpreting individual models, this method is able to identify the discriminative features in the input data with accurate localization. See the [paper](https://arxiv.org/abs/2109.00707) for details.
@@ -318,3 +263,57 @@ heatmap = rollout.interpret(img_path, start_layer=0, visual=True)
   We show a demo with six models (the last column shows the consensus explanation), while more models (around 15) could give a much better result. See the [example](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_consensus_cv.ipynb) for more details.
 
   ![Consensus Result](https://user-images.githubusercontent.com/13829174/165700043-1c680494-8573-4b4a-a2d6-74ea3d14f214.png)
+
+
+- (2021/10/20) Implemented the Transition Attention Maps (TAM) explanation method for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/model_zoo/vision_transformer.py). As always, several lines call this interpreter. See details from the [example](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_tam_cv_ViT.ipynb), and the [paper](https://openreview.net/forum?id=TT-cf6QSDaQ):
+
+  * `TAM`: Tingyi Yuan, Xuhong Li, Haoyi Xiong, Hui Cao, Dejing Dou. Explaining Information Flow Inside Vision Transformers Using Markov Chain. In *Neurips 2021 XAI4Debugging Workshop*. 
+
+  ```python
+  import paddle
+  import interpretdl as it
+
+  # load vit model and weights
+  # !wget -c https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/ViT_base_patch16_224_pretrained.pdparams -P assets/
+  from assets.vision_transformer import ViT_base_patch16_224
+  paddle_model = ViT_base_patch16_224()
+  MODEL_PATH = 'assets/ViT_base_patch16_224_pretrained.pdparams'
+  paddle_model.set_dict(paddle.load(MODEL_PATH))
+
+  # Call the interpreter.
+  tam = it.TAMInterpreter(paddle_model, use_cuda=True)
+  img_path = 'samples/el1.png'
+  heatmap = tam.interpret(
+          img_path,
+          start_layer=4,
+          label=None,  # elephant
+          visual=True,
+          save_path=None)
+  heatmap = tam.interpret(
+          img_path,
+          start_layer=4,
+          label=340,  # zebra
+          visual=True,
+          save_path=None)
+  ```
+  | image | elephant | zebra |
+  :-----------:|:-----------:|:-----------:
+  ![image](https://user-images.githubusercontent.com/13829174/139223230-66094dbf-cbc8-450c-acd8-0c0ec40c5fef.png) | ![elephant](https://user-images.githubusercontent.com/13829174/138049903-8106d879-3c70-437b-a580-cf8e9c17f974.png) | ![zebra](https://user-images.githubusercontent.com/13829174/138049895-6d52b97d-c4fd-40da-be88-f5c956cb9fcb.png)
+
+
+- (2021/07/22) Implemented Rollout Explanations for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/model_zoo/vision_transformer.py). See the [notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_rollout_cv_ViT.ipynb) for the visualization.
+
+  ```python
+  import paddle
+  import interpretdl as it
+
+  # wget -c https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/ViT_small_patch16_224_pretrained.pdparams -P assets/
+  from assets.vision_transformer import ViT_small_patch16_224
+  paddle_model = ViT_small_patch16_224()
+  MODEL_PATH = 'assets/ViT_small_patch16_224_pretrained.pdparams'
+  paddle_model.set_dict(paddle.load(MODEL_PATH))
+
+  img_path = 'assets/catdog.png'
+  rollout = it.RolloutInterpreter(paddle_model, use_cuda=True)
+  heatmap = rollout.interpret(img_path, start_layer=0, visual=True)
+  ```
