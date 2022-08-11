@@ -25,15 +25,34 @@ For researchers working on designing new interpretation algorithms, InterpretDL 
 
 # :fire: :fire: :fire: News :fire: :fire: :fire:
 
-- (2022/04/27) A getting-started tutorial is provided. Check it from [GitHub](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/Getting_Started.ipynb) or [NBViewer](https://nbviewer.org/github/PaddlePaddle/InterpretDL/blob/master/tutorials/Getting_Started.ipynb). Usage examples have been provided for each algorithm (both Interpreter and Evaluator). We are currently preparing tutorials for easy usages of InterpretDL. Both tutorials and examples can be assessed under the [tutorial](https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials) folder.
+- (2022.08) The paper with this repository is accepted by Journal of Machine Learning Research (JMLR). If this repo is helpful for your work, please consider citing this paper:
 
-- (2022/01/06) Implemented the Cross-Model Consensus Explanation method. In brief, this method averages the explanation results from several models. Instead of interpreting individual models, this method is able to identify the discriminative features in the input data with accurate localization. See the [paper](https://arxiv.org/abs/2109.00707) for details.
+  > Xuhong Li, Haoyi Xiong, Xingjian Li, Xuanyu Wu, Zeyu Chen, and Dejing Dou. “InterpretDL: Explaining Deep Models in PaddlePaddle.” Journal of Machine Learning Research, 2022. https://jmlr.org/papers/v23/21-0738.html. 
 
-  * `Consensus`: Xuhong Li, Haoyi Xiong, Siyu Huang, Shilei Ji, Dejing Dou. Cross-Model Consensus of Explanations and Beyond for Image Classification Models: An Empirical Study. arXiv:2109.00707.
+  ```
+  @article{JMLR:v23:21-0738,
+    author  = {Xuhong Li and Haoyi Xiong and Xingjian Li and Xuanyu Wu and Zeyu Chen and Dejing Dou},
+    title   = {InterpretDL: Explaining Deep Models in PaddlePaddle},
+    journal = {Journal of Machine Learning Research},
+    year    = {2022},
+    volume  = {23},
+    number  = {197},
+    pages   = {1--6},
+    url     = {http://jmlr.org/papers/v23/21-0738.html}
+    }
+  ```
 
-We show a demo with six models (the last column shows the consensus explanation), while more models (around 15) could give a much better result. See the [example](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_consensus_cv.ipynb) for more details.
+- (2022.08) Two research works got accepted by ECML and Machine Learning Journal. Cross-model consensus explanations are exploited to create a pseudo semantic segmentation dataset named PSSL, which contains 1.2M pseudo masks corresponding to the whole ImageNet training set. The dataset is publicly available. 
 
-![Consensus Result](https://user-images.githubusercontent.com/13829174/165700043-1c680494-8573-4b4a-a2d6-74ea3d14f214.png)
+  Refer to [PaddleSeg:PSSL](https://github.com/PaddlePaddle/PaddleSeg/tree/develop/configs/pssl) for downloading the dataset and the pretrained models. 
+  
+  Refer to the papers for the details about the Consensus explanation and how it helps for the semantic segmentation task:
+
+  > Xuhong Li, Haoyi Xiong, Siyu Huang, Shilei Ji, Dejing Dou. Cross-Model Consensus of Explanations and Beyond for Image Classification Models: An Empirical Study. ECML'22, Machine Learning Journal Track. https://arxiv.org/abs/2109.00707.
+
+  > Xuhong Li, Haoyi Xiong, Yi Liu, Dingfu Zhou, Zeyu Chen, Yaqing Wang, and Dejing Dou. "Distilling ensemble of explanations for weakly-supervised pre-training of image segmentation models." Machine Learning (2022): 1-17. https://arxiv.org/abs/2207.03335.
+
+  ![](https://user-images.githubusercontent.com/13829174/184098740-a84cfa80-3cc0-4b73-ad57-e51bb2ce96d1.png)
 
 # Demo
 
@@ -288,3 +307,14 @@ img_path = 'assets/catdog.png'
 rollout = it.RolloutInterpreter(paddle_model, use_cuda=True)
 heatmap = rollout.interpret(img_path, start_layer=0, visual=True)
 ```
+
+
+- (2022/04/27) A getting-started tutorial is provided. Check it from [GitHub](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/Getting_Started.ipynb) or [NBViewer](https://nbviewer.org/github/PaddlePaddle/InterpretDL/blob/master/tutorials/Getting_Started.ipynb). Usage examples have been provided for each algorithm (both Interpreter and Evaluator). We are currently preparing tutorials for easy usages of InterpretDL. Both tutorials and examples can be assessed under the [tutorial](https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials) folder.
+
+- (2022/01/06) Implemented the Cross-Model Consensus Explanation method. In brief, this method averages the explanation results from several models. Instead of interpreting individual models, this method is able to identify the discriminative features in the input data with accurate localization. See the [paper](https://arxiv.org/abs/2109.00707) for details.
+
+  * `Consensus`: Xuhong Li, Haoyi Xiong, Siyu Huang, Shilei Ji, Dejing Dou. Cross-Model Consensus of Explanations and Beyond for Image Classification Models: An Empirical Study. arXiv:2109.00707.
+
+  We show a demo with six models (the last column shows the consensus explanation), while more models (around 15) could give a much better result. See the [example](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_consensus_cv.ipynb) for more details.
+
+  ![Consensus Result](https://user-images.githubusercontent.com/13829174/165700043-1c680494-8573-4b4a-a2d6-74ea3d14f214.png)
