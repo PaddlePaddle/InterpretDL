@@ -205,7 +205,16 @@ class GAInterpreter(InputGradientInterpreter):
             
 class GANLPInterpreter(TransformerInterpreter):
     """
+    Generic Attention Interpreter.
+
+    This is a specific interpreter for Bi-Modal Transformers models. GAInterpreter computes the attention map with
+    gradients, and follows the operations that are similar to Rollout, with advanced modifications.
+
     The following implementation is specially designed for Ernie.
+
+    More details regarding the Generic Attention method can be found in the original paper:
+    https://arxiv.org/abs/2103.15679.
+
     """
 
     def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None) -> None:
@@ -223,43 +232,35 @@ class GANLPInterpreter(TransformerInterpreter):
                   start_layer: int = 11,
                   label: int or None = None,
                   embedding_name='^ernie.embeddings.word_embeddings$',
-                  attn_map_name='^ernie.encoder.layers.*.self_attn.attn_drop$', 
-                  save_path: str or None = None):
+                  attn_map_name='^ernie.encoder.layers.*.self_attn.attn_drop$'):
         """
         Args:
-            inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy 
-                array of read images.
-            ap_mode (str, default to head-wise): The approximation method of attentioanl perception stage, "head" for head-wise, "token" for token-wise.
-            start_layer (int, optional): Compute the state from the start layer. Default: ``4``.
-            steps (int, optional): number of steps in the Riemann approximation of the integral. Default: ``20``.
-            labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels 
-                should be equal to the number of images. If None, the most likely label for each image will be used. 
+            data (str or list of strs or numpy.ndarray): The input text filepath or a list of filepaths or numpy
+                array of read texts.
+            start_layer (int, optional): Compute the state from the start layer. Default: ``11``.
+            label (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels
+                should be equal to the number of texts. If None, the most likely label for each text will be used.
                 Default: ``None``.
-            resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
-                ``224``.
-            crop_to (int, optional): After resize, images will be center cropped to a square image with the size 
-                ``crop_to``. If None, no crop will be performed. Defaults to ``None``.
-            visual (bool, optional): Whether or not to visualize the processed image. Default: ``True``.
-            save_path (str, optional): The filepath(s) to save the processed image(s). If None, the image will not be 
-                saved. Default: ``None``.
+            embedding_name (str, optional): The layer name for word embedding.
+                Default: ``^ernie.embeddings.word_embeddings$``.
+            attn_map_name (str, optional): The layer name to obtain attention weights.
+                Default: ``^ernie.encoder.layers.*.self_attn.attn_drop$``
 
         Returns:
-            [numpy.ndarray]: interpretations/heatmap for images
+            [numpy.ndarray]: interpretations for texts
         """
 
         b = data[0].shape[0]  # batch size
         assert b==1, "only support single sentence"
         self._build_predict_fn(embedding_name=embedding_name, attn_map_name=attn_map_name, nlp=True)
-        
-        attns, grads, _, _, _, preds = self.predict_fn(data)
-        
-        assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
 
         if label is None:
             label = preds
 
+        attns, grads, _, _, _, preds = self.predict_fn(data, labels=label)
+        assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
+
         b, h, s, _ = attns[0].shape
-        num_blocks = len(attns)
         R = np.eye(s, s, dtype=attns[0].dtype)
         R = np.expand_dims(R, 0)
               
@@ -297,7 +298,6 @@ class GACVInterpreter(TransformerInterpreter):
 
     def interpret(self,
                   inputs: str or list(str) or np.ndarray,
-                  ap_mode: str = "head",
                   start_layer: int = 4,
                   attn_map_name='^blocks.*.attn.attn_drop$', 
                   label: int or None = None,
@@ -309,10 +309,10 @@ class GACVInterpreter(TransformerInterpreter):
         Args:
             inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy 
                 array of read images.
-            ap_mode (str, default to head-wise): The approximation method of attentioanl perception stage, "head" for head-wise, "token" for token-wise.
             start_layer (int, optional): Compute the state from the start layer. Default: ``4``.
-            steps (int, optional): number of steps in the Riemann approximation of the integral. Default: ``20``.
-            labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels 
+            attn_map_name (str, optional):  The layer name to obtain attention weights.
+                Default: ``^blocks.*.attn.attn_drop$``
+            label (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels
                 should be equal to the number of images. If None, the most likely label for each image will be used. 
                 Default: ``None``.
             resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
@@ -331,15 +331,14 @@ class GACVInterpreter(TransformerInterpreter):
         b = len(data)  # batch size
         assert b==1, "only support single image"
         self._build_predict_fn(attn_map_name=attn_map_name)
+
+        if label is None:
+            label = preds
         
         attns, grads, inputs, values, projs, preds = self.predict_fn(data, labels=label)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
 
-        if label is None:
-            label = preds
-
         b, h, s, _ = attns[0].shape
-        num_blocks = len(attns)
         R = np.eye(s, s, dtype=attns[0].dtype)
         R = np.expand_dims(R, 0)
               
