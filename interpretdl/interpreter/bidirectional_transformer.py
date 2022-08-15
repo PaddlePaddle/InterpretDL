@@ -168,14 +168,14 @@ class BTNLPInterpreter(TransformerInterpreter):
                   attn_map_name='^ernie.encoder.layers.*.self_attn.attn_drop$', 
                   attn_v_name='^ernie.encoder.layers.*.self_attn.v_proj$',
                   attn_proj_name='^ernie.encoder.layers.*.self_attn.out_proj$', 
-                  label: int or None = None,):
+                  label: int or None = None):
         """
         Args:
             data (str or list of strs or numpy.ndarray): The input text filepath or a list of filepaths or numpy
                 array of read texts.
             ap_mode (str, default to head-wise): The approximation method of attentioanl perception stage,
                 "head" for head-wise, "token" for token-wise. Default: ``head``.
-            start_layer (int, optional): Compute the state from the start layer. Default: ``4``.
+            start_layer (int, optional): Compute the state from the start layer. Default: ``11``.
             steps (int, optional): number of steps in the Riemann approximation of the integral. Default: ``20``.
             embedding_name (str, optional): The layer name for embedding, head-wise/token-wise.
                 Default: ``^ernie.embeddings.word_embeddings$``.
@@ -190,7 +190,7 @@ class BTNLPInterpreter(TransformerInterpreter):
                 Default: ``None``.
 
         Returns:
-            [numpy.ndarray]: interpretations for sentences
+            [numpy.ndarray]: interpretations for texts
         """
 
         b = data[0].shape[0]  # batch size
@@ -241,8 +241,7 @@ class BTNLPInterpreter(TransformerInterpreter):
                 R = R + np.matmul(np.matmul(cam, m), R)
         else:
             assert "please specify the attentional perception mode"
-                     
-        
+
         total_gradients = np.zeros((b, h, s, s))
         for alpha in np.linspace(0, 1, steps):
             # forward propagation
