@@ -53,7 +53,7 @@ class BTCVInterpreter(TransformerInterpreter):
                 Default: ``blocks.*.attn.qkv``.
             attn_proj_name (str, optional): The layer name for linear projection, token-wise.
                 Default: ``blocks.*.attn.proj``.
-            labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels 
+            label (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels
                 should be equal to the number of images. If None, the most likely label for each image will be used. 
                 Default: ``None``.
             resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
@@ -168,12 +168,11 @@ class BTNLPInterpreter(TransformerInterpreter):
                   attn_map_name='^ernie.encoder.layers.*.self_attn.attn_drop$', 
                   attn_v_name='^ernie.encoder.layers.*.self_attn.v_proj$',
                   attn_proj_name='^ernie.encoder.layers.*.self_attn.out_proj$', 
-                  label: int or None = None,
-                  save_path: str or None = None):
+                  label: int or None = None,):
         """
         Args:
-            inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy 
-                array of read images.
+            data (str or list of strs or numpy.ndarray): The input text filepath or a list of filepaths or numpy
+                array of read texts.
             ap_mode (str, default to head-wise): The approximation method of attentioanl perception stage,
                 "head" for head-wise, "token" for token-wise. Default: ``head``.
             start_layer (int, optional): Compute the state from the start layer. Default: ``4``.
@@ -186,19 +185,12 @@ class BTNLPInterpreter(TransformerInterpreter):
                 Default: ``^ernie.encoder.layers.*.self_attn.v_proj$``.
             attn_proj_name (str, optional): The layer name for linear projection, token-wise.
                 Default: ``ernie.encoder.layers.*.self_attn.out_proj$``.
-            labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels 
-                should be equal to the number of images. If None, the most likely label for each image will be used. 
+            label (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels
+                should be equal to the number of texts. If None, the most likely label for each text will be used.
                 Default: ``None``.
-            resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
-                ``224``.
-            crop_to (int, optional): After resize, images will be center cropped to a square image with the size 
-                ``crop_to``. If None, no crop will be performed. Defaults to ``None``.
-            visual (bool, optional): Whether or not to visualize the processed image. Default: ``True``.
-            save_path (str, optional): The filepath(s) to save the processed image(s). If None, the image will not be 
-                saved. Default: ``None``.
 
         Returns:
-            [numpy.ndarray]: interpretations/heatmap for sentences
+            [numpy.ndarray]: interpretations for sentences
         """
 
         b = data[0].shape[0]  # batch size
