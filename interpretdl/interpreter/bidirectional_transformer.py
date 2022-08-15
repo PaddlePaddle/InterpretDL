@@ -31,7 +31,6 @@ class BTCVInterpreter(TransformerInterpreter):
                   ap_mode: str = "head",
                   start_layer: int = 4,
                   steps: int = 20,
-                  embedding_name=None, 
                   attn_map_name='^blocks.*.attn.attn_drop$', 
                   attn_v_name='^blocks.*.attn.qkv$',
                   attn_proj_name='^blocks.*.attn.proj$', 
@@ -44,9 +43,16 @@ class BTCVInterpreter(TransformerInterpreter):
         Args:
             inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy 
                 array of read images.
-            ap_mode (str, default to head-wise): The approximation method of attentioanl perception stage, "head" for head-wise, "token" for token-wise.
+            ap_mode (str, optional): The approximation method of attentioanl perception stage,
+                "head" for head-wise, "token" for token-wise. Default: ``head``.
             start_layer (int, optional): Compute the state from the start layer. Default: ``4``.
             steps (int, optional): number of steps in the Riemann approximation of the integral. Default: ``20``.
+            attn_map_name (str, optional): The layer name to obtain the attention weights, head-wise/token-wise.
+                Default: ``^blocks.*.attn.attn_drop$``.
+            attn_v_name (str, optional): The layer name for query, key, value, token-wise.
+                Default: ``blocks.*.attn.qkv``.
+            attn_proj_name (str, optional): The layer name for linear projection, token-wise.
+                Default: ``blocks.*.attn.proj``.
             labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels 
                 should be equal to the number of images. If None, the most likely label for each image will be used. 
                 Default: ``None``.
@@ -74,7 +80,6 @@ class BTCVInterpreter(TransformerInterpreter):
             label = preds
 
         b, h, s, _ = attns[0].shape
-        num_blocks = len(attns)
         R = np.eye(s, s, dtype=attns[0].dtype)
         R = np.expand_dims(R, 0)
         
@@ -96,7 +101,6 @@ class BTCVInterpreter(TransformerInterpreter):
             for i, blk in enumerate(attns):
                 if i < start_layer-1:
                     continue
-                grad = grads[i]
                 cam = blk
                 inp = inputs[i]
                 v = np.transpose(values[i].reshape([b, s, 3, h, -1]), [2, 0, 1, 3, 4])[2]
@@ -170,9 +174,18 @@ class BTNLPInterpreter(TransformerInterpreter):
         Args:
             inputs (str or list of strs or numpy.ndarray): The input image filepath or a list of filepaths or numpy 
                 array of read images.
-            ap_mode (str, default to head-wise): The approximation method of attentioanl perception stage, "head" for head-wise, "token" for token-wise.
+            ap_mode (str, default to head-wise): The approximation method of attentioanl perception stage,
+                "head" for head-wise, "token" for token-wise. Default: ``head``.
             start_layer (int, optional): Compute the state from the start layer. Default: ``4``.
             steps (int, optional): number of steps in the Riemann approximation of the integral. Default: ``20``.
+            embedding_name (str, optional): The layer name for embedding, head-wise/token-wise.
+                Default: ``^ernie.embeddings.word_embeddings$``.
+            attn_map_name (str, optional): The layer name to obtain the attention weights, head-wise/token-wise.
+                Default: ``^ernie.encoder.layers.*.self_attn.attn_drop$``.
+            attn_v_name (str, optional): The layer name for value projection, token-wise.
+                Default: ``^ernie.encoder.layers.*.self_attn.v_proj$``.
+            attn_proj_name (str, optional): The layer name for linear projection, token-wise.
+                Default: ``ernie.encoder.layers.*.self_attn.out_proj$``.
             labels (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels 
                 should be equal to the number of images. If None, the most likely label for each image will be used. 
                 Default: ``None``.
@@ -185,7 +198,7 @@ class BTNLPInterpreter(TransformerInterpreter):
                 saved. Default: ``None``.
 
         Returns:
-            [numpy.ndarray]: interpretations/heatmap for images
+            [numpy.ndarray]: interpretations/heatmap for sentences
         """
 
         b = data[0].shape[0]  # batch size
@@ -200,7 +213,6 @@ class BTNLPInterpreter(TransformerInterpreter):
             label = preds
 
         b, h, s, _ = attns[0].shape
-        num_blocks = len(attns)
         R = np.eye(s, s, dtype=attns[0].dtype)
         R = np.expand_dims(R, 0)
         
@@ -222,7 +234,6 @@ class BTNLPInterpreter(TransformerInterpreter):
             for i, blk in enumerate(attns):
                 if i < start_layer-1:
                     continue
-                grad = grads[i]
                 cam = blk
                 inp = inputs[i]
                 v = np.transpose(values[i].reshape([b, s, h, -1]), [0, 1, 2, 3])
