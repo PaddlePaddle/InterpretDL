@@ -50,3 +50,4 @@ workflows:
   tests:
     jobs:
       - test_py37_cpu
+
