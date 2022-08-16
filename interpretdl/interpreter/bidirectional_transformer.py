@@ -76,9 +76,6 @@ class BTCVInterpreter(TransformerInterpreter):
         attns, grads, inputs, values, projs, preds = self.predict_fn(data)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
 
-        if label is None:
-            label = preds
-
         b, h, s, _ = attns[0].shape
         R = np.eye(s, s, dtype=attns[0].dtype)
         R = np.expand_dims(R, 0)
@@ -200,9 +197,6 @@ class BTNLPInterpreter(TransformerInterpreter):
         
         attns, grads, inputs, values, projs, preds = self.predict_fn(data)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
-
-        if label is None:
-            label = preds
 
         b, h, s, _ = attns[0].shape
         R = np.eye(s, s, dtype=attns[0].dtype)
