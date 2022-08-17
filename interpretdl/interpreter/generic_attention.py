@@ -254,9 +254,6 @@ class GANLPInterpreter(TransformerInterpreter):
         assert b==1, "only support single sentence"
         self._build_predict_fn(embedding_name=embedding_name, attn_map_name=attn_map_name, nlp=True)
 
-        if label is None:
-            label = preds
-
         attns, grads, _, _, _, preds = self.predict_fn(data, labels=label)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
 
@@ -331,9 +328,6 @@ class GACVInterpreter(TransformerInterpreter):
         b = len(data)  # batch size
         assert b==1, "only support single image"
         self._build_predict_fn(attn_map_name=attn_map_name)
-
-        if label is None:
-            label = preds
         
         attns, grads, inputs, values, projs, preds = self.predict_fn(data, labels=label)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
