@@ -126,9 +126,16 @@ class BTCVInterpreter(TransformerInterpreter):
 
             total_gradients += gradients[-1]
 
-        W_state = np.mean((total_gradients / steps).clip(min=0), axis=1)[:, 0, :].reshape((b, 1, s))
+        # gradient mean over heads.
+        grad_head_mean = np.mean((total_gradients / steps).clip(min=0), axis=1)  # [b, s, s]
 
-        explanation = (R * W_state)[:, 0, 1:].reshape((-1, 14, 14))
+        if hasattr(self.paddle_model, 'global_pool') and self.paddle_model.global_pool:
+            # For MAE ViT.
+            explanation = (R * grad_head_mean)[:, 1:, :].mean(axis=1)
+        else:
+            explanation = R[:, 0, :] * grad_head_mean[:, 0, :]
+
+        explanation = explanation[:, 1:].reshape((-1, 14, 14))
 
         # visualization and save image.
         vis_explanation = explanation_to_vis(imgs, explanation[0], style='overlay_heatmap')
