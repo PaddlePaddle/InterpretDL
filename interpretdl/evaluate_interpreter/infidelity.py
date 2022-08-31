@@ -1,0 +1,220 @@
+import cv2
+import numpy as np
+from .abc_evaluator import InterpreterEvaluator
+from ..data_processor.readers import images_transform_pipeline, preprocess_image
+
+
+class Infidelity(InterpreterEvaluator):
+    """
+    Infidelity Interpreter Evaluation method.
+
+    The idea of fidelity is similar to the faithfulness evaluation, to evaluate how faithful/reliable/loyal of the
+    explanations to the model. (In)fidelity measures the normalized squared Euclidean distance between two terms:
+    the product of a perturbation and the explanation, and the difference between the model's response to the original
+    input and the one to the perturbed input, i.e.
+
+    .. math::
+        INFD(\Phi, f, x) = \mathbb{E}_{I \sim \mu_I} [ (I^T \Phi(f, x) - (f(x) - f(x - I)) )^2 ],
+
+    where the meaning of the symbols can be found in the original paper.
+
+    A normalization is added, which is not in the paper but in the 
+    `official implementation <https://github.com/chihkuanyeh/saliency_evaluation>`_: 
+    
+    .. math::
+        \beta = \frac{
+            \mathbb{E}_{I \sim \mu_I} [ I^T \Phi(f, x) (f(x) - f(x - I)) ]
+        }
+        {
+            \mathbb{E}_{I \sim \mu_I} [ (I^T \Phi(f, x))^2 ]
+        }
+
+    Intuitively, given a perturbation, e.g., a perturbation on important pixels, the product (the former term) should 
+    be relatively large if the explanation indicates the important pixels too, compared to a perturbation on irrelavant
+    pixels; while the difference (the latter term) should also be large because the model depends on important pixels
+    to make decisions. Like this, large values would be offset by large values if the explanation is faithful to the 
+    model. Otherwise, for uniform explanations (all being constant), the former term would be a constant value and the
+    infidelity would become large。
+
+    More details about the measure can be found in the original paper: https://arxiv.org/abs/1901.09392.
+    """
+    def __init__(self,
+                paddle_model: callable,
+                device: str = 'gpu:0',
+                **kwargs):
+        """
+
+        Args:
+            paddle_model (callable): _description_
+            device (_type_, optional): _description_. Defaults to 'gpu:0'.
+        """
+        
+        super().__init__(paddle_model, device, None, **kwargs)
+        self._build_predict_fn()
+        self.results = {}
+
+    def _build_predict_fn(self, rebuild: bool = False):
+        """Different from InterpreterEvaluator._build_predict_fn(): using logits.
+
+        Args:
+            rebuild (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        if self.predict_fn is not None:
+            assert callable(self.predict_fn), "predict_fn is predefined before, but is not callable." \
+                "Check it again."
+
+        import paddle
+        if self.predict_fn is None or rebuild:
+            if not paddle.is_compiled_with_cuda() and self.device[:3] == 'gpu':
+                print("Paddle is not installed with GPU support. Change to CPU version now.")
+                self.device = 'cpu'
+
+            # set device. self.device is one of ['cpu', 'gpu:0', 'gpu:1', ...]
+            paddle.set_device(self.device)
+
+            # to get gradients, the ``train`` mode must be set.
+            self.paddle_model.eval()
+
+            def predict_fn(data):
+                """predict_fn for input gradients based interpreters,
+                    for image classification models only.
+
+                Args:
+                    data ([type]): [description]
+
+                Returns:
+                    [type]: [description]
+                """
+                assert len(data.shape) == 4  # [bs, h, w, 3]
+
+                with paddle.no_grad():
+                    # Follow the `official implementation <https://github.com/chihkuanyeh/saliency_evaluation>`_
+                    # to use logits as output.
+                    logits = self.paddle_model(paddle.to_tensor(data))  # get logits, [bs, num_c]
+                    # probas = paddle.nn.functional.softmax(logits, axis=1)  # get probabilities.
+                return logits.numpy()
+
+            self.predict_fn = predict_fn
+    
+    def _generate_samples(self, img):
+        copy_data = np.copy(img)
+        bs, height, width, color_channel = copy_data.shape
+
+        generated_samples = []
+        Is = []
+
+        # fixed kernel_size. independent of explanations.
+        kernel_size = [32, 64, 128]
+        # Note that `official implementation <https://github.com/chihkuanyeh/saliency_evaluation>`_ uses the stride of
+        # 1. Here we use a large stride of 8 for reducing computations.
+        stride = 8
+
+        for k in kernel_size:
+            h_range = ( height - stride ) // stride
+            w_range = ( width - stride ) // stride
+            if h_range * stride < height:
+                h_range += 1
+            if w_range * stride < width:
+                w_range += 1
+
+            for i in range(h_range):
+                start_h = i * stride
+                end_h = start_h + k
+                if end_h > height:
+                    end_h = height
+                    break
+                for j in range(w_range):
+                    start_w = j * stride
+                    end_w = start_w + k
+                    if end_w > width:
+                        end_w = width
+                        break
+                    tmp_data = np.copy(img)
+                    tmp_data[:, start_h:end_h, start_w:end_w, :] = 127
+                    
+                    Is.append(img != tmp_data)  # binary I.
+                    generated_samples.append(tmp_data)
+
+        # print(len(generated_samples))
+
+        return np.concatenate(generated_samples, axis=0), np.concatenate(Is, axis=0).transpose((0, 3, 1, 2)).astype(np.float32)
+    
+    def evaluate(self, img_path: str or np.ndarray, explanation: np.ndarray, recompute: bool = False, batch_size: int = 50, resize_to: int = 224, crop_to: None or int = None):
+        """Given ``img_path``, Infidelity first generates perturbed samples, with a square removal strategy on the 
+        original image. Since the difference (the second term in the infidelity formula) is independ of the 
+        explanation, so we temporaily save these results in case this image has other explanations for evaluations.
+
+        Then, given ``explanation``, we follow the formula to compute the infidelity. A normalization is added, 
+        which is not in the paper but in the 
+        `official implementation <https://github.com/chihkuanyeh/saliency_evaluation>`_.
+
+        Args:
+            img_path (strornp.ndarray): a string for image path.
+            explanation (np.ndarray): the explanation result from an interpretation algorithm.
+            recompute (bool, optional): whether forcing to recompute. Defaults to False.
+            batch_size (int, optional): batch size for each pass.. Defaults to 50.
+            resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
+                ``224``.
+            crop_to (int, optional): After resize, images will be center cropped to a square image with the size 
+                ``crop_to``. If None, no crop will be performed. Defaults to ``None``.
+
+        Returns:
+            int: the infidelity score.
+        """
+
+        img, data = images_transform_pipeline(img_path, resize_to=resize_to, crop_to=crop_to)
+
+        if 'proba_diff' not in self.results or recompute:
+            ## x and I related.
+            generated_samples, Is = self._generate_samples(img)
+            self.results['generated_samples'] = generated_samples
+            self.results['Is'] = Is
+
+            generated_samples = preprocess_image(generated_samples)
+            probas_x = self.predict_fn(data)
+            label = np.argmax(probas_x[0])
+            proba_x = probas_x[:, label]
+            self.results['predict'] = {'label': label, 'proba': proba_x}
+
+            if batch_size is None:
+                proba_pert = self.predict_fn(generated_samples)[:, label]
+            else:
+                proba_pert = []
+                list_to_compute = list(range(generated_samples.shape[0]))
+                while len(list_to_compute) > 0:
+                    if len(list_to_compute) >= batch_size:
+                        list_c = list_to_compute[:batch_size]
+                        list_to_compute = list_to_compute[batch_size:]
+                    else:
+                        list_c = list_to_compute[:len(list_to_compute)]
+                        list_to_compute = []
+
+                    probs_batch = self.predict_fn(generated_samples[list_c])[:, label]
+                    proba_pert.append(probs_batch)
+                proba_pert = np.concatenate(proba_pert)
+            # proba_pert = self.predict_fn(generated_samples)[:, label]
+            proba_diff = proba_x - proba_pert
+
+            self.results['proba_diff'] = proba_diff
+        else:
+            Is = self.results['Is']
+            proba_diff = self.results['proba_diff']
+
+        ## explanation related.
+        resized_exp = cv2.resize(explanation[0], (data.shape[2], data.shape[3]))
+        resized_exp = resized_exp.reshape((1, 1, data.shape[2], data.shape[3]))
+        exp_sum = np.sum(Is * resized_exp, axis=(1, 2, 3))
+
+        # performs optimal scaling for each explanation before calculating the infidelity score
+        beta = (proba_diff*exp_sum).mean() / np.mean(exp_sum*exp_sum)  # TODO: NAN issue.
+        exp_sum *= beta
+
+        infid = np.mean(np.square(proba_diff-exp_sum))
+
+        self.results['explanation'] = explanation
+        self.results['infid'] = infid
+
+        return infid
