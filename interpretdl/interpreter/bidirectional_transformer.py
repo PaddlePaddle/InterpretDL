@@ -1,6 +1,5 @@
 import numpy as np
 import re
-import paddle
 
 from .abc_interpreter import Interpreter, TransformerInterpreter
 from ..data_processor.readers import images_transform_pipeline, preprocess_save_path

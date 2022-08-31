@@ -35,7 +35,7 @@ try:
     from .training_dynamics import TrainingDynamics, BHDFInterpreter
     __all__ += [
         "LIMEPriorInterpreter", "GLIMECVInterpreter", "ForgettingEventsInterpreter", "NormLIMECVInterpreter",
-        "NormLIMENLPInterpreter", "BHDFInterpreter","TrainingDynamics"
+        "NormLIMENLPInterpreter", "BHDFInterpreter", "TrainingDynamics"
     ]
 except ModuleNotFoundError:
     print("Warning: Paddle should be installed before using some Interpreters.")
