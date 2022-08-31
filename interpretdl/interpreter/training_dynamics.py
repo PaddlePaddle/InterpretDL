@@ -1,7 +1,7 @@
 import paddle
 import numpy as np
 import os, sys
-
+import warnings
 from tqdm import tqdm
 from interpretdl.common.file_utils import download_and_decompress
 
@@ -30,7 +30,21 @@ class TrainingDynamics():
             device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        Interpreter.__init__(self, paddle_model, device, use_cuda)
+        self.device = device
+        self.paddle_model = paddle_model
+
+        if use_cuda in [True, False]:
+            warnings.warn('``use_cuda`` would be deprecated soon. Use ``device`` directly.', stacklevel=2)
+            self.device = 'gpu:0' if use_cuda and device[:3] == 'gpu' else 'cpu'
+
+        assert self.device[:3] in ['cpu', 'gpu']
+
+        if not paddle.is_compiled_with_cuda() and self.device[:3] == 'gpu':
+            print("Paddle is not installed with GPU support. Change to CPU version now.")
+            self.device = 'cpu'
+
+        # globally set device.
+        paddle.set_device(self.device)
 
     def generator(self,
                   train_loader: callable,
@@ -48,15 +62,14 @@ class TrainingDynamics():
             training_dynamics (dict): A pointwise training dynamics(history) for each epoch.
         """
 
+        self.paddle_model.train()
         training_dynamics = {}
-
-        paddle.set_device(self.device)
 
         for i in range(epochs):
             counter = 0
             correct = 0
             total = 0
-            for step_id, (indices,x_train,y_train) in enumerate(train_loader()):
+            for step_id, (indices, x_train, y_train) in enumerate(train_loader()):
 
                 if not isinstance(x_train[0], np.ndarray):
                     x_train = x_train.numpy()
@@ -127,10 +140,10 @@ class TrainingDynamics():
         self.labels = np.ones_like(logits[:,0,:],dtype=np.int16)
         
         for index,targets in enumerate(tqdm(targets_list,desc=f"Save")):
-        # save ground turth td
+            # save ground turth td
             self.labels[index,0] = assigned_targets[index]
             self.training_dynamics[index,:,0] = logits[index,:,assigned_targets[index]].tolist()
-        # save topk td
+            # save topk td
             top_i=1
             for target in targets:
                 if target != assigned_targets[index]:
@@ -175,7 +188,7 @@ class LSTM(paddle.nn.Layer):
         out = self.softmax(out)
         return out
     
-class BHDFInterpreter():
+class BHDFInterpreter(Interpreter):
 
     """
         [Beyond hand-designed Feature Interpreter]
@@ -191,16 +204,22 @@ class BHDFInterpreter():
             device (str, optional): The device used for running ``detector``, options: ``"cpu"``, ``"gpu:0"``, 
                 ``"gpu:1"`` etc. Defaults to 'gpu:0'.
         """
-        
-        paddle.set_device(device)
+        Interpreter.__init__(self, detector, device, use_cuda)
+        self._paddle_env_setup()
                 
         if detector is not None:
             self.detector = detector
         else:
             self.detector = LSTM()
-            download_and_decompress(url="https://github.com/PaddlePaddle/InterpretDL/files/9120427/noise_detector_trained.pdparams.zip",
-                    path="assets/")
-            paddle.Model(self.detector).load("assets/noise_detector_trained")
+            default_detector_path = "assets/noise_detector_trained.pdparams"
+            if not os.path.exists(default_detector_path):
+                download_and_decompress(
+                    url="https://github.com/PaddlePaddle/InterpretDL/files/9120427/noise_detector_trained.pdparams.zip",
+                    path="assets/"
+                )
+            paddle.Model(self.detector).load(default_detector_path)
+
+        self.detector.eval()
 
     def interpret(self,
                   training_dynamics=None,
