@@ -11,7 +11,9 @@ class TestLoc(unittest.TestCase):
 
     def test_evaluate(self):
         paddle_model = mobilenet_v3_small(pretrained=True)
-        img_path = 'imgs/catdog.jpg'
+        np.random.seed(42)
+        # jpeg decoding may be slightly different because of version and device.
+        img_path = np.random.randint(0, 255, size=(1, 224, 224, 3), dtype=np.uint8)
         gradcam = it.GradCAMInterpreter(paddle_model, device='cpu')
         exp = gradcam.interpret(
             img_path,
@@ -19,13 +21,13 @@ class TestLoc(unittest.TestCase):
             visual=False, 
             save_path=None)
         evaluator = it.PointGame()
-        r = evaluator.evaluate([0, 0, 3, 3], exp)
+        r = evaluator.evaluate([0, 0, 6, 6], exp, threshold=0.01)
 
-        desired = list({'precision': 1.0,
-                'recall': 0.19047619047619047,
-                'f1_score': 0.3199997312002258,
-                'auc_score': 0.6054421768707483,
-                'ap_score': 0.6184073259558627}.values())
+        desired = list({'precision': 0.8571428571428571, 
+            'recall': 1.0, 
+            'f1_score': 0.9230764260357706, 
+            'auc_score': 0.6122448979591837, 
+            'ap_score': 0.9242890900837504}.values())
 
         assert_arrays_almost_equal(self, np.array(list(r.values())), np.array(desired))
 
@@ -34,11 +36,11 @@ class TestLoc(unittest.TestCase):
         gt_seg[0, :3, 2:5] = 1
         r = evaluator.evaluate(gt_seg, exp)
 
-        desired = list({'precision': 1.0,
-            'recall': 0.44444445,
-            'f1_score': 0.615384192523618,
-            'auc_score': 0.6416666666666667,
-            'ap_score': 0.608843537414966}.values())
+        desired = list({'precision': 0.19148936170212766, 
+            'recall': 1.0, 
+            'f1_score': 0.3214283016583897, 
+            'auc_score': 0.5611111111111111, 
+            'ap_score': 0.2282429182374856}.values())
 
         assert_arrays_almost_equal(self, np.array(list(r.values())), np.array(desired))
 
