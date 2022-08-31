@@ -22,12 +22,11 @@ class Infidelity(InterpreterEvaluator):
     `official implementation <https://github.com/chihkuanyeh/saliency_evaluation>`_: 
     
     .. math::
-        \beta = \frac{
+        \\beta = \\frac{
             \mathbb{E}_{I \sim \mu_I} [ I^T \Phi(f, x) (f(x) - f(x - I)) ]
-        }
-        {
-            \mathbb{E}_{I \sim \mu_I} [ (I^T \Phi(f, x))^2 ]
-        }
+            }{
+                \mathbb{E}_{I \sim \mu_I} [ (I^T \Phi(f, x))^2 ]
+            }
 
     Intuitively, given a perturbation, e.g., a perturbation on important pixels, the product (the former term) should 
     be relatively large if the explanation indicates the important pixels too, compared to a perturbation on irrelavant

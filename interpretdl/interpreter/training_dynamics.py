@@ -204,9 +204,6 @@ class BHDFInterpreter(Interpreter):
             device (str, optional): The device used for running ``detector``, options: ``"cpu"``, ``"gpu:0"``, 
                 ``"gpu:1"`` etc. Defaults to 'gpu:0'.
         """
-        Interpreter.__init__(self, detector, device, use_cuda)
-        self._paddle_env_setup()
-                
         if detector is not None:
             self.detector = detector
         else:
@@ -219,6 +216,8 @@ class BHDFInterpreter(Interpreter):
                 )
             paddle.Model(self.detector).load(default_detector_path)
 
+        Interpreter.__init__(self, self.detector, device, use_cuda)
+        self._paddle_env_setup()
         self.detector.eval()
 
     def interpret(self,
