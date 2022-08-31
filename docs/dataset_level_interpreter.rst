@@ -1,6 +1,11 @@
 Dataset-Level Interpreters
 ============================================
 
+Training Dynamics
+-----------------------------------------
+
+.. autoclass:: interpretdl.TrainingDynamics
+   :members:
 
 Beyond Hand-designed Feature Interpreter 
 -----------------------------------------

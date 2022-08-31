@@ -21,3 +21,10 @@ Perturbation
 .. autoclass:: interpretdl.Perturbation
    :members:
    :private-members:
+
+Infidelity
+--------------------------
+
+.. autoclass:: interpretdl.Infidelity
+   :members:
+   :private-members:
