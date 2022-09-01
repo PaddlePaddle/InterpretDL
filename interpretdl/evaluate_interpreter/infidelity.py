@@ -139,9 +139,16 @@ class Infidelity(InterpreterEvaluator):
 
         # print(len(generated_samples))
 
-        return np.concatenate(generated_samples, axis=0), np.concatenate(Is, axis=0).transpose((0, 3, 1, 2)).astype(np.float32)
+        return np.concatenate(generated_samples, axis=0), \
+            np.concatenate(Is, axis=0).transpose((0, 3, 1, 2)).astype(np.float32)
     
-    def evaluate(self, img_path: str or np.ndarray, explanation: np.ndarray, recompute: bool = False, batch_size: int = 50, resize_to: int = 224, crop_to: None or int = None):
+    def evaluate(self, 
+                 img_path: str or np.ndarray, 
+                 explanation: np.ndarray, 
+                 recompute: bool = False, 
+                 batch_size: int = 50, 
+                 resize_to: int = 224, 
+                 crop_to: None or int = None):
         """Given ``img_path``, Infidelity first generates perturbed samples, with a square removal strategy on the 
         original image. Since the difference (the second term in the infidelity formula) is independ of the 
         explanation, so we temporaily save these results in case this image has other explanations for evaluations.
@@ -163,6 +170,9 @@ class Infidelity(InterpreterEvaluator):
         Returns:
             int: the infidelity score.
         """
+        explanation = explanation.squeeze()
+        assert len(explanation.shape) == 2, \
+            f"Explanation should only have two dimensions after squeezed but got shape of {explanation.shape}."
 
         img, data = images_transform_pipeline(img_path, resize_to=resize_to, crop_to=crop_to)
 
@@ -203,7 +213,7 @@ class Infidelity(InterpreterEvaluator):
             proba_diff = self.results['proba_diff']
 
         ## explanation related.
-        resized_exp = cv2.resize(explanation[0], (data.shape[2], data.shape[3]))
+        resized_exp = cv2.resize(explanation, (data.shape[2], data.shape[3]))
         resized_exp = resized_exp.reshape((1, 1, data.shape[2], data.shape[3]))
         exp_sum = np.sum(Is * resized_exp, axis=(1, 2, 3))
 
