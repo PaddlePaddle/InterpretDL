@@ -218,8 +218,11 @@ class Infidelity(InterpreterEvaluator):
         exp_sum = np.sum(Is * resized_exp, axis=(1, 2, 3))
 
         # performs optimal scaling for each explanation before calculating the infidelity score
-        beta = (proba_diff*exp_sum).mean() / np.mean(exp_sum*exp_sum)  # TODO: NAN issue.
-        exp_sum *= beta
+        if np.mean(exp_sum*exp_sum) == 0.0:
+            exp_sum = 0.0  # simple handling the NAN issue.
+        else:
+            beta = (proba_diff*exp_sum).mean() / np.mean(exp_sum*exp_sum)
+            exp_sum *= beta
 
         infid = np.mean(np.square(proba_diff-exp_sum))
 
