@@ -6,6 +6,7 @@
 [![Documentation Status](https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat)](https://interpretdl.readthedocs.io/en/latest/index.html)
 [![Downloads](https://static.pepy.tech/personalized-badge/interpretdl?period=total&units=abbreviation&left_color=grey&right_color=green&left_text=Downloads%20Total)](https://pepy.tech/project/interpretdl)
 
+![logo](https://user-images.githubusercontent.com/13829174/192076322-72b1306b-58c9-4d34-89a1-28d168ebf079.png)
 
 # InterpretDL: Interpretation of Deep Learning Models based on PaddlePaddle
 
@@ -199,6 +200,7 @@ Two dimensions (representations of explanation results and types of the target m
 
 - [x] [Perturbation Tests](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/evaluate_interpreter/perturbation.py)
 - [x] [Deletion & Insertion](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/evaluate_interpreter/deletion_insertion.py)
+- [x] [Infidelity](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/evaluate_interpreter/infidelity.py)
 
 ## Interpretability Evaluation Algorithms
 
@@ -215,7 +217,7 @@ Two dimensions (representations of explanation results and types of the target m
 * Evaluations
   - [ ] Local Fidelity
   - [ ] Monotonicity
-  - [ ] Infidelity
+  - [x] Infidelity
   - [ ] Sensitivity
 
 # Presentations
