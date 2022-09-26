@@ -1,3 +1,7 @@
+# This file adds MultiHeadAttention.attn_drop so that 
+# the hooks can be added to get the input/output of that layer.
+# Modified from paddle 2.3.2.
+
 import copy
 import collections
 import numpy as np
@@ -164,6 +168,8 @@ class MultiHeadAttention(Layer):
             self.vdim, embed_dim, weight_attr, bias_attr=bias_attr)
         self.out_proj = Linear(
             embed_dim, embed_dim, weight_attr, bias_attr=bias_attr)    
+        
+        # add this Layer so that the hooks can be added to get its input/output.
         self.attn_drop = Dropout(dropout, mode="upscale_in_train")
 
     def _prepare_qkv(self, query, key, value, cache=None):
