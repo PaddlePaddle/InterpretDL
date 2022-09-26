@@ -1,5 +1,6 @@
-import numpy as np
 import re
+import numpy as np
+from collections.abc import Iterable
 
 from .abc_interpreter import Interpreter, TransformerInterpreter
 from ..data_processor.readers import images_transform_pipeline, preprocess_save_path
@@ -72,7 +73,7 @@ class BTCVInterpreter(TransformerInterpreter):
         assert b==1, "only support single image"
         self._build_predict_fn(attn_map_name=attn_map_name, attn_v_name=attn_v_name, attn_proj_name=attn_proj_name)
         
-        attns, grads, inputs, values, projs, preds = self.predict_fn(data)
+        attns, grads, inputs, values, projs, proba, preds = self.predict_fn(data)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
 
         if label is None:
@@ -121,7 +122,7 @@ class BTCVInterpreter(TransformerInterpreter):
         for alpha in np.linspace(0, 1, steps):
             # forward propagation
             data_scaled = data * alpha
-            _, gradients, _, _, _, _ = self.predict_fn(data_scaled, labels=label)
+            _, gradients, _, _, _, _, _ = self.predict_fn(data_scaled, label=label)
 
             total_gradients += gradients[-1]
 
@@ -166,15 +167,18 @@ class BTNLPInterpreter(TransformerInterpreter):
         TransformerInterpreter.__init__(self, paddle_model, device, use_cuda)
 
     def interpret(self,
-                  data: np.ndarray,
+                  raw_text: str,
+                  tokenizer: callable = None,
+                  text_to_input_fn: callable = None,
+                  label: list or np.ndarray = None,                  
                   ap_mode: str = "head",
                   start_layer: int = 11,
                   steps: int = 20,
                   embedding_name='^ernie.embeddings.word_embeddings$', 
                   attn_map_name='^ernie.encoder.layers.*.self_attn.attn_drop$', 
                   attn_v_name='^ernie.encoder.layers.*.self_attn.v_proj$',
-                  attn_proj_name='^ernie.encoder.layers.*.self_attn.out_proj$', 
-                  label: int or None = None):
+                  attn_proj_name='^ernie.encoder.layers.*.self_attn.out_proj$',
+                  max_seq_len=128):
         """
         Args:
             data (str or list of strs or numpy.ndarray): The input text filepath or a list of filepaths or numpy
@@ -198,13 +202,29 @@ class BTNLPInterpreter(TransformerInterpreter):
         Returns:
             [numpy.ndarray]: interpretations for texts
         """
+        assert (tokenizer is None) + (text_to_input_fn is None) == 1, "only one of them should be given."
 
-        b = data[0].shape[0]  # batch size
-        assert b==1, "only support single sentence"
-        self._build_predict_fn(embedding_name=embedding_name, attn_map_name=attn_map_name, 
-                              attn_v_name=attn_v_name, attn_proj_name=attn_proj_name, nlp=True)
+        # tokenizer to text_to_input_fn.
+        if tokenizer is not None:
+            def text_to_input_fn(raw_text):
+                encoded_inputs = tokenizer(text=raw_text, max_seq_len=max_seq_len)
+                # order is important. *_batched_and_to_tuple will be the input for the model.
+                _batched_and_to_tuple = tuple([np.array([v]) for v in encoded_inputs.values()])
+                return _batched_and_to_tuple
+        else:
+            print("Warning: Visualization can not be supported if tokenizer is not given.")        
         
-        attns, grads, inputs, values, projs, preds = self.predict_fn(data)
+        # from raw text string to token ids (and other terms that the user-defined function outputs).
+        model_input = text_to_input_fn(raw_text)
+        if isinstance(model_input, Iterable) and not hasattr(model_input, 'shape'):
+            model_input = tuple(inp for inp in model_input)
+        else:
+            model_input = tuple(model_input, )
+
+        self._build_predict_fn(embedding_name=embedding_name, attn_map_name=attn_map_name, 
+                               attn_v_name=attn_v_name, attn_proj_name=attn_proj_name, nlp=True)
+        
+        attns, grads, inputs, values, projs, proba, preds = self.predict_fn(model_input)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
 
         if label is None:
@@ -251,11 +271,15 @@ class BTNLPInterpreter(TransformerInterpreter):
         total_gradients = np.zeros((b, h, s, s))
         for alpha in np.linspace(0, 1, steps):
             # forward propagation
-            _, gradients, _, _, _, _ = self.predict_fn(data, labels=label, alpha=alpha)
+            _, gradients, _, _, _, _, _ = self.predict_fn(model_input, label=label, scale=alpha)
             total_gradients += gradients[-1]
 
         W_state = np.mean((total_gradients / steps).clip(min=0), axis=1)[:, 0, :].reshape((b, 1, s))
 
         explanation = (R * W_state)[:, 0, 1:]
+
+        # intermediate results, for possible further usages.
+        self.predcited_label = preds
+        self.predcited_proba = proba
 
         return explanation

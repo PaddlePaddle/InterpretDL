@@ -1,4 +1,6 @@
+import warnings
 import numpy as np
+from collections.abc import Iterable
 
 from ..data_processor.readers import preprocess_image, read_image, restore_image
 from ..data_processor.visualizer import sp_weights_to_image_explanation, overlay_threshold, save_image, show_vis_explanation
@@ -165,25 +167,24 @@ class LIMENLPInterpreter(InputOutputInterpreter):
                 etc.
             random_seed (int): random seed. Defaults to None.
         """
-        Interpreter.__init__(self, paddle_model, device, use_cuda)
-        self.paddle_model = paddle_model
+        InputOutputInterpreter.__init__(self, paddle_model, device, use_cuda)
 
         # use the default LIME setting
         self.lime_base = LimeBase(random_state=random_seed)
-
         self.lime_results = {}
 
     def interpret(self,
-                  data: str,
-                  preprocess_fn: callable,
-                  unk_id: int,
-                  pad_id: int or None = None,
-                  interpret_class: int = None,
+                  raw_text: str,
+                  tokenizer: callable = None,
+                  text_to_input_fn: callable = None,
+                  preprocess_fn: callable = None,
+                  unk_id: int = 0,
+                  pad_id: int = 0,
+                  classes_to_interpret: list or np.ndarray = None,
                   num_samples: int = 1000,
                   batch_size: int = 50,
-                  lod_levels: int = None,
-                  return_pred: bool = False,
-                  visual: bool = True):
+                  max_seq_len: int = 128,
+                  visual: bool = False):
         """
         Main function of the interpreter.
 
@@ -191,68 +192,78 @@ class LIMENLPInterpreter(InputOutputInterpreter):
 
         Args:
             data (str): The raw string for analysis.
-            preprocess_fn (callable): A user-defined function that input raw string and outputs the a tuple of inputs 
-                to feed into the NLP model.
+            tokenizer (callable): 
+            text_to_input (callable): A user-defined function that convert raw text string to a tuple of inputs 
+                that can be fed into the NLP model.
             unk_id (int): The word id to replace occluded words. Typical choices include "", <unk>, and <pad>.
             pad_id (int or None): The word id used to pad the sequences. If None, it means there is no padding. 
                 Default: ``None``.
-            interpret_class (list or numpy.ndarray, optional): The index of class to interpret. If None, the most 
-                likely label will be used. Default: ``None``.
+            classes_to_interpret (list or numpy.ndarray, optional): The index of class to interpret. If None, the most
+                likely label will be used. can be Default: ``None``.
             num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate
                 interpretation. Default: ``1000``.
             batch_size (int, optional): Number of samples to forward each time. Default: ``50``.
-            lod_levels (list or tuple or numpy.ndarray or None, optional): The lod levels for model inputs. It should
-                have the length equal to number of outputs given by preprocess_fn. If None, lod levels are all zeros. 
-                Default: ``None``.
             visual (bool, optional): Whether or not to visualize. Default: ``True``.
 
         Returns:
             [dict]: LIME results: {interpret_label_i: weights on features}
         """
+        if preprocess_fn is not None:
+            text_to_input_fn = preprocess_fn
+            warnings.warn('``preprocess_fn`` would be deprecated soon. Use ``text_to_input`` directly.', stacklevel=2)
+        assert (tokenizer is None) + (text_to_input_fn is None) == 1, "only one of them should be given."
 
-        model_inputs = preprocess_fn(data)
-        if not isinstance(model_inputs, tuple):
-            self.model_inputs = (np.array(model_inputs), )
+        # tokenizer to text_to_input.
+        if tokenizer is not None:
+            def text_to_input_fn(raw_text):
+                encoded_inputs = tokenizer(text=raw_text, max_seq_len=max_seq_len)
+                # order is important. *_batched_and_to_tuple will be the input for the model.
+                _batched_and_to_tuple = tuple([np.array([v]) for v in encoded_inputs.values()])
+                return _batched_and_to_tuple
         else:
-            self.model_inputs = tuple(inp.numpy() for inp in model_inputs)
+            print("Warning: Visualization can not be supported if tokenizer is not given.")
+
+        # from raw text string to token ids (and other terms that the user-defined function outputs).
+        model_input = text_to_input_fn(raw_text)
+        
+        if isinstance(model_input, Iterable) and not hasattr(model_input, 'shape'):
+            self.model_inputs = tuple(inp for inp in model_input)
+        else:
+            self.model_inputs = tuple(model_input, )
 
         self._build_predict_fn(output='probability')
         def predict_fn_for_lime(*inputs):
             probability, _, _ = self.predict_fn(inputs, None)
-            return probability        
+            return probability
 
+        probability, _, _ = self.predict_fn(self.model_inputs, classes_to_interpret)
         # only one example here
-        probability, _, _ = self.predict_fn(self.model_inputs, interpret_class)
         probability = probability[0]
 
         # only interpret top 1
-        if interpret_class is None:
+        if classes_to_interpret is None:
             pred_label = np.argsort(probability)
-            interpret_class = pred_label[-1:]
+            classes_to_interpret = pred_label[-1:]
 
+        # this api is from LIME official repo: https://github.com/marcotcr/lime.
         lime_weights, r2_scores = self.lime_base.interpret_instance_text(self.model_inputs,
                                                                          classifier_fn=predict_fn_for_lime,
-                                                                         interpret_labels=interpret_class,
+                                                                         interpret_labels=classes_to_interpret,
                                                                          unk_id=unk_id,
                                                                          pad_id=pad_id,
                                                                          num_samples=num_samples,
                                                                          batch_size=batch_size)
 
-        data_array = self.model_inputs[0]
-        data_array = data_array.reshape((np.prod(data_array.shape), ))
-        for c in lime_weights:
-            weights_c = lime_weights[c]
-            weights_new = [(data_array[tup[0]], tup[1]) for tup in weights_c]
-            lime_weights[c] = weights_new
-
         # intermediate results, for possible further usages.
-        self.lime_results['probability'] = {c: probability[c] for c in interpret_class.ravel()}
+        self.probability = probability
+        self.lime_results['probability'] = {c: probability[c] for c in classes_to_interpret.ravel()}
         self.lime_results['r2_scores'] = r2_scores
         self.lime_results['lime_weights'] = lime_weights
 
-        # Visualization is currently not supported here.
-        # See the tutorial for more information:
-        # https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2.ipynb
-        if return_pred:
-            return (interpret_class, probability[interpret_class], lime_weights)
+        if visual:
+            # TODO: visualize if tokenizer is given.
+            print("Visualization is not supported yet.")
+            print("Currently please see the tutorial for the visualization:")
+            print("https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2.ipynb")
+
         return lime_weights

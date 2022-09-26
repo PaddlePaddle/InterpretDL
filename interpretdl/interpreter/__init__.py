@@ -6,7 +6,8 @@ from .abc_interpreter import InputGradientInterpreter, InputOutputInterpreter, I
 from .lime import LIMECVInterpreter, LIMENLPInterpreter
 from .gradient_cam import GradCAMInterpreter
 from .integrated_gradients import IntGradCVInterpreter, IntGradNLPInterpreter
-from .smooth_grad import SmoothGradInterpreter
+from .smooth_grad import SmoothGradInterpreter, SmoothGradNLPInterpreter
+SmoothGradCVInterpreter = SmoothGradInterpreter
 from .smooth_grad_v2 import SmoothGradInterpreterV2
 from .occlusion import OcclusionInterpreter
 from .gradient_shap import GradShapCVInterpreter, GradShapNLPInterpreter
@@ -23,7 +24,8 @@ __all__ = [
     "LIMECVInterpreter", "LIMENLPInterpreter", "GradCAMInterpreter", "IntGradCVInterpreter", "IntGradNLPInterpreter",
     "SmoothGradInterpreter", "OcclusionInterpreter", "GradShapCVInterpreter", "GradShapNLPInterpreter",
     "ScoreCAMInterpreter", "LRPCVInterpreter", "RolloutInterpreter", "TAMInterpreter", "SmoothGradInterpreterV2",
-    "ConsensusInterpreter", "GAInterpreter", "BTCVInterpreter", "BTNLPInterpreter", "GANLPInterpreter", "GACVInterpreter"
+    "ConsensusInterpreter", "GAInterpreter", "BTCVInterpreter", "BTNLPInterpreter", "GANLPInterpreter", "GACVInterpreter",
+    "SmoothGradNLPInterpreter", "SmoothGradCVInterpreter"
 ]
 
 try:

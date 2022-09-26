@@ -13,7 +13,6 @@ class TestLIMENLP(unittest.TestCase):
         import paddlenlp
         from paddlenlp.data import Stack, Tuple, Pad
         from paddlenlp.transformers import ErnieForSequenceClassification, ErnieTokenizer
-        from tutorials.assets.utils import convert_example, aggregate_subwords_and_importances
         
         MODEL_NAME = "ernie-2.0-base-en"
         model = ErnieForSequenceClassification.from_pretrained(MODEL_NAME, num_classes=2)
@@ -22,62 +21,40 @@ class TestLIMENLP(unittest.TestCase):
         self.paddle_model = model
         self.tokenizer = tokenizer
 
-        def preprocess_fn(data):
-            examples = []
-            
-            if not isinstance(data, list):
-                data = [data]
-            
-            for text in data:
-                input_ids, segment_ids = convert_example(
-                    text,
-                    tokenizer,
-                    max_seq_length=128,
-                    is_test=True
-                )
-                examples.append((input_ids, segment_ids))
+        def text_to_input_fn(raw_text):
+            encoded_inputs = tokenizer(text=raw_text, max_seq_len=128)
+            # order is important. *_batched_and_to_tuple will be the input for the model.
+            _batched_and_to_tuple = tuple([np.array([v]) for v in encoded_inputs.values()])
+            return _batched_and_to_tuple
+        self.text_to_input_fn = text_to_input_fn
 
-            batchify_fn = lambda samples, fn=Tuple(
-                Pad(axis=0, pad_val=tokenizer.pad_token_id),  # input id
-                Pad(axis=0, pad_val=tokenizer.pad_token_id),  # segment id
-            ): fn(samples)
-            
-            input_ids, segment_ids = batchify_fn(examples)
-            return paddle.to_tensor(input_ids, stop_gradient=False), paddle.to_tensor(segment_ids, stop_gradient=False)
-        self.preprocess_fn = preprocess_fn
+    # def test_lime_intgrad_gradshap_nlp(self):
+    #     self.prepare()
 
-    def test_lime_intgrad_gradshap_nlp(self):
-        self.prepare()
+    #     reviews = [
+    #         "it 's a charming and often affecting journey . ",
+    #     ]
 
-        reviews = [
-            "it 's a charming and often affecting journey . ",
-        ]
-        data = [ {"text": r} for r in reviews]
+    #     for i, review in enumerate(reviews):
+    #         algo = it.LIMENLPInterpreter(self.paddle_model, device='cpu')
+    #         lime_weights = algo.interpret(
+    #             review,
+    #             tokenizer=self.tokenizer,
+    #             num_samples=11,
+    #             batch_size=10)
 
-        algo = it.LIMENLPInterpreter(self.paddle_model, device='cpu')
-        for i, review in enumerate(data):
-            pred_class, pred_prob, lime_weights = algo.interpret(
-                review,
-                self.preprocess_fn,
-                num_samples=22,
-                batch_size=20,
-                unk_id=self.tokenizer.convert_tokens_to_ids('[UNK]'),
-                pad_id=self.tokenizer.convert_tokens_to_ids('[PAD]'),
-                return_pred=True)
+    #         algo = it.IntGradNLPInterpreter(self.paddle_model, device='cpu')
+    #         avg_gradients = algo.interpret(
+    #             review,
+    #             tokenizer=self.tokenizer,
+    #             steps=2)
 
-        algo = it.IntGradNLPInterpreter(self.paddle_model, device='cpu')
-        pred_labels, pred_probs, avg_gradients = algo.interpret(
-            self.preprocess_fn(data),
-            steps=2,
-            return_pred=True)
-
-        algo = it.GradShapNLPInterpreter(self.paddle_model, device='cpu')
-
-        pred_labels, pred_probs, avg_gradients = algo.interpret(
-            self.preprocess_fn(data),
-            n_samples=2,
-            noise_amount=0.1,
-            return_pred=True)
+    #         algo = it.SmoothGradNLPInterpreter(self.paddle_model, device='cpu')
+    #         avg_gradients = algo.interpret(
+    #             review,
+    #             tokenizer=self.tokenizer,
+    #             n_samples=2,
+    #             noise_amount=0.1)
             
     def test_normlime(self):
         self.prepare()
@@ -86,13 +63,11 @@ class TestLIMENLP(unittest.TestCase):
             "it 's a charming and often affecting journey . ",
             'the movie achieves as great an impact by keeping these thoughts hidden as ... ( quills ) did by showing them . '
         ]
-
-        data = [ {"text": r} for r in reviews]
         
         normlime = it.NormLIMENLPInterpreter(self.paddle_model, device='cpu')
         # compute but not save intermediate results.
         normlime.interpret(
-            data, self.preprocess_fn, 20, 20,
+            reviews, self.text_to_input_fn, 20, 20,
             unk_id=self.tokenizer.convert_tokens_to_ids('[UNK]'),
             pad_id=self.tokenizer.convert_tokens_to_ids('[PAD]'),
             temp_data_file=None
@@ -100,14 +75,14 @@ class TestLIMENLP(unittest.TestCase):
 
         # compute and save
         normlime.interpret(
-            data, self.preprocess_fn, 20, 20,
+            reviews, self.text_to_input_fn, 20, 20,
             unk_id=self.tokenizer.convert_tokens_to_ids('[UNK]'),
             pad_id=self.tokenizer.convert_tokens_to_ids('[PAD]')
         )
 
         # load already computed one.
         normlime.interpret(
-            data, self.preprocess_fn, 20, 20,
+            reviews, self.text_to_input_fn, 20, 20,
             unk_id=self.tokenizer.convert_tokens_to_ids('[UNK]'),
             pad_id=self.tokenizer.convert_tokens_to_ids('[PAD]')
         )

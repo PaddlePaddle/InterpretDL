@@ -1,5 +1,6 @@
-import numpy as np
 import re
+import numpy as np
+from collections.abc import Iterable
 
 from .abc_interpreter import Interpreter, InputGradientInterpreter, TransformerInterpreter
 from ..data_processor.readers import images_transform_pipeline
@@ -228,11 +229,14 @@ class GANLPInterpreter(TransformerInterpreter):
         TransformerInterpreter.__init__(self, paddle_model, device, use_cuda)
 
     def interpret(self,
-                  data: np.ndarray,
-                  start_layer: int = 11,
+                  raw_text: str,
+                  tokenizer: callable = None,
+                  text_to_input_fn: callable = None,
                   label: int or None = None,
+                  start_layer: int = 11,
                   embedding_name='^ernie.embeddings.word_embeddings$',
-                  attn_map_name='^ernie.encoder.layers.*.self_attn.attn_drop$'):
+                  attn_map_name='^ernie.encoder.layers.*.self_attn.attn_drop$',
+                  max_seq_len=128):
         """
         Args:
             data (str or list of strs or numpy.ndarray): The input text filepath or a list of filepaths or numpy
@@ -249,13 +253,30 @@ class GANLPInterpreter(TransformerInterpreter):
         Returns:
             [numpy.ndarray]: interpretations for texts
         """
+        assert (tokenizer is None) + (text_to_input_fn is None) == 1, "only one of them should be given."
 
-        b = data[0].shape[0]  # batch size
-        assert b==1, "only support single sentence"
+        # tokenizer to text_to_input_fn.
+        if tokenizer is not None:
+            def text_to_input_fn(raw_text):
+                encoded_inputs = tokenizer(text=raw_text, max_seq_len=max_seq_len)
+                # order is important. *_batched_and_to_tuple will be the input for the model.
+                _batched_and_to_tuple = tuple([np.array([v]) for v in encoded_inputs.values()])
+                return _batched_and_to_tuple
+        else:
+            print("Warning: Visualization can not be supported if tokenizer is not given.")          
+
+        # from raw text string to token ids (and other terms that the user-defined function outputs).
+        model_input = text_to_input_fn(raw_text)
+        if isinstance(model_input, Iterable) and not hasattr(model_input, 'shape'):
+            model_input = tuple(inp for inp in model_input)
+        else:
+            model_input = tuple(model_input, )
         self._build_predict_fn(embedding_name=embedding_name, attn_map_name=attn_map_name, nlp=True)
 
-        attns, grads, _, _, _, preds = self.predict_fn(data, labels=label)
+        attns, grads, inputs, values, projs, proba, preds = self.predict_fn(model_input)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
+        if label is None:
+            label = preds
 
         b, h, s, _ = attns[0].shape
         R = np.eye(s, s, dtype=attns[0].dtype)
@@ -274,6 +295,10 @@ class GANLPInterpreter(TransformerInterpreter):
             R = R + np.matmul(cam, R)
 
         explanation = R[:, 0, 1:]
+
+        # intermediate results, for possible further usages.
+        self.predcited_label = preds
+        self.predcited_proba = proba
 
         return explanation
 
@@ -329,7 +354,7 @@ class GACVInterpreter(TransformerInterpreter):
         assert b==1, "only support single image"
         self._build_predict_fn(attn_map_name=attn_map_name)
         
-        attns, grads, inputs, values, projs, preds = self.predict_fn(data, labels=label)
+        attns, grads, inputs, values, projs, proba, preds = self.predict_fn(data, label=label)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
 
         b, h, s, _ = attns[0].shape

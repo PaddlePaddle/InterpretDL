@@ -385,28 +385,6 @@ class TransformerInterpreter(Interpreter):
             "paddle_model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
 
-    def _paddle_env_setup(self):
-        """Prepare the environment setup. 
-        """
-        import paddle
-        if not paddle.is_compiled_with_cuda() and self.device[:3] == 'gpu':
-            print("Paddle is not installed with GPU support. Change to CPU version now.")
-            self.device = 'cpu'
-
-        # globally set device.
-        paddle.set_device(self.device)
-        if versiontuple2tuple(paddle.__version__) >= (2, 2, 1):
-            # From Paddle2.2.1, gradients are supported in eval mode.
-            self.paddle_model.eval()
-        else:
-            # Former versions.
-            self.paddle_model.train()
-            for n, v in self.paddle_model.named_sublayers():
-                if "batchnorm" in v.__class__.__name__.lower():
-                    v._use_global_stats = True
-                if "dropout" in v.__class__.__name__.lower():
-                    v.p = 0
-
     def _build_predict_fn(self, rebuild: bool = False, embedding_name: str or None = None, attn_map_name: str or None = None, 
                                  attn_v_name: str or None = None, attn_proj_name: str or None = None, nlp: bool = False):
         
@@ -427,98 +405,191 @@ class TransformerInterpreter(Interpreter):
                 "Check it again."
 
         if self.predict_fn is None or rebuild:
-
             self._paddle_env_setup()
 
-            def predict_fn(data, labels=None, alpha: float or None=None):
+            def predict_fn(inputs, label=None, scale: float or None=None):
                 """predict_fn for input gradients based interpreters,
                     for image classification models only.
 
                 Args:
-                    data ([type]): scaled input data.
-                    labels ([type]): can be None.
-                    alpha (float, optional): noise scale for intergrated gradient and smooth gradient 
+                    inputs ([type]): scaled input data.
+                    label ([type]): can be None.
+                    scale (float, optional): noise scale for intergrated gradient and smooth gradient 
 
                 Returns:
-                    [type]: gradients, labels
+                    [type]: 
                 """
                 import paddle
 
-                data = paddle.to_tensor(data)
-                data.stop_gradient = False
+                if isinstance(inputs, tuple):
+                    _inputs = []
+                    for inp in inputs:
+                        inp = paddle.to_tensor(inp)
+                        inp.stop_gradient = False
+                        _inputs.append(inp)
+                    inputs = tuple(_inputs)
+                else:
+                    inputs = paddle.to_tensor(inputs)
+                    inputs.stop_gradient = False
+
+                inputs = tuple(paddle.to_tensor(inp) for inp in inputs) if isinstance(inputs, tuple) \
+                        else (paddle.to_tensor(inputs), )
                 
                 # when alpha is not None
                 def hook(layer, input, output):
-                    if alpha is not None:
-                        output = alpha * output
+                    if scale is not None:
+                        output = scale * output
                     return output
 
                 # to obtain the attention weights
-                attns = []
-                def attn_hook(layer, input, output):
-                    attns.append(output)
-                    
+                block_attns = []
+                def block_attn_hook(layer, input, output):
+                    block_attns.append(output)
+
                 # to obtain the input of each attention block
-                inputs = []
-                def input_hook(layer, input):
-                    inputs.append(input)
-                    
+                block_inputs = []
+                def block_input_hook(layer, input):
+                    block_inputs.append(input)
+
                 # to obtain the value and projection weights
-                values = []
-                projs = []
-                def v_hook(layer, input, output):
-                    values.append(output)
-                    
+                block_values = []
+                def block_value_hook(layer, input, output):
+                    block_values.append(output)
+
                 # apply hooks in the forward pass
+                block_projs = []
                 hooks = []
                 for n, v in self.paddle_model.named_sublayers():
                     if attn_map_name is not None and re.match(attn_map_name, n):
-                        h = v.register_forward_post_hook(attn_hook)
+                        h = v.register_forward_post_hook(block_attn_hook)
                         hooks.append(h)
-                    elif alpha is not None and re.match(embedding_name, n):
+                    elif scale is not None and re.match(embedding_name, n):
                         h = v.register_forward_post_hook(hook)
                         hooks.append(h)
                     elif attn_proj_name is not None and re.match(attn_proj_name, n):
-                        projs.append(v.weight)
+                        block_projs.append(v.weight)
                     elif attn_v_name is not None and re.match(attn_v_name, n):
-                        h = v.register_forward_pre_hook(input_hook)
+                        h = v.register_forward_pre_hook(block_input_hook)
                         hooks.append(h)
-                        h = v.register_forward_post_hook(v_hook)
+                        h = v.register_forward_post_hook(block_value_hook)
                         hooks.append(h)
                 
-                if nlp:
-                    out = self.paddle_model(*data)
-                else:
-                    out = self.paddle_model(data)
+                out = self.paddle_model(*inputs)
                 
                 for h in hooks:
                     h.remove()
 
-                out = paddle.nn.functional.softmax(out, axis=1)
-                preds = paddle.argmax(out, axis=1)
-                if labels is None:
-                    labels = preds.numpy()
+                proba = paddle.nn.functional.softmax(out, axis=1)
+                preds = paddle.argmax(proba, axis=1)
+                if label is None:
+                    label = preds.numpy()
 
-                attns_grads = []
+                block_attns_grads = []
                 
-                label_onehot = paddle.nn.functional.one_hot(paddle.to_tensor(labels), num_classes=out.shape[1])
-                target = paddle.sum(out * label_onehot, axis=1)
+                label_onehot = paddle.nn.functional.one_hot(paddle.to_tensor(label), num_classes=proba.shape[1])
+                target = paddle.sum(proba * label_onehot, axis=1)
                 target.backward()
-                for i, blk in enumerate(attns):
+                for i, blk in enumerate(block_attns):
                     grad = blk.grad.numpy()
-                    attns_grads.append(grad)
-                    attns[i] = blk.numpy()
+                    block_attns_grads.append(grad)
+                    block_attns[i] = blk.numpy()
                 target.clear_gradient()
+
+                for i, blk in enumerate(block_inputs):
+                    block_inputs[i] = blk[0].numpy()
                 
-                for i, blk in enumerate(inputs):
-                    inputs[i] = blk[0].numpy()
+                for i, blk in enumerate(block_values):
+                    block_values[i] = blk[0].numpy()
                 
-                for i, blk in enumerate(values):
-                    values[i] = blk[0].numpy()
+                for i, blk in enumerate(block_projs):
+                    block_projs[i] = blk.numpy()                
                 
-                for i, blk in enumerate(projs):
-                    projs[i] = blk.numpy()
-                
-                return attns, attns_grads, inputs, values, projs, labels
+                return block_attns, block_attns_grads, block_inputs, block_values, block_projs, proba.numpy(), label
 
             self.predict_fn = predict_fn
+
+
+class IntermediateGradientInterpreter(Interpreter):
+    """This is one of the sub-abstract Interpreters. 
+    
+    :class:`IntermediateGradientInterpreter` exhibits both features and gradients from intermediate layers to produce 
+    explanations. Interpreters that are derived from :class:`IntermediateGradientInterpreter` include
+    :class:``, :class:``.
+
+    This Interpreter implements :py:func:`_build_predict_fn` that returns the model's intermediate outputs given an 
+    input. 
+    """
+
+    def __init__(self, paddle_model: callable, device: str = 'gpu:0') -> None:
+        """
+        
+        Args:
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc.
+        """
+        Interpreter.__init__(self, paddle_model, device, None)
+
+    def _build_predict_fn(self, rebuild=False, layer_name='word_embeddings', gradient_of='probability'):
+
+        if self.predict_fn is not None:
+            assert callable(self.predict_fn), \
+                "predict_fn is predefined before, but is not callable. Check it again."
+            return
+
+        if self.predict_fn is None or rebuild:
+            assert gradient_of in ['loss', 'logit', 'probability']
+            self._paddle_env_setup()
+
+            def predict_fn(inputs, label=None, scale=None, noise_amount=None):
+                import paddle
+                inputs = tuple(paddle.to_tensor(inp) for inp in inputs) if isinstance(inputs, tuple) \
+                        else (paddle.to_tensor(inputs), )
+
+                target_feature_map = []
+                def hook(layer, input, output):
+                    if scale is not None:
+                        output = scale * output
+                    if noise_amount is not None:
+                        bias = paddle.normal(std=noise_amount * output.mean(), shape=output.shape)
+                        output = output + bias
+                    target_feature_map.append(output)
+                    return output
+
+                hooks = []
+                for name, v in self.paddle_model.named_sublayers():
+                    if layer_name in name:
+                        h = v.register_forward_post_hook(hook)
+                        hooks.append(h)
+
+                logits = self.paddle_model(*inputs)   # get logits, [bs, num_c]
+
+                for h in hooks:
+                    h.remove()
+
+                probas = paddle.nn.functional.softmax(logits, axis=1)  # get probabilities.
+                preds = paddle.argmax(probas, axis=1)  # get predictions.
+                if label is None:
+                    label = preds.numpy()  # label is an integer.
+
+                if gradient_of == 'loss':
+                    # loss
+                    loss = paddle.nn.functional.cross_entropy(logits, paddle.to_tensor(label), reduction='sum')
+                else:
+                    # logits or probas
+                    label_onehot = paddle.nn.functional.one_hot(paddle.to_tensor(label), num_classes=probas.shape[-1])
+                    if gradient_of == 'logit':
+                        loss = paddle.sum(logits * label_onehot, axis=1)
+                    else:
+                        loss = paddle.sum(probas * label_onehot, axis=1)
+
+                loss.backward()
+                gradients = target_feature_map[0].grad
+                loss.clear_gradient()
+
+                if isinstance(gradients, paddle.Tensor):
+                    gradients = gradients.numpy()
+
+                return gradients, label, target_feature_map[0].numpy(), probas.numpy()
+
+        self.predict_fn = predict_fn

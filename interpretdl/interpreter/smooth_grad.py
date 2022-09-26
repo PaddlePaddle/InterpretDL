@@ -1,10 +1,10 @@
 import numpy as np
-
 from tqdm import tqdm
-from .abc_interpreter import InputGradientInterpreter
+from collections.abc import Iterable
+
+from .abc_interpreter import InputGradientInterpreter, IntermediateGradientInterpreter
 from ..data_processor.readers import images_transform_pipeline, preprocess_save_path
 from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
-
 
 class SmoothGradInterpreter(InputGradientInterpreter):
     """
@@ -87,8 +87,8 @@ class SmoothGradInterpreter(InputGradientInterpreter):
         for i in tqdm(range(n_samples), leave=True, position=0):
             noise = np.concatenate(
                 [np.float32(np.random.normal(0.0, stds[j], (1, ) + tuple(d.shape))) for j, d in enumerate(data)])
-            data_noised = data + noise
-            gradients, _, _ = self.predict_fn(data_noised, labels)
+            _noised_data = data + noise
+            gradients, _, _ = self.predict_fn(_noised_data, labels)
             total_gradients += gradients
 
         avg_gradients = total_gradients / n_samples
@@ -113,3 +113,96 @@ class SmoothGradInterpreter(InputGradientInterpreter):
         self.labels = labels
 
         return avg_gradients
+
+
+class SmoothGradNLPInterpreter(IntermediateGradientInterpreter):
+    """
+    Integrated Gradients Interpreter for NLP tasks.
+        
+    For input gradient based interpreters, the target issue is generally the vanilla input gradient's noises.
+    The basic idea of reducing the noises is to use different similar inputs to get the input gradients and 
+    do the average. 
+
+    The inputs for NLP tasks are considered as the embedding features. So the noises or the changes of inputs
+    are done for the embeddings.
+
+    More details regarding the Integrated Gradients method can be found in the original paper:
+    https://arxiv.org/abs/1703.01365.
+    """
+
+    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda: bool = None) -> None:
+        """
+        
+        Args:
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc.
+        """
+        IntermediateGradientInterpreter.__init__(self, paddle_model, device)
+
+    def interpret(self,
+                  raw_text: str,
+                  tokenizer: callable = None,
+                  text_to_input_fn: callable = None,
+                  label: list or np.ndarray = None,
+                  noise_amount: int = 0.1,
+                  n_samples: int = 50,
+                  embedding_name: str = 'word_embeddings',
+                  max_seq_len: int = 128,
+                  visual: bool = False) -> np.ndarray:
+        """The technical details of the IntGrad method for NLP tasks are similar for CV tasks, except the noises are
+        added on the embeddings.
+
+        Args:
+            data (tupleornp.ndarray): The inputs to the NLP model.
+            labels (listornp.ndarray, optional): The target labels to analyze. If None, the most likely label 
+                will be used. Default: ``None``.
+            steps (int, optional): number of steps in the Riemann approximation of the integral. Default: ``50``.
+            embedding_name (str, optional): name of the embedding layer at which the noises will be applied. 
+                The name of embedding can be verified through ``print(model)``. Defaults to ``word_embeddings``. 
+
+        Returns:
+            np.ndarray or tuple: explanations, or (explanations, pred).
+        """
+        assert (tokenizer is None) + (text_to_input_fn is None) == 1, "only one of them should be given."
+
+        # tokenizer to text_to_input_fn.
+        if tokenizer is not None:
+            def text_to_input_fn(raw_text):
+                encoded_inputs = tokenizer(text=raw_text, max_seq_len=max_seq_len)
+                # order is important. *_batched_and_to_tuple will be the input for the model.
+                _batched_and_to_tuple = tuple([np.array([v]) for v in encoded_inputs.values()])
+                return _batched_and_to_tuple
+        else:
+            print("Warning: Visualization can not be supported if tokenizer is not given.")
+
+        # from raw text string to token ids (and other terms that the user-defined function outputs).
+        model_input = text_to_input_fn(raw_text)
+        if isinstance(model_input, Iterable) and not hasattr(model_input, 'shape'):
+            model_input = tuple(inp for inp in model_input)
+        else:
+            model_input = tuple(model_input, )
+
+        self._build_predict_fn(layer_name=embedding_name, gradient_of='probability')
+
+        gradients, label, _, proba = self.predict_fn(model_input, label, noise_amount=None)
+
+        # SG
+        total_gradients = np.zeros_like(gradients)
+        for i in tqdm(range(n_samples), leave=True, position=0):
+            gradients, _, _, _ = self.predict_fn(model_input, label, noise_amount=noise_amount)
+            total_gradients += gradients
+
+        sg_gradients = total_gradients / n_samples
+
+        # intermediate results, for possible further usages.
+        self.predcited_label = label
+        self.predcited_proba = proba
+
+        if visual:
+            # TODO: visualize if tokenizer is given.
+            print("Visualization is not supported yet.")
+            print("Currently please see the tutorial for the visualization:")
+            print("https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2.ipynb")
+
+        return sg_gradients

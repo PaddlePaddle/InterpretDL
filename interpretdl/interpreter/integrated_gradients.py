@@ -1,6 +1,9 @@
+import warnings
 import numpy as np
 from tqdm import tqdm
-from .abc_interpreter import InputGradientInterpreter, Interpreter
+from collections.abc import Iterable
+
+from .abc_interpreter import InputGradientInterpreter, IntermediateGradientInterpreter
 from ..data_processor.readers import images_transform_pipeline, preprocess_save_path
 from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
 
@@ -125,7 +128,7 @@ class IntGradCVInterpreter(InputGradientInterpreter):
         return avg_gradients
 
 
-class IntGradNLPInterpreter(Interpreter):
+class IntGradNLPInterpreter(IntermediateGradientInterpreter):
     """
     Integrated Gradients Interpreter for NLP tasks.
         
@@ -148,14 +151,17 @@ class IntGradNLPInterpreter(Interpreter):
             device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        Interpreter.__init__(self, paddle_model, device, use_cuda)
+        IntermediateGradientInterpreter.__init__(self, paddle_model, device)
 
     def interpret(self,
-                  data: tuple or np.ndarray,
-                  labels: list or np.ndarray = None,
+                  raw_text: str,
+                  tokenizer: callable = None,
+                  text_to_input_fn: callable = None,
+                  label: list or np.ndarray = None,
                   steps: int = 50,
                   embedding_name: str = 'word_embeddings',
-                  return_pred: bool = True) -> np.ndarray or tuple:
+                  max_seq_len: int = 128,
+                  visual: bool = False) -> np.ndarray:
         """The technical details of the IntGrad method for NLP tasks are similar for CV tasks, except the noises are
         added on the embeddings.
 
@@ -166,113 +172,49 @@ class IntGradNLPInterpreter(Interpreter):
             steps (int, optional): number of steps in the Riemann approximation of the integral. Default: ``50``.
             embedding_name (str, optional): name of the embedding layer at which the noises will be applied. 
                 The name of embedding can be verified through ``print(model)``. Defaults to ``word_embeddings``. 
-            return_pred (bool, optional): Whether or not to return predicted labels and probabilities. 
-                If True, a tuple of predicted labels, probabilities, and interpretations will be returned.
-                There are useful for visualization. Else, only interpretations will be returned. Default: ``True``.
 
         Returns:
             np.ndarray or tuple: explanations, or (explanations, pred).
         """
+        assert (tokenizer is None) + (text_to_input_fn is None) == 1, "only one of them should be given."
 
-        self._build_predict_fn(embedding_name=embedding_name, gradient_of='probability')
-
-        if isinstance(data, tuple):
-            bs = data[0].shape[0]
+        # tokenizer to text_to_input.
+        if tokenizer is not None:
+            def text_to_input_fn(raw_text):
+                encoded_inputs = tokenizer(text=raw_text, max_seq_len=max_seq_len)
+                # order is important. *_batched_and_to_tuple will be the input for the model.
+                _batched_and_to_tuple = tuple([np.array([v]) for v in encoded_inputs.values()])
+                return _batched_and_to_tuple
         else:
-            bs = data.shape[0]
+            print("Warning: Visualization can not be supported if tokenizer is not given.")
 
-        gradients, labels, data_out, probas = self.predict_fn(data, labels, None)
-        self.predcited_labels = labels
-        self.predcited_probas = probas
+        # from raw text string to token ids (and other terms that the user-defined function outputs).
+        model_input = text_to_input_fn(raw_text)
+        if isinstance(model_input, Iterable) and not hasattr(model_input, 'shape'):
+            model_input = tuple(inp for inp in model_input)
+        else:
+            model_input = tuple(model_input, )
 
-        labels = labels.reshape((bs, ))
+        self._build_predict_fn(layer_name=embedding_name, gradient_of='probability')
+
+        gradients, label, data_out, proba = self.predict_fn(model_input, label, scale=None)
+
+        # IG
         total_gradients = np.zeros_like(gradients)
         for alpha in np.linspace(0, 1, steps):
-            gradients, _, _, _ = self.predict_fn(data, labels, alpha)
+            gradients, _, _, _ = self.predict_fn(model_input, label, scale=alpha)
             total_gradients += gradients
 
         ig_gradients = total_gradients * data_out / steps
-        ig_gradients = np.sum(ig_gradients, axis=-1)
 
-        if return_pred:
-            return labels, probas.numpy(), ig_gradients
+        # intermediate results, for possible further usages.
+        self.predcited_label = label
+        self.predcited_proba = proba
 
-        # Visualization is currently not supported here.
-        # See the tutorial for more information:
-        # https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2.ipynb
+        if visual:
+            # TODO: visualize if tokenizer is given.
+            print("Visualization is not supported yet.")
+            print("Currently please see the tutorial for the visualization:")
+            print("https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2.ipynb")
 
         return ig_gradients
-
-    def _build_predict_fn(self, rebuild=False, embedding_name='word_embeddings', gradient_of='probability'):
-
-        if self.predict_fn is not None:
-            assert callable(self.predict_fn), \
-                "predict_fn is predefined before, but is not callable. Check it again."
-            return
-
-        import paddle
-        if self.predict_fn is None or rebuild:
-            assert gradient_of in ['loss', 'logit', 'probability']
-
-            self._paddle_env_setup()
-
-            def predict_fn(data, labels, noise_scale=1.0):
-                if isinstance(data, tuple):
-                    # NLP models usually have two inputs.
-                    bs = data[0].shape[0]
-                    data = (paddle.to_tensor(data[0]), paddle.to_tensor(data[1]))
-                else:
-                    bs = data.shape[0]
-                    data = paddle.to_tensor(data)
-
-                assert labels is None or \
-                    (isinstance(labels, (list, np.ndarray)) and len(labels) == bs)
-
-                target_feature_map = []
-
-                def hook(layer, input, output):
-                    if noise_scale is not None:
-                        output = noise_scale * output
-                    target_feature_map.append(output)
-                    return output
-
-                hooks = []
-                for name, v in self.paddle_model.named_sublayers():
-                    if embedding_name in name:
-                        h = v.register_forward_post_hook(hook)
-                        hooks.append(h)
-
-                if isinstance(data, tuple):
-                    logits = self.paddle_model(*data)  # get logits, [bs, num_c]
-                else:
-                    logits = self.paddle_model(data)  # get logits, [bs, num_c]
-
-                for h in hooks:
-                    h.remove()
-
-                probas = paddle.nn.functional.softmax(logits, axis=1)  # get probabilities.
-                preds = paddle.argmax(probas, axis=1)  # get predictions.
-                if labels is None:
-                    labels = preds.numpy()  # label is an integer.
-
-                if gradient_of == 'loss':
-                    # loss
-                    loss = paddle.nn.functional.cross_entropy(logits, paddle.to_tensor(labels), reduction='sum')
-                else:
-                    # logits or probas
-                    labels = np.array(labels).reshape((bs, ))
-                    labels_onehot = paddle.nn.functional.one_hot(paddle.to_tensor(labels), num_classes=probas.shape[1])
-                    if gradient_of == 'logit':
-                        loss = paddle.sum(logits * labels_onehot, axis=1)
-                    else:
-                        loss = paddle.sum(probas * labels_onehot, axis=1)
-
-                loss.backward()
-                gradients = target_feature_map[0].grad  # get gradients of "embedding".
-                loss.clear_gradient()
-
-                if isinstance(gradients, paddle.Tensor):
-                    gradients = gradients.numpy()
-                return gradients, labels, target_feature_map[0].numpy(), probas
-
-        self.predict_fn = predict_fn

@@ -214,11 +214,10 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
             return
 
         lime_weights = self.lime_interpret(data,
-                                           preprocess_fn=preprocess_fn,
+                                           text_to_input_fn=preprocess_fn,
                                            unk_id=unk_id,
                                            pad_id=pad_id,
                                            num_samples=num_samples,
-                                           lod_levels=lod_levels,
                                            batch_size=batch_size)
 
         self.all_lime_weights[dict_key] = {
@@ -232,12 +231,12 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
         return
 
     def interpret(self,
-                  data: str,
+                  list_of_raw_text,
                   preprocess_fn: callable,
                   num_samples: int,
                   batch_size: int,
-                  unk_id: int,
-                  pad_id: int or None = None,
+                  unk_id: int = 0,
+                  pad_id: int = 0,
                   lod_levels: int or None = None,
                   save_path: str = 'normlime_weights.npy',
                   temp_data_file: str = 'all_lime_weights.npz'):
@@ -247,7 +246,7 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
         and ``batch_size`` are LIME arguments, for the generated samples and the batch size of each pass.
 
         Args:
-            data (str): The raw string for analysis.
+            list_of_raw_text (str): The raw string for analysis.
             preprocess_fn (Callable): A user-defined function that input raw string and outputs the a tuple of inputs 
                 to feed into the NLP model.
             num_samples (int, optional): LIME sampling numbers. Larger number of samples usually gives more accurate 
@@ -290,8 +289,8 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
                 self.all_lime_weights = dict(np.load(self.filepath_to_save, allow_pickle=True))
 
         # compute lime weights and put in self.all_lime_weights
-        for i in tqdm(range(len(data)), leave=True, position=0):
-            self._get_lime_weights(data[i],
+        for i in tqdm(range(len(list_of_raw_text)), leave=True, position=0):
+            self._get_lime_weights(list_of_raw_text[i],
                                    preprocess_fn=preprocess_fn,
                                    unk_id=unk_id,
                                    pad_id=pad_id,
