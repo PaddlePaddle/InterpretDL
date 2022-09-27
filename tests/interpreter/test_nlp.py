@@ -28,33 +28,33 @@ class TestLIMENLP(unittest.TestCase):
             return _batched_and_to_tuple
         self.text_to_input_fn = text_to_input_fn
 
-    # def test_lime_intgrad_gradshap_nlp(self):
-    #     self.prepare()
+    def test_lime_intgrad_gradshap_nlp(self):
+        self.prepare()
 
-    #     reviews = [
-    #         "it 's a charming and often affecting journey . ",
-    #     ]
+        reviews = [
+            "it 's a charming and often affecting journey . ",
+        ]
 
-    #     for i, review in enumerate(reviews):
-    #         algo = it.LIMENLPInterpreter(self.paddle_model, device='cpu')
-    #         lime_weights = algo.interpret(
-    #             review,
-    #             tokenizer=self.tokenizer,
-    #             num_samples=11,
-    #             batch_size=10)
+        for i, review in enumerate(reviews):
+            algo = it.LIMENLPInterpreter(self.paddle_model, device='cpu')
+            lime_weights = algo.interpret(
+                review,
+                tokenizer=self.tokenizer,
+                num_samples=11,
+                batch_size=10)
 
-    #         algo = it.IntGradNLPInterpreter(self.paddle_model, device='cpu')
-    #         avg_gradients = algo.interpret(
-    #             review,
-    #             tokenizer=self.tokenizer,
-    #             steps=2)
+            algo = it.IntGradNLPInterpreter(self.paddle_model, device='cpu')
+            avg_gradients = algo.interpret(
+                review,
+                tokenizer=self.tokenizer,
+                steps=2)
 
-    #         algo = it.SmoothGradNLPInterpreter(self.paddle_model, device='cpu')
-    #         avg_gradients = algo.interpret(
-    #             review,
-    #             tokenizer=self.tokenizer,
-    #             n_samples=2,
-    #             noise_amount=0.1)
+            algo = it.SmoothGradNLPInterpreter(self.paddle_model, device='cpu')
+            avg_gradients = algo.interpret(
+                review,
+                tokenizer=self.tokenizer,
+                n_samples=2,
+                noise_amount=0.1)
             
     def test_normlime(self):
         self.prepare()
