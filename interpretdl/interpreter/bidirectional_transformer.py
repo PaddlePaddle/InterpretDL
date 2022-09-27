@@ -31,9 +31,9 @@ class BTCVInterpreter(TransformerInterpreter):
                   ap_mode: str = "head",
                   start_layer: int = 4,
                   steps: int = 20,
-                  attn_map_name='^blocks.*.attn.attn_drop$', 
-                  attn_v_name='^blocks.*.attn.qkv$',
-                  attn_proj_name='^blocks.*.attn.proj$', 
+                  attn_map_name='^blocks.[0-9]*.attn.attn_drop$', 
+                  attn_v_name='^blocks.[0-9]*.attn.qkv$',
+                  attn_proj_name='^blocks.[0-9]*.attn.proj$', 
                   label: int or None = None,
                   resize_to: int = 224,
                   crop_to: int or None = None,
@@ -174,10 +174,10 @@ class BTNLPInterpreter(TransformerInterpreter):
                   ap_mode: str = "head",
                   start_layer: int = 11,
                   steps: int = 20,
-                  embedding_name='^ernie.embeddings.word_embeddings$', 
-                  attn_map_name='^ernie.encoder.layers.*.self_attn.attn_drop$', 
-                  attn_v_name='^ernie.encoder.layers.*.self_attn.v_proj$',
-                  attn_proj_name='^ernie.encoder.layers.*.self_attn.out_proj$',
+                  embedding_name='^[a-z]*.embeddings.word_embeddings$', 
+                  attn_map_name='^[a-z]*.encoder.layers.[0-9]*.self_attn.attn_drop$', 
+                  attn_v_name='^[a-z]*.encoder.layers.[0-9]*.self_attn.v_proj$',
+                  attn_proj_name='^[a-z]*.encoder.layers.[0-9]*.self_attn.out_proj$',
                   max_seq_len=128):
         """
         Args:

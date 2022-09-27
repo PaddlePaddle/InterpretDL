@@ -36,8 +36,8 @@ class GAInterpreter(InputGradientInterpreter):
                   image_input: str or np.ndarray,
                   text: str,
                   text_tokenized: np.ndarray,
-                  vis_attn_layer_pattern: str = '^visual.transformer.resblocks.*.attn.attn_map$',
-                  txt_attn_layer_pattern: str = '^transformer.resblocks.*.attn.attn_map$',
+                  vis_attn_layer_pattern: str = '^visual.transformer.resblocks.[0-9]*.attn.attn_map$',
+                  txt_attn_layer_pattern: str = '^transformer.resblocks.[0-9]*.attn.attn_map$',
                   start_layer: int = 11,
                   start_layer_text: int = 11,
                   resize_to: int = 224,
@@ -234,8 +234,8 @@ class GANLPInterpreter(TransformerInterpreter):
                   text_to_input_fn: callable = None,
                   label: int or None = None,
                   start_layer: int = 11,
-                  embedding_name='^ernie.embeddings.word_embeddings$',
-                  attn_map_name='^ernie.encoder.layers.*.self_attn.attn_drop$',
+                  embedding_name='^[a-z]*.embeddings.word_embeddings$',
+                  attn_map_name='^[a-z]*.encoder.layers.[0-9]*.self_attn.attn_drop$',
                   max_seq_len=128):
         """
         Args:
@@ -321,7 +321,7 @@ class GACVInterpreter(TransformerInterpreter):
     def interpret(self,
                   inputs: str or list(str) or np.ndarray,
                   start_layer: int = 4,
-                  attn_map_name='^blocks.*.attn.attn_drop$', 
+                  attn_map_name='^blocks.[0-9]*.attn.attn_drop$', 
                   label: int or None = None,
                   resize_to: int = 224,
                   crop_to: int or None = None,
