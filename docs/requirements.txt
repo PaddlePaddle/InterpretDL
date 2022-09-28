@@ -11,4 +11,3 @@ opencv-python
 matplotlib
 IPython
 paddlepaddle
-protobuf<=3.20
