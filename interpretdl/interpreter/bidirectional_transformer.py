@@ -178,7 +178,8 @@ class BTNLPInterpreter(TransformerInterpreter):
                   attn_map_name='^[a-z]*.encoder.layers.[0-9]*.self_attn.attn_drop$', 
                   attn_v_name='^[a-z]*.encoder.layers.[0-9]*.self_attn.v_proj$',
                   attn_proj_name='^[a-z]*.encoder.layers.[0-9]*.self_attn.out_proj$',
-                  max_seq_len=128):
+                  max_seq_len=128,
+                  visual=False):
         """
         Args:
             data (str or list of strs or numpy.ndarray): The input text filepath or a list of filepaths or numpy
@@ -281,5 +282,11 @@ class BTNLPInterpreter(TransformerInterpreter):
         # intermediate results, for possible further usages.
         self.predcited_label = preds
         self.predcited_proba = proba
+
+        if visual:
+            # TODO: visualize if tokenizer is given.
+            print("Visualization is not supported yet.")
+            print("Currently please see the tutorial for the visualization:")
+            print("https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2.ipynb")
 
         return explanation

@@ -236,7 +236,8 @@ class GANLPInterpreter(TransformerInterpreter):
                   start_layer: int = 11,
                   embedding_name='^[a-z]*.embeddings.word_embeddings$',
                   attn_map_name='^[a-z]*.encoder.layers.[0-9]*.self_attn.attn_drop$',
-                  max_seq_len=128):
+                  max_seq_len=128,
+                  visual=False):
         """
         Args:
             data (str or list of strs or numpy.ndarray): The input text filepath or a list of filepaths or numpy
@@ -299,6 +300,12 @@ class GANLPInterpreter(TransformerInterpreter):
         # intermediate results, for possible further usages.
         self.predcited_label = preds
         self.predcited_proba = proba
+
+        if visual:
+            # TODO: visualize if tokenizer is given.
+            print("Visualization is not supported yet.")
+            print("Currently please see the tutorial for the visualization:")
+            print("https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2.ipynb")
 
         return explanation
 
