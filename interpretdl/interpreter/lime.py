@@ -255,7 +255,7 @@ class LIMENLPInterpreter(InputOutputInterpreter):
                                                                          batch_size=batch_size)
 
         # intermediate results, for possible further usages.
-        self.probability = probability
+        self.predcited_proba = probability
         self.lime_results['probability'] = {c: probability[c] for c in classes_to_interpret.ravel()}
         self.lime_results['r2_scores'] = r2_scores
         self.lime_results['lime_weights'] = lime_weights
