@@ -277,7 +277,7 @@ class BTNLPInterpreter(TransformerInterpreter):
 
         W_state = np.mean((total_gradients / steps).clip(min=0), axis=1)[:, 0, :].reshape((b, 1, s))
 
-        explanation = (R * W_state)[:, 0, 1:]
+        explanation = (R * W_state)[:, 0]  # NLP tasks return explanations for all tokens, including [CLS] and [SEP].
 
         # intermediate results, for possible further usages.
         self.predcited_label = preds

@@ -295,7 +295,7 @@ class GANLPInterpreter(TransformerInterpreter):
 
             R = R + np.matmul(cam, R)
 
-        explanation = R[:, 0, 1:]
+        explanation = R[:, 0]  # NLP tasks return explanations for all tokens, including [CLS] and [SEP].
 
         # intermediate results, for possible further usages.
         self.predcited_label = preds
