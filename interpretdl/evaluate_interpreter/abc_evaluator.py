@@ -42,8 +42,8 @@ class InterpreterEvaluator(ABC):
             assert callable(self.predict_fn), "predict_fn is predefined before, but is not callable." \
                 "Check it again."
 
-        import paddle
         if self.predict_fn is None or rebuild:
+            import paddle
             if not paddle.is_compiled_with_cuda() and self.device[:3] == 'gpu':
                 print("Paddle is not installed with GPU support. Change to CPU version now.")
                 self.device = 'cpu'
@@ -54,7 +54,7 @@ class InterpreterEvaluator(ABC):
             # to get gradients, the ``train`` mode must be set.
             self.paddle_model.eval()
 
-            def predict_fn(data):
+            def predict_fn(inputs):
                 """predict_fn for input gradients based interpreters,
                     for image classification models only.
 
@@ -64,10 +64,12 @@ class InterpreterEvaluator(ABC):
                 Returns:
                     [type]: [description]
                 """
-                assert len(data.shape) == 4  # [bs, h, w, 3]
+                # assert len(inputs.shape) == 4  # [bs, h, w, 3]
 
                 with paddle.no_grad():
-                    logits = self.paddle_model(paddle.to_tensor(data))  # get logits, [bs, num_c]
+                    inputs = tuple(paddle.to_tensor(inp) for inp in inputs) if isinstance(inputs, tuple) \
+                        else (paddle.to_tensor(inputs), )
+                    logits = self.paddle_model(*inputs)  # get logits, [bs, num_c]
                     probas = paddle.nn.functional.softmax(logits, axis=1)  # get probabilities.
                 return probas.numpy()
 

@@ -31,7 +31,7 @@ class Perturbation(InterpreterEvaluator):
 
     def __init__(self,
                  paddle_model: callable,
-                 device: str,
+                 device: str = 'gpu:0',
                  compute_MoRF: bool = True,
                  compute_LeRF: bool = True,
                  **kwargs):
@@ -260,6 +260,148 @@ class Perturbation(InterpreterEvaluator):
                     probas.append(probs_batch)
 
                 probas = np.concatenate(probas, axis=0)
+
+            # class of interest
+            if coi is None:
+                # probas.shape = [n_samples, n_classes]
+                coi = np.argmax(probas[0], axis=0)
+
+            results['LeRF_probas'] = probas[:, coi]
+            results['LeRF_score'] = np.mean(results['LeRF_probas'])
+
+        return results
+
+
+class PerturbationNLP(InterpreterEvaluator):
+    """Perturbation based Evaluations for NLP tasks. 
+
+    More details of MoRF and LeRF can be found in the original paper:
+    https://arxiv.org/abs/1509.06321. 
+
+    """
+
+    def __init__(self,
+                 paddle_model: callable,
+                 device: str = 'gpu:0',
+                 **kwargs):
+        """_summary_
+
+        Args:
+            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions. This 
+                is not always required if the model is not involved. 
+            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+                etc. Again, this is not always required if the model is not involved.
+            compute_MoRF (bool, optional): Whether comptue MoRF score. Defaults to True.
+            compute_LeRF (bool, optional): Whether comptue LeRF score. Defaults to True.
+
+        Raises:
+            ValueError: 'At least one of ``compute_MoRF`` and ``compute_LeRF`` must be True.'
+        """
+        super().__init__(paddle_model, device, None, **kwargs)
+        self._build_predict_fn()
+
+    def evaluate(self,
+                 raw_text: str,
+                 explanation: list or np.ndarray,
+                 tokenizer: callable,
+                 compute_MoRF: bool = True,
+                 compute_LeRF: bool = True,
+                 batch_size=None,
+                 percentile=False) -> dict:
+
+        if (not compute_MoRF) and (not compute_LeRF):
+            raise ValueError('At least one of ``compute_MoRF`` and ``compute_LeRF`` must be True.')
+        self.compute_MoRF = compute_MoRF
+        self.compute_LeRF = compute_LeRF
+
+        results = {}
+        if compute_MoRF:
+            results['MoRF_score'] = 0.0
+            results['MoRF_probas'] = None
+        if compute_LeRF:
+            results['LeRF_score'] = 0.0
+            results['LeRF_probas'] = None
+
+        results = self.generate_samples(
+            raw_text, explanation, tokenizer, percentile, results)
+
+        results = self.compute_probas(results, batch_size)
+
+        return results
+
+    def generate_samples(self, raw_text, explanation, tokenizer, percentile=False, results=None):
+        if results is None:
+            results = {}
+        
+        # tokenizer text to ids
+        encoded_inputs = tokenizer(raw_text, max_seq_len=128)
+
+        explanation = np.squeeze(explanation)
+        assert explanation.shape[0] == len(encoded_inputs['input_ids'])
+
+        text_explanation = explanation[1:-1]  # without special tokens
+        # perturb on text or directly on ids. use tokenizer.pad_token_id
+        if percentile:
+            # perturb tokens according to the percentiles.
+            qs = [0.01 * (i - 1) for i in range(1, 101)]
+            tiles = np.percentile(text_explanation, qs)
+        else:
+            # (default setting) perturb tokens one by one. 
+            tiles = np.sort(text_explanation)
+
+        # this is for [cls] token tasks.
+        cls_id = encoded_inputs['input_ids'][0]
+        sep_id = encoded_inputs['input_ids'][-1]
+        pad_id = tokenizer.pad_token_id  # use pad_token to mask original ids.
+
+        if self.compute_MoRF:
+            batched_input_ids = [encoded_inputs['input_ids'].copy()]
+            for p in tiles[::-1]:
+                inputs_copy = encoded_inputs.copy()
+                _tmp_input_ids = np.array(inputs_copy['input_ids'])
+                _tmp_input_ids[explanation >= p] = pad_id
+                _tmp_input_ids[0] = cls_id
+                _tmp_input_ids[-1] = sep_id
+                batched_input_ids.append(_tmp_input_ids)
+            batched_input_ids = np.array(batched_input_ids)
+            results['MoRF_samples'] = (batched_input_ids, )
+                
+        if self.compute_LeRF:
+            batched_input_ids = [encoded_inputs['input_ids'].copy()]
+            for p in tiles:
+                inputs_copy = encoded_inputs.copy()
+                _tmp_input_ids = np.array(inputs_copy['input_ids'])
+                _tmp_input_ids[explanation <= p] = pad_id
+                _tmp_input_ids[0] = cls_id
+                _tmp_input_ids[-1] = sep_id
+                batched_input_ids.append(_tmp_input_ids)
+            batched_input_ids = np.array(batched_input_ids)
+            results['LeRF_samples'] = (batched_input_ids, )
+
+        return results
+
+    def compute_probas(self, results, batch_size, coi=None):
+        if self.compute_MoRF:
+            data = results['MoRF_samples']
+            if batch_size is None:
+                probas = self.predict_fn(data)
+            else:
+                raise NotImplementedError
+
+            # class of interest
+            if coi is None:
+                # probas.shape = [n_samples, n_classes]
+                coi = np.argmax(probas[0], axis=0)
+
+            results['MoRF_probas'] = probas[:, coi]
+            results['MoRF_score'] = np.mean(results['MoRF_probas'])
+
+        if self.compute_LeRF:
+            data = results['LeRF_samples']
+            if batch_size is None:
+                probas = self.predict_fn(data)
+            else:
+                raise NotImplementedError
 
             # class of interest
             if coi is None:
