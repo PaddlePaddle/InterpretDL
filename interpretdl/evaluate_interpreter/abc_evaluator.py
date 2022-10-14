@@ -18,7 +18,7 @@ class InterpreterEvaluator(ABC):
     .. warning:: ``use_cuda`` would be deprecated soon. Use ``device`` directly.
     """
 
-    def __init__(self, paddle_model: callable or None, device: str, use_cuda: bool or None, **kwargs):
+    def __init__(self, paddle_model: callable or None, device: str = 'gpu:0', use_cuda: bool = None, **kwargs):
         """
 
         Args:

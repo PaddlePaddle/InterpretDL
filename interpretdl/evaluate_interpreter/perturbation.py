@@ -307,6 +307,7 @@ class PerturbationNLP(InterpreterEvaluator):
                  compute_MoRF: bool = True,
                  compute_LeRF: bool = True,
                  batch_size=None,
+                 max_seq_len=128,
                  percentile=False) -> dict:
 
         if (not compute_MoRF) and (not compute_LeRF):
@@ -323,18 +324,18 @@ class PerturbationNLP(InterpreterEvaluator):
             results['LeRF_probas'] = None
 
         results = self.generate_samples(
-            raw_text, explanation, tokenizer, percentile, results)
+            raw_text, explanation, tokenizer, max_seq_len, percentile, results)
 
         results = self.compute_probas(results, batch_size)
 
         return results
 
-    def generate_samples(self, raw_text, explanation, tokenizer, percentile=False, results=None):
+    def generate_samples(self, raw_text, explanation, tokenizer, max_seq_len, percentile, results=None):
         if results is None:
             results = {}
         
         # tokenizer text to ids
-        encoded_inputs = tokenizer(raw_text, max_seq_len=128)
+        encoded_inputs = tokenizer(raw_text, max_seq_len=max_seq_len)
 
         explanation = np.squeeze(explanation)
         assert explanation.shape[0] == len(encoded_inputs['input_ids'])

@@ -49,7 +49,6 @@ class Infidelity(InterpreterEvaluator):
         """
         
         super().__init__(paddle_model, device, None, **kwargs)
-        self._build_predict_fn()
         self.results = {}
 
     def _build_predict_fn(self, rebuild: bool = False):
@@ -65,8 +64,8 @@ class Infidelity(InterpreterEvaluator):
             assert callable(self.predict_fn), "predict_fn is predefined before, but is not callable." \
                 "Check it again."
 
-        import paddle
         if self.predict_fn is None or rebuild:
+            import paddle
             if not paddle.is_compiled_with_cuda() and self.device[:3] == 'gpu':
                 print("Paddle is not installed with GPU support. Change to CPU version now.")
                 self.device = 'cpu'
@@ -170,6 +169,8 @@ class Infidelity(InterpreterEvaluator):
         Returns:
             int: the infidelity score.
         """
+        self._build_predict_fn()
+
         explanation = explanation.squeeze()
         assert len(explanation.shape) == 2, \
             f"Explanation should only have two dimensions after squeezed but got shape of {explanation.shape}."
@@ -216,6 +217,77 @@ class Infidelity(InterpreterEvaluator):
         resized_exp = cv2.resize(explanation, (data.shape[2], data.shape[3]))
         resized_exp = resized_exp.reshape((1, 1, data.shape[2], data.shape[3]))
         exp_sum = np.sum(Is * resized_exp, axis=(1, 2, 3))
+
+        # performs optimal scaling for each explanation before calculating the infidelity score
+        if np.mean(exp_sum*exp_sum) == 0.0:
+            exp_sum = 0.0  # simple handling the NAN issue.
+        else:
+            beta = (proba_diff*exp_sum).mean() / np.mean(exp_sum*exp_sum)
+            exp_sum *= beta
+
+        infid = np.mean(np.square(proba_diff-exp_sum))
+
+        self.results['explanation'] = explanation
+        self.results['infid'] = infid
+
+        return infid
+
+
+class InfidelityNLP(InterpreterEvaluator):
+    def __init__(self, paddle_model: callable or None, device: str = 'gpu:0', **kwargs):
+        super().__init__(paddle_model, device, **kwargs)
+        self.results = {}
+
+    def _generate_samples(self, input_ids, masked_id=0):
+        num_tokens = len(input_ids)
+
+        # like 1d-conv, stride=1, kernel-size={1,2,3,4,5}
+        generated_samples = []
+        input_ids_array = np.array([input_ids])
+        for ks in range(1, 6):
+            if ks > num_tokens - 2:
+                break
+            for i in range(1, num_tokens-ks):
+                tmp = np.copy(input_ids_array)
+                tmp[0, i:i+ks] = masked_id
+                generated_samples.append(tmp)
+        
+        perturbed_samples = np.concatenate(generated_samples, axis=0)
+        Is = perturbed_samples != input_ids_array
+
+        return perturbed_samples, Is
+
+    def evaluate(self, raw_text: str, explanation: list or np.ndarray, tokenizer: callable, recompute: bool = False):
+        self._build_predict_fn()
+
+        # tokenizer text to ids
+        encoded_inputs = tokenizer(raw_text, max_seq_len=128)
+        # order is important. *_batched_and_to_tuple will be the input for the model.
+        _batched_and_to_tuple = tuple([np.array([v]) for v in encoded_inputs.values()])
+
+        probas_x = self.predict_fn(_batched_and_to_tuple)
+        label = np.argmax(probas_x[0])
+        proba_x = probas_x[:, label]
+        self.results['predict'] = {'label': label, 'proba': proba_x}
+
+        explanation = np.squeeze(explanation)
+        assert explanation.shape[0] == len(encoded_inputs['input_ids'])
+        
+        # generate perturbation samples.
+        if 'proba_diff' not in self.results or recompute:
+            ## x and I related.
+            generated_samples, Is = self._generate_samples(encoded_inputs['input_ids'], tokenizer.pad_token_id)
+            self.results['generated_samples'] = generated_samples
+            self.results['Is'] = Is
+            proba_pert = self.predict_fn(generated_samples)[:, label]
+            proba_diff = proba_x - proba_pert
+            self.results['proba_diff'] = proba_diff
+        else:
+            Is = self.results['Is']
+            proba_diff = self.results['proba_diff']
+
+        ## explanation related.
+        exp_sum = np.sum(Is * explanation, axis=(-1))
 
         # performs optimal scaling for each explanation before calculating the infidelity score
         if np.mean(exp_sum*exp_sum) == 0.0:

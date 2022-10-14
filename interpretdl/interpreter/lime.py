@@ -215,6 +215,12 @@ class LIMENLPInterpreter(InputOutputInterpreter):
 
         # tokenizer to text_to_input.
         if tokenizer is not None:
+            if hasattr(tokenizer, 'pad_token_id'):
+                pad_id = tokenizer.pad_token_id
+                print("According to the tokenizer, pad_token_id is set to", pad_id)
+            if hasattr(tokenizer, 'unk_token_id'):
+                unk_id = tokenizer.unk_token_id
+                print("According to the tokenizer, unk_token_id is set to", unk_id)
             def text_to_input_fn(raw_text):
                 encoded_inputs = tokenizer(text=raw_text, max_seq_len=max_seq_len)
                 # order is important. *_batched_and_to_tuple will be the input for the model.
