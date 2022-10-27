@@ -344,7 +344,7 @@ class PerturbationNLP(InterpreterEvaluator):
         # perturb on text or directly on ids. use tokenizer.pad_token_id
         if percentile:
             # perturb tokens according to the percentiles.
-            qs = [0.01 * (i - 1) for i in range(1, 101)]
+            qs = [i for i in range(101)]
             tiles = np.percentile(text_explanation, qs)
         else:
             # (default setting) perturb tokens one by one. 
@@ -357,7 +357,8 @@ class PerturbationNLP(InterpreterEvaluator):
 
         if self.compute_MoRF:
             batched_input_ids = [encoded_inputs['input_ids'].copy()]
-            for p in tiles[::-1]:
+            MoRF_tiles = tiles[:100]
+            for p in MoRF_tiles[::-1]:
                 inputs_copy = encoded_inputs.copy()
                 _tmp_input_ids = np.array(inputs_copy['input_ids'])
                 _tmp_input_ids[explanation >= p] = pad_id
@@ -369,7 +370,8 @@ class PerturbationNLP(InterpreterEvaluator):
                 
         if self.compute_LeRF:
             batched_input_ids = [encoded_inputs['input_ids'].copy()]
-            for p in tiles:
+            LeRF_tiles = tiles[1:]
+            for p in LeRF_tiles:
                 inputs_copy = encoded_inputs.copy()
                 _tmp_input_ids = np.array(inputs_copy['input_ids'])
                 _tmp_input_ids[explanation <= p] = pad_id
