@@ -284,7 +284,7 @@ class GANLPInterpreter(TransformerInterpreter):
         R = np.expand_dims(R, 0)
               
         for i, blk in enumerate(attns):
-            if i < start_layer-1:
+            if i < start_layer:
                 continue
             grad = grads[i]
             cam = blk
@@ -298,8 +298,8 @@ class GANLPInterpreter(TransformerInterpreter):
         explanation = R[:, 0]  # NLP tasks return explanations for all tokens, including [CLS] and [SEP].
 
         # intermediate results, for possible further usages.
-        self.predcited_label = preds
-        self.predcited_proba = proba
+        self.predicted_label = preds
+        self.predicted_proba = proba
 
         if visual:
             # TODO: visualize if tokenizer is given.
@@ -369,7 +369,7 @@ class GACVInterpreter(TransformerInterpreter):
         R = np.expand_dims(R, 0)
               
         for i, blk in enumerate(attns):
-            if i < start_layer-1:
+            if i < start_layer:
                 continue
             grad = grads[i]
             cam = blk

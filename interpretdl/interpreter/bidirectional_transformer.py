@@ -85,7 +85,7 @@ class BTCVInterpreter(TransformerInterpreter):
         
         if ap_mode == 'head':            
             for i, blk in enumerate(attns):
-                if i < start_layer-1:
+                if i < start_layer:
                     continue
                 grad = grads[i]
                 cam = blk
@@ -98,22 +98,19 @@ class BTCVInterpreter(TransformerInterpreter):
 
                 R = R + np.matmul(cam, R)
         elif ap_mode == 'token':
-            for i, blk in enumerate(attns):
-                if i < start_layer-1:
+            for i, attn in enumerate(attns):
+                if i < start_layer:
                     continue
-                cam = blk
-                inp = inputs[i]
-                v = np.transpose(values[i].reshape([b, s, 3, h, -1]), [2, 0, 1, 3, 4])[2]
-                proj = projs[i]
-                proj = np.expand_dims(proj, 0)
-                proj = np.repeat(proj, repeats=b, axis=0)
-                vproj = np.matmul(v.reshape([b, s, -1]), proj)
-                
-                order = np.linalg.norm(vproj, axis=-1).squeeze()/np.linalg.norm(inp, axis=-1).squeeze()
+                z = inputs[i]
+                v = values[i]
+                v = v.reshape([s, 3, h, -1])[:, :, 2]  # [k,q,v] == 3
+                v = v.reshape([s, -1])  # [s, 768] v = ZW_v
+                proj = projs[i]  # W_proj
+                vproj = np.matmul(v, proj)  # vproj = ZW = ZW_vW_proj
+                order = np.linalg.norm(vproj, axis=-1).squeeze()/np.linalg.norm(z, axis=-1).squeeze()
                 m = np.diag(order)
-                cam = cam.reshape([-1, cam.shape[-2], cam.shape[-1]]).mean(0)
-            
-                R = R + np.matmul(np.matmul(cam, m), R)
+                attn = attn.reshape([-1, attn.shape[-2], attn.shape[-1]]).mean(0)  # over heads
+                R = R + np.matmul(np.matmul(attn, m), R)
         else:
             assert "please specify the attentional perception mode"
                      
@@ -237,7 +234,7 @@ class BTNLPInterpreter(TransformerInterpreter):
         
         if ap_mode == 'head':            
             for i, blk in enumerate(attns):
-                if i < start_layer-1:
+                if i < start_layer:
                     continue
                 grad = grads[i]
                 cam = blk
@@ -250,22 +247,18 @@ class BTNLPInterpreter(TransformerInterpreter):
 
                 R = R + np.matmul(cam, R)
         elif ap_mode == 'token':
-            for i, blk in enumerate(attns):
-                if i < start_layer-1:
+            for i, attn in enumerate(attns):
+                if i < start_layer:
                     continue
-                cam = blk
-                inp = inputs[i]
-                v = np.transpose(values[i].reshape([b, s, h, -1]), [0, 1, 2, 3])
-                proj = projs[i]
-                proj = np.expand_dims(proj, 0)
-                proj = np.repeat(proj, repeats=b, axis=0)
-                vproj = np.matmul(v.reshape([b, s, -1]), proj)
-                
-                order = np.linalg.norm(vproj, axis=-1).squeeze()/np.linalg.norm(inp, axis=-1).squeeze()
+                # attn: [1, 12, 512, 512]
+                z = inputs[i]  # [1, 512, 768]
+                v = values[i]  # [512, 768] v = ZW_v
+                proj = projs[i]  # [768, 768] W_proj
+                vproj = np.matmul(v, proj)  # vproj = ZW = ZW_vW_proj
+                order = np.linalg.norm(vproj, axis=-1).squeeze()/np.linalg.norm(z, axis=-1).squeeze()
                 m = np.diag(order)
-                cam = cam.reshape([-1, cam.shape[-2], cam.shape[-1]]).mean(0)
-            
-                R = R + np.matmul(np.matmul(cam, m), R)
+                attn = attn[0].mean(0)  # over heads
+                R = R + np.matmul(np.matmul(attn, m), R)
         else:
             assert "please specify the attentional perception mode"
 
@@ -275,9 +268,8 @@ class BTNLPInterpreter(TransformerInterpreter):
             _, gradients, _, _, _, _, _ = self.predict_fn(model_input, label=label, scale=alpha)
             total_gradients += gradients[-1]
 
-        W_state = np.mean((total_gradients / steps).clip(min=0), axis=1)[:, 0, :].reshape((b, 1, s))
-
-        explanation = (R * W_state)[:, 0]  # NLP tasks return explanations for all tokens, including [CLS] and [SEP].
+        grad_head_mean = np.mean((total_gradients / steps).clip(min=0), axis=1)  # [b, s, s]
+        explanation = R[:, 0, :] * grad_head_mean[:, 0, :]  # NLP tasks return explanations for all tokens, including [CLS] and [SEP].
 
         # intermediate results, for possible further usages.
         self.predcited_label = preds
