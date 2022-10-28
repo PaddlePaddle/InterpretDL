@@ -327,7 +327,7 @@ class GACVInterpreter(TransformerInterpreter):
 
     def interpret(self,
                   inputs: str or list(str) or np.ndarray,
-                  start_layer: int = 4,
+                  start_layer: int = 3,
                   attn_map_name='^blocks.[0-9]*.attn.attn_drop$', 
                   label: int or None = None,
                   resize_to: int = 224,
@@ -368,17 +368,15 @@ class GACVInterpreter(TransformerInterpreter):
         R = np.eye(s, s, dtype=attns[0].dtype)
         R = np.expand_dims(R, 0)
               
-        for i, blk in enumerate(attns):
+        for i, attn in enumerate(attns):
             if i < start_layer:
                 continue
             grad = grads[i]
-            cam = blk
-            cam = cam.reshape((b, h, cam.shape[-1], cam.shape[-1])).mean(1)
+            attn = attn.reshape((b, h, attn.shape[-1], attn.shape[-1])).mean(1)
             grad = grad.reshape((b, h, grad.shape[-1], grad.shape[-1])).mean(1)
-            
-            cam = (cam*grad).reshape([b,s,s]).clip(min=0)
+            attn = (attn*grad).reshape([b,s,s]).clip(min=0)
 
-            R = R + np.matmul(cam, R)
+            R = R + np.matmul(attn, R)
 
         if hasattr(self.paddle_model, 'global_pool') and self.paddle_model.global_pool:
             # For MAE ViT, but GA does not work well.

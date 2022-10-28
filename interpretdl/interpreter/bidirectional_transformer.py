@@ -29,7 +29,7 @@ class BTCVInterpreter(TransformerInterpreter):
     def interpret(self,
                   inputs: str or list(str) or np.ndarray,
                   ap_mode: str = "head",
-                  start_layer: int = 4,
+                  start_layer: int = 3,
                   steps: int = 20,
                   attn_map_name='^blocks.[0-9]*.attn.attn_drop$', 
                   attn_v_name='^blocks.[0-9]*.attn.qkv$',
@@ -83,28 +83,25 @@ class BTCVInterpreter(TransformerInterpreter):
         R = np.eye(s, s, dtype=attns[0].dtype)
         R = np.expand_dims(R, 0)
         
-        if ap_mode == 'head':            
-            for i, blk in enumerate(attns):
+        if ap_mode == 'head':
+            for i, attn in enumerate(attns):
                 if i < start_layer:
                     continue
                 grad = grads[i]
-                cam = blk
-                cam = cam.reshape((-1, cam.shape[-1], cam.shape[-1]))
+                attn = attn.reshape((-1, attn.shape[-1], attn.shape[-1]))
                 grad = grad.reshape((-1, grad.shape[-1], grad.shape[-1]))
 
-                Ih = np.mean(np.abs(np.matmul(np.transpose(cam, [0, 2, 1]), grad)), axis=(-1,-2))
+                Ih = np.mean(np.abs(np.matmul(np.transpose(attn, [0, 2, 1]), grad)), axis=(-1,-2))
                 Ih = Ih.reshape([b, h])/np.sum(Ih, axis=-1)
-                cam = np.matmul(Ih.reshape([b,1,h]),cam.reshape([b,h,-1])).reshape([b,s,s])
+                attn = np.matmul(Ih.reshape([b,1,h]),attn.reshape([b,h,-1])).reshape([b,s,s])
 
-                R = R + np.matmul(cam, R)
+                R = R + np.matmul(attn, R)
         elif ap_mode == 'token':
             for i, attn in enumerate(attns):
                 if i < start_layer:
                     continue
-                z = inputs[i]
-                v = values[i]
-                v = v.reshape([s, 3, h, -1])[:, :, 2]  # [k,q,v] == 3
-                v = v.reshape([s, -1])  # [s, 768] v = ZW_v
+                z = inputs[i]  # [s, 768]
+                v = values[i]  # [s, 768] v = ZW_v
                 proj = projs[i]  # W_proj
                 vproj = np.matmul(v, proj)  # vproj = ZW = ZW_vW_proj
                 order = np.linalg.norm(vproj, axis=-1).squeeze()/np.linalg.norm(z, axis=-1).squeeze()
@@ -233,19 +230,18 @@ class BTNLPInterpreter(TransformerInterpreter):
         R = np.expand_dims(R, 0)
         
         if ap_mode == 'head':            
-            for i, blk in enumerate(attns):
+            for i, attn in enumerate(attns):
                 if i < start_layer:
                     continue
                 grad = grads[i]
-                cam = blk
-                cam = cam.reshape((-1, cam.shape[-1], cam.shape[-1]))
+                attn = attn.reshape((-1, attn.shape[-1], attn.shape[-1]))
                 grad = grad.reshape((-1, grad.shape[-1], grad.shape[-1]))
 
-                Ih = np.mean(np.abs(np.matmul(np.transpose(cam, [0, 2, 1]), grad)), axis=(-1,-2))
+                Ih = np.mean(np.abs(np.matmul(np.transpose(attn, [0, 2, 1]), grad)), axis=(-1,-2))
                 Ih = Ih.reshape([b, h])/np.sum(Ih, axis=-1)
-                cam = np.matmul(Ih.reshape([b,1,h]),cam.reshape([b,h,-1])).reshape([b,s,s])
+                attn = np.matmul(Ih.reshape([b,1,h]),attn.reshape([b,h,-1])).reshape([b,s,s])
 
-                R = R + np.matmul(cam, R)
+                R = R + np.matmul(attn, R)
         elif ap_mode == 'token':
             for i, attn in enumerate(attns):
                 if i < start_layer:

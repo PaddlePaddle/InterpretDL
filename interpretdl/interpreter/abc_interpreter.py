@@ -489,20 +489,30 @@ class TransformerInterpreter(Interpreter):
                 label_onehot = paddle.nn.functional.one_hot(paddle.to_tensor(label), num_classes=proba.shape[1])
                 target = paddle.sum(proba * label_onehot, axis=1)
                 target.backward()
-                for i, blk in enumerate(block_attns):
-                    grad = blk.grad.numpy()
+                for i, attn in enumerate(block_attns):
+                    grad = attn.grad.numpy()
                     block_attns_grads.append(grad)
-                    block_attns[i] = blk.numpy()
+                    block_attns[i] = attn.numpy()
                 target.clear_gradient()
 
-                for i, blk in enumerate(block_inputs):
-                    block_inputs[i] = blk[0].numpy()
+                for i, inp in enumerate(block_inputs):
+                    block_inputs[i] = inp[0].numpy()
                 
-                for i, blk in enumerate(block_values):
-                    block_values[i] = blk[0].numpy()
+                for i, value in enumerate(block_values):
+                    # check whether q,k,v are concatenated.
+                    d_inp = block_inputs[i].shape[-1]
+                    d_value = value.shape[-1]
+                    if d_inp == d_value:
+                        block_values[i] = value[0].numpy()
+                    elif d_inp * 3 == d_value:
+                        b, s, _ = value.shape
+                        value = value.reshape((b, s, 3, -1))  # 3 == [q,k,v], b == 1.
+                        block_values[i] = value[0, :, 2].numpy()
+                    else:
+                        raise ValueError("Report this issue to InterpretDL.")
                 
-                for i, blk in enumerate(block_projs):
-                    block_projs[i] = blk.numpy()                
+                for i, proj in enumerate(block_projs):
+                    block_projs[i] = proj.numpy()                
                 
                 return block_attns, block_attns_grads, block_inputs, block_values, block_projs, proba.numpy(), label
 
