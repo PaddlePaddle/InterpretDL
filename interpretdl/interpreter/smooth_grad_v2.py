@@ -79,11 +79,11 @@ class SmoothGradInterpreterV2(InputGradientInterpreter):
         self._build_predict_fn(gradient_of='probability')
 
         # obtain the labels (and initialization).
-        _, predcited_labels, predcited_probas = self.predict_fn(data, labels)
-        self.predcited_labels = predcited_labels
-        self.predcited_probas = predcited_probas
+        _, predicted_label, predicted_proba = self.predict_fn(data, labels)
+        self.predicted_label = predicted_label
+        self.predicted_proba = predicted_proba
         if labels is None:
-            labels = predcited_labels
+            labels = predicted_label
 
         labels = np.array(labels).reshape((1, ))
 

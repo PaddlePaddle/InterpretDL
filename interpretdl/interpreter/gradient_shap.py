@@ -72,11 +72,11 @@ class GradShapCVInterpreter(InputGradientInterpreter):
 
         self._build_predict_fn(gradient_of='probability')
 
-        _, predcited_labels, predcited_probas = self.predict_fn(data, labels)
-        self.predcited_labels = predcited_labels
-        self.predcited_probas = predcited_probas
+        _, predicted_label, predicted_proba = self.predict_fn(data, labels)
+        self.predicted_label = predicted_label
+        self.predicted_proba = predicted_proba
         if labels is None:
-            labels = predcited_labels
+            labels = predicted_label
 
         def add_noise_to_inputs(data):
             max_axis = tuple(np.arange(1, data.ndim))
@@ -181,8 +181,8 @@ class GradShapNLPInterpreter(Interpreter):
             bs = data.shape[0]
 
         gradients, labels, data_out, probas = self.predict_fn(data, labels, None)
-        self.predcited_labels = labels
-        self.predcited_probas = probas
+        self.predicted_label = labels
+        self.predicted_proba = probas
 
         labels = labels.reshape((bs, ))
         total_gradients = np.zeros_like(gradients)

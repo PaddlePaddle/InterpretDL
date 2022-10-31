@@ -110,7 +110,6 @@ class BTCVInterpreter(TransformerInterpreter):
                 R = R + np.matmul(np.matmul(attn, m), R)
         else:
             assert "please specify the attentional perception mode"
-                     
         
         total_gradients = np.zeros((b, h, s, s))
         for alpha in np.linspace(0, 1, steps):
@@ -229,7 +228,7 @@ class BTNLPInterpreter(TransformerInterpreter):
         R = np.eye(s, s, dtype=attns[0].dtype)
         R = np.expand_dims(R, 0)
         
-        if ap_mode == 'head':            
+        if ap_mode == 'head':
             for i, attn in enumerate(attns):
                 if i < start_layer:
                     continue
@@ -268,8 +267,8 @@ class BTNLPInterpreter(TransformerInterpreter):
         explanation = R[:, 0, :] * grad_head_mean[:, 0, :]  # NLP tasks return explanations for all tokens, including [CLS] and [SEP].
 
         # intermediate results, for possible further usages.
-        self.predcited_label = preds
-        self.predcited_proba = proba
+        self.predicted_label = preds
+        self.predicted_proba = proba
 
         if visual:
             # TODO: visualize if tokenizer is given.

@@ -83,8 +83,8 @@ class OcclusionInterpreter(InputOutputInterpreter):
             baselines = np.repeat(baselines, len(data), 0)
 
         probas, label, _ = self.predict_fn(data, None)
-        self.predcited_labels = labels
-        self.predcited_probas = probas        
+        self.predicted_label = labels
+        self.predicted_proba = probas
 
         sliding_windows = np.ones(sliding_window_shapes)
 
