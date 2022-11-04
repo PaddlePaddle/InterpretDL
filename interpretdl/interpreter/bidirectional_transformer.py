@@ -167,7 +167,7 @@ class BTNLPInterpreter(TransformerInterpreter):
                   ap_mode: str = "head",
                   start_layer: int = 11,
                   steps: int = 20,
-                  embedding_name='^[a-z]*.embeddings.word_embeddings$', 
+                  embedding_name='^[a-z]*.embeddings$', 
                   attn_map_name='^[a-z]*.encoder.layers.[0-9]*.self_attn.attn_drop$', 
                   attn_v_name='^[a-z]*.encoder.layers.[0-9]*.self_attn.v_proj$',
                   attn_proj_name='^[a-z]*.encoder.layers.[0-9]*.self_attn.out_proj$',
@@ -182,7 +182,7 @@ class BTNLPInterpreter(TransformerInterpreter):
             start_layer (int, optional): Compute the state from the start layer. Default: ``11``.
             steps (int, optional): number of steps in the Riemann approximation of the integral. Default: ``20``.
             embedding_name (str, optional): The layer name for embedding, head-wise/token-wise.
-                Default: ``^ernie.embeddings.word_embeddings$``.
+                Default: ``^ernie.embeddings$``.
             attn_map_name (str, optional): The layer name to obtain the attention weights, head-wise/token-wise.
                 Default: ``^ernie.encoder.layers.*.self_attn.attn_drop$``.
             attn_v_name (str, optional): The layer name for value projection, token-wise.
@@ -216,7 +216,8 @@ class BTNLPInterpreter(TransformerInterpreter):
             model_input = tuple(model_input, )
 
         self._build_predict_fn(embedding_name=embedding_name, attn_map_name=attn_map_name, 
-                               attn_v_name=attn_v_name, attn_proj_name=attn_proj_name, nlp=True)
+                               attn_v_name=attn_v_name, attn_proj_name=attn_proj_name, 
+                               gradient_of='logit')
         
         attns, grads, inputs, values, projs, proba, preds = self.predict_fn(model_input)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
@@ -269,6 +270,8 @@ class BTNLPInterpreter(TransformerInterpreter):
         # intermediate results, for possible further usages.
         self.predicted_label = preds
         self.predicted_proba = proba
+        self.ap = R[:, 0, :]
+        self.rf = grad_head_mean[:, 0, :]
 
         if visual:
             # TODO: visualize if tokenizer is given.

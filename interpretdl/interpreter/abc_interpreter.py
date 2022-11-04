@@ -385,8 +385,15 @@ class TransformerInterpreter(Interpreter):
             "paddle_model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
 
-    def _build_predict_fn(self, rebuild: bool = False, embedding_name: str or None = None, attn_map_name: str or None = None, 
-                                 attn_v_name: str or None = None, attn_proj_name: str or None = None, nlp: bool = False):
+    def _build_predict_fn(
+            self, 
+            rebuild: bool = False, 
+            embedding_name: str or None = None, 
+            attn_map_name: str or None = None, 
+            attn_v_name: str or None = None, 
+            attn_proj_name: str or None = None, 
+            gradient_of: str or None = None,
+            nlp: bool = False):
         
         """Build ``predict_fn`` for transformer based algorithms.
         The model is supposed to be a classification model.
@@ -463,7 +470,7 @@ class TransformerInterpreter(Interpreter):
                     if attn_map_name is not None and re.match(attn_map_name, n):
                         h = v.register_forward_post_hook(block_attn_hook)
                         hooks.append(h)
-                    elif scale is not None and re.match(embedding_name, n):
+                    elif scale is not None and embedding_name is not None and re.match(embedding_name, n):
                         h = v.register_forward_post_hook(hook)
                         hooks.append(h)
                     elif attn_proj_name is not None and re.match(attn_proj_name, n):
@@ -474,21 +481,28 @@ class TransformerInterpreter(Interpreter):
                         h = v.register_forward_post_hook(block_value_hook)
                         hooks.append(h)
                 
-                out = self.paddle_model(*inputs)
+                logits = self.paddle_model(*inputs)
                 
                 for h in hooks:
                     h.remove()
 
-                proba = paddle.nn.functional.softmax(out, axis=1)
+                proba = paddle.nn.functional.softmax(logits, axis=1)
                 preds = paddle.argmax(proba, axis=1)
                 if label is None:
                     label = preds.numpy()
+                label_onehot = paddle.nn.functional.one_hot(paddle.to_tensor(label), num_classes=logits.shape[1])
 
                 block_attns_grads = []
-                
-                label_onehot = paddle.nn.functional.one_hot(paddle.to_tensor(label), num_classes=proba.shape[1])
-                target = paddle.sum(proba * label_onehot, axis=1)
-                target.backward()
+
+                if gradient_of == 'probability' or gradient_of is None:
+                    target = paddle.sum(proba * label_onehot, axis=1)
+                    target.backward()
+                elif gradient_of == 'logit':
+                    target = paddle.sum(logits * label_onehot, axis=1)
+                    target.backward()
+                else:
+                    raise ValueError("`gradient_of` should be one of [logits, probability].")
+
                 for i, attn in enumerate(block_attns):
                     grad = attn.grad.numpy()
                     block_attns_grads.append(grad)

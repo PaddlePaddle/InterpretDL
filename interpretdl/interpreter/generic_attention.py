@@ -234,7 +234,6 @@ class GANLPInterpreter(TransformerInterpreter):
                   text_to_input_fn: callable = None,
                   label: int or None = None,
                   start_layer: int = 11,
-                  embedding_name='^[a-z]*.embeddings.word_embeddings$',
                   attn_map_name='^[a-z]*.encoder.layers.[0-9]*.self_attn.attn_drop$',
                   max_seq_len=128,
                   visual=False):
@@ -246,8 +245,6 @@ class GANLPInterpreter(TransformerInterpreter):
             label (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels
                 should be equal to the number of texts. If None, the most likely label for each text will be used.
                 Default: ``None``.
-            embedding_name (str, optional): The layer name for word embedding.
-                Default: ``^ernie.embeddings.word_embeddings$``.
             attn_map_name (str, optional): The layer name to obtain attention weights.
                 Default: ``^ernie.encoder.layers.*.self_attn.attn_drop$``
 
@@ -272,7 +269,7 @@ class GANLPInterpreter(TransformerInterpreter):
             model_input = tuple(inp for inp in model_input)
         else:
             model_input = tuple(model_input, )
-        self._build_predict_fn(embedding_name=embedding_name, attn_map_name=attn_map_name, nlp=True)
+        self._build_predict_fn(attn_map_name=attn_map_name, gradient_of='logit', nlp=True)
 
         attns, grads, inputs, values, projs, proba, preds = self.predict_fn(model_input)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
