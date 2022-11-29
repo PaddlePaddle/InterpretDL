@@ -34,6 +34,7 @@ class BTCVInterpreter(TransformerInterpreter):
                   attn_map_name='^blocks.[0-9]*.attn.attn_drop$', 
                   attn_v_name='^blocks.[0-9]*.attn.qkv$',
                   attn_proj_name='^blocks.[0-9]*.attn.proj$', 
+                  gradient_of: str = 'probability',
                   label: int or None = None,
                   resize_to: int = 224,
                   crop_to: int or None = None,
@@ -53,6 +54,8 @@ class BTCVInterpreter(TransformerInterpreter):
                 Default: ``blocks.*.attn.qkv``.
             attn_proj_name (str, optional): The layer name for linear projection, token-wise.
                 Default: ``blocks.*.attn.proj``.
+            gradient_of (str, optional): compute the gradient of ['probability', 'logit' or 'loss']. Default: 
+                ``'probability'``. Multi-class classification uses probabitliy, while binary classification uses logit.
             label (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels
                 should be equal to the number of images. If None, the most likely label for each image will be used. 
                 Default: ``None``.
@@ -71,7 +74,12 @@ class BTCVInterpreter(TransformerInterpreter):
         imgs, data = images_transform_pipeline(inputs, resize_to, crop_to)
         b = len(data)  # batch size
         assert b==1, "only support single image"
-        self._build_predict_fn(attn_map_name=attn_map_name, attn_v_name=attn_v_name, attn_proj_name=attn_proj_name)
+        self._build_predict_fn(
+            attn_map_name=attn_map_name, 
+            attn_v_name=attn_v_name, 
+            attn_proj_name=attn_proj_name,
+            gradient_of=gradient_of
+        )
         
         attns, grads, inputs, values, projs, proba, preds = self.predict_fn(data)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
@@ -171,6 +179,7 @@ class BTNLPInterpreter(TransformerInterpreter):
                   attn_map_name='^[a-z]*.encoder.layers.[0-9]*.self_attn.attn_drop$', 
                   attn_v_name='^[a-z]*.encoder.layers.[0-9]*.self_attn.v_proj$',
                   attn_proj_name='^[a-z]*.encoder.layers.[0-9]*.self_attn.out_proj$',
+                  gradient_of: str = 'logit',
                   max_seq_len=128,
                   visual=False):
         """
@@ -189,6 +198,8 @@ class BTNLPInterpreter(TransformerInterpreter):
                 Default: ``^ernie.encoder.layers.*.self_attn.v_proj$``.
             attn_proj_name (str, optional): The layer name for linear projection, token-wise.
                 Default: ``ernie.encoder.layers.*.self_attn.out_proj$``.
+            gradient_of (str, optional): compute the gradient of ['probability', 'logit' or 'loss']. Default: 
+                ``'logit'``. Multi-class classification uses probabitliy, while binary classification uses logit.
             label (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels
                 should be equal to the number of texts. If None, the most likely label for each text will be used.
                 Default: ``None``.
@@ -217,7 +228,7 @@ class BTNLPInterpreter(TransformerInterpreter):
 
         self._build_predict_fn(embedding_name=embedding_name, attn_map_name=attn_map_name, 
                                attn_v_name=attn_v_name, attn_proj_name=attn_proj_name, 
-                               gradient_of='logit')
+                               gradient_of=gradient_of)
         
         attns, grads, inputs, values, projs, proba, preds = self.predict_fn(model_input)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"

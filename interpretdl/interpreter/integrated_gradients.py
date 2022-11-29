@@ -39,6 +39,7 @@ class IntGradCVInterpreter(InputGradientInterpreter):
                   baselines: np.ndarray or None = None,
                   steps: int = 50,
                   num_random_trials: int = 10,
+                  gradient_of: str = 'probability',
                   resize_to: int = 224,
                   crop_to: int = None,
                   visual: bool = True,
@@ -60,6 +61,8 @@ class IntGradCVInterpreter(InputGradientInterpreter):
             steps (int, optional): number of steps in the Riemann approximation of the integral. Default: ``50``.
             num_random_trials (int, optional): number of random initializations to take average in the end. 
                 Default: ``10``.
+            gradient_of (str, optional): compute the gradient of ['probability', 'logit' or 'loss']. Default: 
+                ``'probability'``. Multi-class classification uses probabitliy, while binary classification uses logit.
             resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
                 ``224``.
             crop_to (int, optional): After resize, images will be center cropped to a square image with the size 
@@ -76,7 +79,7 @@ class IntGradCVInterpreter(InputGradientInterpreter):
         bsz = len(data)
         self.data_type = np.array(data).dtype
 
-        self._build_predict_fn(gradient_of='probability')
+        self._build_predict_fn(gradient_of=gradient_of)
 
         if baselines is None:
             num_random_trials = 1
@@ -159,6 +162,7 @@ class IntGradNLPInterpreter(IntermediateGradientInterpreter):
                   text_to_input_fn: callable = None,
                   label: list or np.ndarray = None,
                   steps: int = 50,
+                  gradient_of: str = 'logit',
                   embedding_name: str = 'word_embeddings',
                   max_seq_len: int = 128,
                   visual: bool = False) -> np.ndarray:
@@ -170,6 +174,8 @@ class IntGradNLPInterpreter(IntermediateGradientInterpreter):
             labels (listornp.ndarray, optional): The target labels to analyze. If None, the most likely label 
                 will be used. Default: ``None``.
             steps (int, optional): number of steps in the Riemann approximation of the integral. Default: ``50``.
+            gradient_of (str, optional): compute the gradient of ['probability', 'logit' or 'loss']. Default: 
+                ``'logit'``. Multi-class classification uses probabitliy, while binary classification uses logit.
             embedding_name (str, optional): name of the embedding layer at which the noises will be applied. 
                 The name of embedding can be verified through ``print(model)``. Defaults to ``word_embeddings``. 
 
@@ -195,7 +201,8 @@ class IntGradNLPInterpreter(IntermediateGradientInterpreter):
         else:
             model_input = tuple(model_input, )
 
-        self._build_predict_fn(layer_name=embedding_name, gradient_of='probability')
+        # TODO: layer_name to be matched using re.
+        self._build_predict_fn(layer_name=embedding_name, gradient_of=gradient_of)
 
         gradients, label, data_out, proba = self.predict_fn(model_input, label, scale=None)
 

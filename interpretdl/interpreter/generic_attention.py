@@ -235,6 +235,7 @@ class GANLPInterpreter(TransformerInterpreter):
                   label: int or None = None,
                   start_layer: int = 11,
                   attn_map_name='^[a-z]*.encoder.layers.[0-9]*.self_attn.attn_drop$',
+                  gradient_of: str = 'logit',
                   max_seq_len=128,
                   visual=False):
         """
@@ -246,7 +247,9 @@ class GANLPInterpreter(TransformerInterpreter):
                 should be equal to the number of texts. If None, the most likely label for each text will be used.
                 Default: ``None``.
             attn_map_name (str, optional): The layer name to obtain attention weights.
-                Default: ``^ernie.encoder.layers.*.self_attn.attn_drop$``
+                Default: ``^ernie.encoder.layers.*.self_attn.attn_drop$``.
+            gradient_of (str, optional): compute the gradient of ['probability', 'logit' or 'loss']. Default: 
+                ``'logit'``. Multi-class classification uses probabitliy, while binary classification uses logit.
 
         Returns:
             [numpy.ndarray]: interpretations for texts
@@ -269,7 +272,7 @@ class GANLPInterpreter(TransformerInterpreter):
             model_input = tuple(inp for inp in model_input)
         else:
             model_input = tuple(model_input, )
-        self._build_predict_fn(attn_map_name=attn_map_name, gradient_of='logit', nlp=True)
+        self._build_predict_fn(attn_map_name=attn_map_name, gradient_of=gradient_of)
 
         attns, grads, inputs, values, projs, proba, preds = self.predict_fn(model_input)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
@@ -327,6 +330,7 @@ class GACVInterpreter(TransformerInterpreter):
                   start_layer: int = 3,
                   attn_map_name='^blocks.[0-9]*.attn.attn_drop$', 
                   label: int or None = None,
+                  gradient_of: str = 'probability',
                   resize_to: int = 224,
                   crop_to: int or None = None,
                   visual: bool = True,
@@ -341,6 +345,8 @@ class GACVInterpreter(TransformerInterpreter):
             label (list or tuple or numpy.ndarray, optional): The target labels to analyze. The number of labels
                 should be equal to the number of images. If None, the most likely label for each image will be used. 
                 Default: ``None``.
+            gradient_of (str, optional): compute the gradient of ['probability', 'logit' or 'loss']. Default: 
+                ``'probability'``. Multi-class classification uses probabitliy, while binary classification uses logit.
             resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
                 ``224``.
             crop_to (int, optional): After resize, images will be center cropped to a square image with the size 
@@ -356,7 +362,7 @@ class GACVInterpreter(TransformerInterpreter):
         imgs, data = images_transform_pipeline(inputs, resize_to, crop_to)
         b = len(data)  # batch size
         assert b==1, "only support single image"
-        self._build_predict_fn(attn_map_name=attn_map_name)
+        self._build_predict_fn(attn_map_name=attn_map_name, gradient_of=gradient_of)
         
         attns, grads, inputs, values, projs, proba, preds = self.predict_fn(data, label=label)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"

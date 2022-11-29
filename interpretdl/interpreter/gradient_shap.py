@@ -35,6 +35,7 @@ class GradShapCVInterpreter(InputGradientInterpreter):
                   baselines: np.ndarray = None,
                   n_samples: int = 5,
                   noise_amount: float = 0.1,
+                  gradient_of: str = 'probability',
                   resize_to: int = 224,
                   crop_to: int = None,
                   visual: bool = True,
@@ -54,6 +55,8 @@ class GradShapCVInterpreter(InputGradientInterpreter):
             n_samples (int, optional): The number of randomly generated samples. Defaults to ``5``.
             noise_amount (float, optional): Noise level of added noise to each image. The std of Gaussian random noise
                 is ``noise_amount`` * (x :sub:`max` - x :sub:`min`). Default: ``0.1``.
+            gradient_of (str, optional): compute the gradient of ['probability', 'logit' or 'loss']. Default: 
+                ``'probability'``. SmoothGrad uses probability for all tasks by default.
             resize_to (int, optional): Images will be rescaled with the shorter edge being ``resize_to``. Defaults to 
                 ``224``.
             crop_to (int, optional): After resize, images will be center cropped to a square image with the size 
@@ -70,7 +73,7 @@ class GradShapCVInterpreter(InputGradientInterpreter):
         bsz = len(data)
         self.data_type = np.array(data).dtype
 
-        self._build_predict_fn(gradient_of='probability')
+        self._build_predict_fn(gradient_of=gradient_of)
 
         _, predicted_label, predicted_proba = self.predict_fn(data, labels)
         self.predicted_label = predicted_label
@@ -123,6 +126,7 @@ class GradShapCVInterpreter(InputGradientInterpreter):
 
 class GradShapNLPInterpreter(Interpreter):
     """
+    TODO: Inherit from a subabstract interpreter.
     Gradient SHAP Interpreter for NLP tasks.
 
     For input gradient based interpreters, the target issue is generally the vanilla input gradient's noises.

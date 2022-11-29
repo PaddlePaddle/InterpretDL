@@ -8,6 +8,7 @@ from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation
 
 class TAMInterpreter(Interpreter):
     """
+    TODO: Inherit from a subabstract interpreter.
     Transition Attention Maps Interpreter.
 
     This is a specific interpreter for Transformers models.
