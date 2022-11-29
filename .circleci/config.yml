@@ -24,7 +24,7 @@ commands:
           name: "Run unit tests"
           command: |
             pip install setuptools_scm
-            pip install paddlenlp==2.3.3
+            pip install paddlenlp
             pip install coverage
             coverage run --source=interpretdl -m unittest -v
             coverage report -m
