@@ -30,15 +30,6 @@ class TestNormLIME(unittest.TestCase):
         os.remove('normlime_weights-0.npy')
         os.remove('normlime_weights-1.npy')
 
-    def test_prior_shape_algo(self):
-        paddle_model = mobilenet_v2(pretrained=True)
-        algo = it.LIMEPriorInterpreter(paddle_model, prior_method='ridge', device='cpu')
-        dataset_dir = "tutorials/assets"
-        image_paths = sorted(glob.glob(dataset_dir + "/*.png"))
-        algo.interpreter_init(image_paths, batch_size=20)
-        
-        algo.interpret(image_paths[0], num_samples=20, batch_size=20, resize_to=64, crop_to=64, visual=False)
-
 
 if __name__ == '__main__':
     unittest.main()
