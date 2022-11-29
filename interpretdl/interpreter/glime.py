@@ -11,7 +11,13 @@ from ..data_processor.visualizer import sp_weights_to_image_explanation, overlay
 
 class GLIMECVInterpreter(LIMECVInterpreter):
     """
-    G-LIME CV Interpreter. This is an Interpreter in progress.
+
+    G-LIME CV Interpreter. This method integrates the global information from NormLIME or Average to the local 
+    explanation LIME. 
+
+    More details can be found in this 
+    [pdf link](https://github.com/PaddlePaddle/InterpretDL/files/10110787/glime-aij-paper.pdf).
+    
     """
 
     def __init__(self, paddle_model: callable, device: str = 'gpu:0') -> None:

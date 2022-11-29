@@ -26,43 +26,22 @@ For researchers working on designing new interpretation algorithms, InterpretDL 
 
 # :fire: :fire: :fire: News :fire: :fire: :fire:
 
-- (2022.08) The paper with this repository is accepted by Journal of Machine Learning Research (JMLR). If this repo is helpful for your work, please consider citing this paper:
+- (2022.11) Two papers got accepted by AAAI'23 and Artificial Intelligence respectively. See implementations at [G-LIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/glime.py) and [TrainingDynamics](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/training_dynamics.py).
 
-  > Xuhong Li, Haoyi Xiong, Xingjian Li, Xuanyu Wu, Zeyu Chen, and Dejing Dou. “InterpretDL: Explaining Deep Models in PaddlePaddle.” Journal of Machine Learning Research, 2022. https://jmlr.org/papers/v23/21-0738.html. 
 
-  ```
-  @article{JMLR:v23:21-0738,
-    author  = {Xuhong Li and Haoyi Xiong and Xingjian Li and Xuanyu Wu and Zeyu Chen and Dejing Dou},
-    title   = {InterpretDL: Explaining Deep Models in PaddlePaddle},
-    journal = {Journal of Machine Learning Research},
-    year    = {2022},
-    volume  = {23},
-    number  = {197},
-    pages   = {1--6},
-    url     = {http://jmlr.org/papers/v23/21-0738.html}
-    }
-  ```
+> Xuhong Li, Haoyi Xiong, Xingjian Li, Xiao Zhang, Ji Liu, Haiyan Jiang, Zeyu Chen, Dejing Dou. “G-LIME: Statistical Learning for Local Interpretations of Deep Neural Networks using Global Priors.” Artificial Intelligence, 2023. [pdf link](https://github.com/PaddlePaddle/InterpretDL/files/10110787/glime-aij-paper.pdf). 
 
-- (2022.08) Two research works got accepted by ECML and Machine Learning Journal. Cross-model consensus explanations are exploited to create a pseudo semantic segmentation dataset named PSSL, which contains 1.2M pseudo masks corresponding to the whole ImageNet training set. The dataset is publicly available. 
-
-  Refer to [PaddleSeg:PSSL](https://github.com/PaddlePaddle/PaddleSeg/tree/develop/configs/pssl) for downloading the dataset and the pretrained models. 
-  
-  Refer to the papers for the details about the Consensus explanation and how it helps for the semantic segmentation task:
-
-  > Xuhong Li, Haoyi Xiong, Siyu Huang, Shilei Ji, Dejing Dou. Cross-Model Consensus of Explanations and Beyond for Image Classification Models: An Empirical Study. ECML'22, Machine Learning Journal Track. https://arxiv.org/abs/2109.00707.
-
-  > Xuhong Li, Haoyi Xiong, Yi Liu, Dingfu Zhou, Zeyu Chen, Yaqing Wang, and Dejing Dou. "Distilling ensemble of explanations for weakly-supervised pre-training of image segmentation models." Machine Learning (2022): 1-17. https://arxiv.org/abs/2207.03335.
-
-  ![](https://user-images.githubusercontent.com/13829174/184098740-a84cfa80-3cc0-4b73-ad57-e51bb2ce96d1.png)
+> Qingrui Jia, Xuhong Li, Lei Yu, Penghao Zhao, Jiang Bian, Shupeng Li, Haoyi Xiong, Dejing Dou. “Learning from Training Dynamics: Identifying Mislabeled Data Beyond Manually Designed Features”. AAAI 2023. [pdf link to be announced]().
 
 # Demo
 
 Interpretation algorithms give a hint of why a black-box model makes its decision.
 
 The following table gives visualizations of several interpretation algorithms applied to the original image to tell us why the model predicts "bull_mastiff."
-| Original Image | IntGrad ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_int_grad_cv.ipynb)) | SG ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_smooth_grad_cv.ipynb)) | LIME ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_lime_cv.ipynb)) | Grad-CAM ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_grad_cam_cv.ipynb)) |
-:-----------:|:-----------:|:-----------:|:-----------:|:-----------:
-![](imgs/catdog.jpg)|![](imgs/catdog_ig_overlay.jpeg)|![](imgs/catdog_sg_overlay.jpeg)|![](imgs/catdog_lime_overlay.jpeg)|![](imgs/catdog_gradcam_overlay.jpeg)
+
+|    Original Image    | IntGrad ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_int_grad_cv.ipynb)) | SG ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_smooth_grad_cv.ipynb)) | LIME ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_lime_cv.ipynb)) | Grad-CAM ([demo](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_grad_cam_cv.ipynb)) |
+| :------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: |
+| ![](imgs/catdog.jpg) |               ![](imgs/catdog_ig_overlay.jpeg)               |               ![](imgs/catdog_sg_overlay.jpeg)               |              ![](imgs/catdog_lime_overlay.jpeg)              |            ![](imgs/catdog_gradcam_overlay.jpeg)             |
 
 For sentiment analysis task, the reason why a model gives positive/negative predictions can be visualized as follows. A quick demo can be found [here](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-2.0-en-sst-2.ipynb). Samples in Chinese are also available [here](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/ernie-1.0-zh-chnsenticorp.ipynb).
 
@@ -170,27 +149,27 @@ Welcome to contribute or just tell us which algorithms are desired.
 
 Two dimensions (representations of explanation results and types of the target model) are used to categorize the interpretation algorithms. This taxonomy can be an indicator to find the best suitable algorithm for the target task and model.
 
-| Methods                         | Representation        | Model Type                                     |
-|---------------------------------|-----------------------|------------------------------------------------|
-| [LIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/lime.py)                            | Input Features        | Model-Agnostic                                 |
-| [LIME with Prior](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/lime_prior.py)                 | Input Features        | Model-Agnostic                                 |
-| [GLIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/glime.py)                 | Input Features        | Model-Agnostic                                 |
-| [NormLIME/FastNormLIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/_normlime_base.py)           | Input Features        | Model-Agnostic                                 |
-| [LRP](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/lrp.py)                             | Input Features        | Differentiable* |
-| [SmoothGrad](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/smooth_grad.py)                      | Input Features        | Differentiable                                 |
-| [IntGrad](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/integrated_gradients.py)                         | Input Features        | Differentiable                                 |
-| [GradSHAP](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/gradient_shap.py)                        | Input Features        | Differentiable                                 |
-| [Occlusion](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/occlusion.py)                     | Input Features        | Model-Agnostic                                 |
-| [GradCAM/CAM](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/gradient_cam.py)                     | Intermediate Features | Specific: CNNs                                 |
-| [ScoreCAM](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/score_cam.py)                        | Intermediate Features | Specific: CNNs                                 |
-| [Rollout](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/rollout.py)                         | Intermediate Features | Specific: Transformers                         |
-| [TAM](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/transition_attention_maps.py)                             | Input Features | Specific: Transformers                         |
-| [Generic Attention](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/generic_attention.py)                  | Input Features                | Specific: Transformers |
-| [Bidirectional](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/bidirectional_transformer.py)                  | Input Features                | Specific: Transformers |
-| [ForgettingEvents](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/forgetting_events.py)                | Dataset-Level         | Differentiable                                 |
-| [TIDY (Training Data Analyzer)](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/TIDY.ipynb) | Dataset-Level         | Differentiable                                 |
-| [BHDF](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/training_dynamics.py) | Dataset-Level**        | Differentiable                                 |
-| [Consensus](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/consensus.py)                       | Features              | Cross-Model                                    |
+| Methods                                                      | Representation        | Model Type             |
+| ------------------------------------------------------------ | --------------------- | ---------------------- |
+| [LIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/lime.py) | Input Features        | Model-Agnostic         |
+| [LIME with Prior](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/lime_prior.py) | Input Features        | Model-Agnostic         |
+| [GLIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/glime.py) | Input Features        | Model-Agnostic         |
+| [NormLIME/FastNormLIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/_normlime_base.py) | Input Features        | Model-Agnostic         |
+| [LRP](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/lrp.py) | Input Features        | Differentiable*        |
+| [SmoothGrad](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/smooth_grad.py) | Input Features        | Differentiable         |
+| [IntGrad](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/integrated_gradients.py) | Input Features        | Differentiable         |
+| [GradSHAP](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/gradient_shap.py) | Input Features        | Differentiable         |
+| [Occlusion](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/occlusion.py) | Input Features        | Model-Agnostic         |
+| [GradCAM/CAM](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/gradient_cam.py) | Intermediate Features | Specific: CNNs         |
+| [ScoreCAM](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/score_cam.py) | Intermediate Features | Specific: CNNs         |
+| [Rollout](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/rollout.py) | Intermediate Features | Specific: Transformers |
+| [TAM](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/transition_attention_maps.py) | Input Features        | Specific: Transformers |
+| [Generic Attention](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/generic_attention.py) | Input Features        | Specific: Transformers |
+| [Bidirectional](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/bidirectional_transformer.py) | Input Features        | Specific: Transformers |
+| [ForgettingEvents](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/forgetting_events.py) | Dataset-Level         | Differentiable         |
+| [TIDY (Training Data Analyzer)](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/TIDY.ipynb) | Dataset-Level         | Differentiable         |
+| [BHDF](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/training_dynamics.py) | Dataset-Level**       | Differentiable         |
+| [Consensus](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/consensus.py) | Features              | Cross-Model            |
 
 \* LRP requires that the model is of specific implementations for relevance back-propagation.
 
@@ -221,6 +200,7 @@ Two dimensions (representations of explanation results and types of the target m
   - [ ] Sensitivity
 
 # Presentations
+
 **Linux Foundation Project AI & Data** -- Interpretable Deep Learning: Interpretation, Interpretability, Trustworthiness, and Beyond. [Video Link](https://wiki.lfaidata.foundation/download/attachments/7733341/GMT20220324-130226_Recording_3840x2160.mp4?version=1&modificationDate=1649079184753&api=v2) (00:20:30 -- 00:45:00).
 
 **Baidu Create 2021 (in Chinese)**: [Video Link](https://live.baidu.com/m/media/pclive/pchome/live.html?room_id=5073321791&source=h5pre) (01:18:40 -- 01:36:30).
@@ -247,7 +227,8 @@ Two dimensions (representations of explanation results and types of the target m
 * `Deletion&Insertion`: [RISE: Randomized Input Sampling for Explanation of Black-box Models.](https://arxiv.org/abs/1806.07421)
 * `PointGame`: [Top-down Neural Attention by Excitation Backprop.](https://arxiv.org/abs/1608.00507)
 * `Generic Attention`: [Generic Attention-model Explainability for Interpreting Bi-Modal and Encoder-Decoder Transformers
-](https://arxiv.org/abs/2103.15679)
+  
+  ](https://arxiv.org/abs/2103.15679)
 
 # Copyright and License
 
@@ -255,6 +236,35 @@ InterpretDL is provided under the [Apache-2.0 license](https://github.com/Paddle
 
 # Recent News
 
+
+- (2022.08) The paper with this repository is accepted by Journal of Machine Learning Research (JMLR). If this repo is helpful for your work, please consider citing this paper:
+
+  > Xuhong Li, Haoyi Xiong, Xingjian Li, Xuanyu Wu, Zeyu Chen, and Dejing Dou. “InterpretDL: Explaining Deep Models in PaddlePaddle.” Journal of Machine Learning Research, 2022. https://jmlr.org/papers/v23/21-0738.html. 
+
+  ```
+  @article{JMLR:v23:21-0738,
+    author  = {Xuhong Li and Haoyi Xiong and Xingjian Li and Xuanyu Wu and Zeyu Chen and Dejing Dou},
+    title   = {InterpretDL: Explaining Deep Models in PaddlePaddle},
+    journal = {Journal of Machine Learning Research},
+    year    = {2022},
+    volume  = {23},
+    number  = {197},
+    pages   = {1--6},
+    url     = {http://jmlr.org/papers/v23/21-0738.html}
+    }
+  ```
+
+- (2022.08) Two research works got accepted by ECML and Machine Learning Journal. Cross-model consensus explanations are exploited to create a pseudo semantic segmentation dataset named PSSL, which contains 1.2M pseudo masks corresponding to the whole ImageNet training set. The dataset is publicly available. 
+
+  Refer to [PaddleSeg:PSSL](https://github.com/PaddlePaddle/PaddleSeg/tree/develop/configs/pssl) for downloading the dataset and the pretrained models. 
+
+  Refer to the papers for the details about the Consensus explanation and how it helps for the semantic segmentation task:
+
+  > Xuhong Li, Haoyi Xiong, Siyu Huang, Shilei Ji, Dejing Dou. Cross-Model Consensus of Explanations and Beyond for Image Classification Models: An Empirical Study. ECML'22, Machine Learning Journal Track. https://arxiv.org/abs/2109.00707.
+
+  > Xuhong Li, Haoyi Xiong, Yi Liu, Dingfu Zhou, Zeyu Chen, Yaqing Wang, and Dejing Dou. "Distilling ensemble of explanations for weakly-supervised pre-training of image segmentation models." Machine Learning (2022): 1-17. https://arxiv.org/abs/2207.03335.
+
+  ![](https://user-images.githubusercontent.com/13829174/184098740-a84cfa80-3cc0-4b73-ad57-e51bb2ce96d1.png)
 
 - (2022/04/27) A getting-started tutorial is provided. Check it from [GitHub](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/Getting_Started.ipynb) or [NBViewer](https://nbviewer.org/github/PaddlePaddle/InterpretDL/blob/master/tutorials/Getting_Started.ipynb). Usage examples have been provided for each algorithm (both Interpreter and Evaluator). We are currently preparing tutorials for easy usages of InterpretDL. Both tutorials and examples can be assessed under the [tutorial](https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials) folder.
 
@@ -274,14 +284,14 @@ InterpretDL is provided under the [Apache-2.0 license](https://github.com/Paddle
   ```python
   import paddle
   import interpretdl as it
-
+  
   # load vit model and weights
   # !wget -c https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/ViT_base_patch16_224_pretrained.pdparams -P assets/
   from assets.vision_transformer import ViT_base_patch16_224
   paddle_model = ViT_base_patch16_224()
   MODEL_PATH = 'assets/ViT_base_patch16_224_pretrained.pdparams'
   paddle_model.set_dict(paddle.load(MODEL_PATH))
-
+  
   # Call the interpreter.
   tam = it.TAMInterpreter(paddle_model, use_cuda=True)
   img_path = 'samples/el1.png'
@@ -298,9 +308,10 @@ InterpretDL is provided under the [Apache-2.0 license](https://github.com/Paddle
           visual=True,
           save_path=None)
   ```
-  | image | elephant | zebra |
-  :-----------:|:-----------:|:-----------:
-  ![image](https://user-images.githubusercontent.com/13829174/139223230-66094dbf-cbc8-450c-acd8-0c0ec40c5fef.png) | ![elephant](https://user-images.githubusercontent.com/13829174/138049903-8106d879-3c70-437b-a580-cf8e9c17f974.png) | ![zebra](https://user-images.githubusercontent.com/13829174/138049895-6d52b97d-c4fd-40da-be88-f5c956cb9fcb.png)
+
+  |                            image                             |                           elephant                           |                            zebra                             |
+  | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: |
+  | ![image](https://user-images.githubusercontent.com/13829174/139223230-66094dbf-cbc8-450c-acd8-0c0ec40c5fef.png) | ![elephant](https://user-images.githubusercontent.com/13829174/138049903-8106d879-3c70-437b-a580-cf8e9c17f974.png) | ![zebra](https://user-images.githubusercontent.com/13829174/138049895-6d52b97d-c4fd-40da-be88-f5c956cb9fcb.png) |
 
 
 - (2021/07/22) Implemented Rollout Explanations for PaddlePaddle [Vision Transformers](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/model_zoo/vision_transformer.py). See the [notebook](https://github.com/PaddlePaddle/InterpretDL/blob/master/tutorials/example_rollout_cv_ViT.ipynb) for the visualization.
@@ -308,13 +319,13 @@ InterpretDL is provided under the [Apache-2.0 license](https://github.com/Paddle
   ```python
   import paddle
   import interpretdl as it
-
+  
   # wget -c https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/ViT_small_patch16_224_pretrained.pdparams -P assets/
   from assets.vision_transformer import ViT_small_patch16_224
   paddle_model = ViT_small_patch16_224()
   MODEL_PATH = 'assets/ViT_small_patch16_224_pretrained.pdparams'
   paddle_model.set_dict(paddle.load(MODEL_PATH))
-
+  
   img_path = 'assets/catdog.png'
   rollout = it.RolloutInterpreter(paddle_model, use_cuda=True)
   heatmap = rollout.interpret(img_path, start_layer=0, visual=True)

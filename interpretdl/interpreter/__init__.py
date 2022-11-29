@@ -30,13 +30,13 @@ __all__ = [
 
 try:
     import paddle
-    from .lime_prior import LIMEPriorInterpreter
+    # from .lime_prior import LIMEPriorInterpreter
     from .glime import GLIMECVInterpreter
     from .forgetting_events import ForgettingEventsInterpreter
     from ._normlime_base import NormLIMECVInterpreter, NormLIMENLPInterpreter
     from .training_dynamics import TrainingDynamics, BHDFInterpreter
     __all__ += [
-        "LIMEPriorInterpreter", "GLIMECVInterpreter", "ForgettingEventsInterpreter", "NormLIMECVInterpreter",
+        "GLIMECVInterpreter", "ForgettingEventsInterpreter", "NormLIMECVInterpreter",
         "NormLIMENLPInterpreter", "BHDFInterpreter", "TrainingDynamics"
     ]
 except ModuleNotFoundError:

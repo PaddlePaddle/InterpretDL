@@ -12,6 +12,8 @@ from ..data_processor.visualizer import sp_weights_to_image_explanation, overlay
 class LIMEPriorInterpreter(LIMECVInterpreter):
     """
     LIME Prior Interpreter. This is an Interpreter in progress.
+
+    Depreciated. Refer to GLIMECVInterpreter.
     """
 
     def __init__(self,
