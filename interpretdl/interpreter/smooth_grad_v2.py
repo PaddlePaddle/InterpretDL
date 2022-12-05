@@ -24,16 +24,16 @@ class SmoothGradInterpreterV2(InputGradientInterpreter):
     http://arxiv.org/abs/1706.03825.
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None):
+    def __init__(self, model: callable, device: str = 'gpu:0'):
         """
 
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
 
-        InputGradientInterpreter.__init__(self, paddle_model, device, use_cuda)
+        InputGradientInterpreter.__init__(self, model, device)
 
     def interpret(self,
                   inputs: str or list(str) or np.ndarray,

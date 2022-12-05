@@ -26,18 +26,17 @@ class DeletionInsertion(InterpreterEvaluator):
     """
 
     def __init__(self,
-                 paddle_model: callable,
+                 model: callable,
                  device: str,
-                 use_cuda: bool = None,
                  compute_deletion: bool = True,
                  compute_insertion: bool = True,
                  **kwargs):
         """
 
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions. This 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions. This 
                 is not always required if the model is not involved. 
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc. Again, this is not always required if the model is not involved.
             compute_deletion (bool, optional): Whether compute deletion score. Defaults to ``True``.
             compute_insertion (bool, optional): Whether compute insertion score. Defaults to ``True``.
@@ -45,7 +44,7 @@ class DeletionInsertion(InterpreterEvaluator):
         Raises:
             ValueError: At least one of ``compute_deletion`` and ``compute_insertion`` must be True.
         """
-        super().__init__(paddle_model, device, use_cuda, **kwargs)
+        super().__init__(model, device, **kwargs)
 
         if (not compute_deletion) or (not compute_insertion):
             raise ValueError('At least one of ``compute_deletion`` and ``compute_insertion`` must be True.')

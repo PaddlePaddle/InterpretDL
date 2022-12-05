@@ -33,22 +33,22 @@ class Infidelity(InterpreterEvaluator):
     pixels; while the difference (the latter term) should also be large because the model depends on important pixels
     to make decisions. Like this, large values would be offset by large values if the explanation is faithful to the 
     model. Otherwise, for uniform explanations (all being constant), the former term would be a constant value and the
-    infidelity would become large。
+    infidelity would become large.
 
     More details about the measure can be found in the original paper: https://arxiv.org/abs/1901.09392.
     """
     def __init__(self,
-                paddle_model: callable,
+                model: callable,
                 device: str = 'gpu:0',
                 **kwargs):
         """
 
         Args:
-            paddle_model (callable): _description_
+            model (callable): _description_
             device (_type_, optional): _description_. Defaults to 'gpu:0'.
         """
         
-        super().__init__(paddle_model, device, None, **kwargs)
+        super().__init__(model, device, **kwargs)
         self.results = {}
 
     def _build_predict_fn(self, rebuild: bool = False):
@@ -74,7 +74,7 @@ class Infidelity(InterpreterEvaluator):
             paddle.set_device(self.device)
 
             # to get gradients, the ``train`` mode must be set.
-            self.paddle_model.eval()
+            self.model.eval()
 
             def predict_fn(data):
                 """predict_fn for input gradients based interpreters,
@@ -91,7 +91,7 @@ class Infidelity(InterpreterEvaluator):
                 with paddle.no_grad():
                     # Follow the `official implementation <https://github.com/chihkuanyeh/saliency_evaluation>`_
                     # to use logits as output.
-                    logits = self.paddle_model(paddle.to_tensor(data))  # get logits, [bs, num_c]
+                    logits = self.model(paddle.to_tensor(data))  # get logits, [bs, num_c]
                     # probas = paddle.nn.functional.softmax(logits, axis=1)  # get probabilities.
                 return logits.numpy()
 
@@ -234,34 +234,92 @@ class Infidelity(InterpreterEvaluator):
 
 
 class InfidelityNLP(InterpreterEvaluator):
-    def __init__(self, paddle_model: callable or None, device: str = 'gpu:0', **kwargs):
-        super().__init__(paddle_model, device, **kwargs)
+    def __init__(self, model: callable or None, device: str = 'gpu:0', **kwargs):
+        super().__init__(model, device, **kwargs)
         self.results = {}
 
-    def _generate_samples(self, input_ids, masked_id=0):
+    def _generate_samples(self, input_ids, masked_id: int, is_random_samples: bool):
         num_tokens = len(input_ids)
 
-        # like 1d-conv, stride=1, kernel-size={1,2,3,4,5}
-        generated_samples = []
-        input_ids_array = np.array([input_ids])
-        for ks in range(1, 6):
-            if ks > num_tokens - 2:
-                break
-            for i in range(1, num_tokens-ks):
-                tmp = np.copy(input_ids_array)
-                tmp[0, i:i+ks] = masked_id
-                generated_samples.append(tmp)
-        
-        perturbed_samples = np.concatenate(generated_samples, axis=0)
-        Is = perturbed_samples != input_ids_array
+        if is_random_samples:
+            # This is more suitable for long documents.
+            # we concat three kinds of perturbations: 
+            # randomly perturbing 1%, 2%, 3%, 4% or 5% tokens respectively
+            # with 40 times
+            num_repeats = 40
+            results = []
+            ids_array = np.array([input_ids]*num_repeats)
+            for p in range(1, 6):
+                _k = int(num_tokens * p / 100)
 
-        return perturbed_samples, Is
+                # not choose from {0, -1}, i.e., [CLS] and [SEP]
+                # https://stackoverflow.com/a/53893160/4834515
+                pert_k = np.random.rand(num_repeats, num_tokens-2).argpartition(_k, axis=1)[:,:_k] + 1
 
-    def evaluate(self, raw_text: str, explanation: list or np.ndarray, tokenizer: callable, recompute: bool = False):
+                pert_array = np.copy(ids_array)
+                # vectorized slicing.
+                # https://stackoverflow.com/a/74024396/4834515
+                row_indexes = np.arange(num_repeats)[:, None]
+                pert_array[row_indexes, pert_k] = masked_id
+
+                results.append(pert_array)
+
+            perturbed_samples = np.concatenate(results)  # [200, num_tokens]
+            Is = perturbed_samples != np.array([input_ids])  # [200, num_tokens]
+
+            return perturbed_samples, Is
+        else:
+            # This is more suitable for short documents.
+            # like 1d-conv, stride=1, kernel-size={1,2,3,4,5}
+            generated_samples = []
+            input_ids_array = np.array([input_ids])
+            for ks in range(1, 6):
+                if ks > num_tokens - 2:
+                    break
+                for i in range(1, num_tokens-ks):
+                    tmp = np.copy(input_ids_array)
+                    tmp[0, i:i+ks] = masked_id
+                    generated_samples.append(tmp)
+            
+            perturbed_samples = np.concatenate(generated_samples, axis=0)
+            Is = perturbed_samples != input_ids_array
+
+            return perturbed_samples, Is
+
+    # def _generate_samples(self, input_ids, masked_id=0):
+    #     num_tokens = len(input_ids)
+
+    #     # we concat three kinds of perturbations: 
+    #     # randomly perturbing 1, 2 or 3 tokens respectively
+    #     # with 33 times
+    #     num_repeats = 33
+
+    #     ids_array = np.array([input_ids]*num_repeats)
+
+    #     # not choose from {0, -1}, [CLS] and [SEP]
+    #     # https://stackoverflow.com/a/53893160/4834515
+    #     pert_1 = np.random.rand(num_repeats, num_tokens-2).argpartition(1, axis=1)[:,:1] + 1
+    #     pert_2 = np.random.rand(num_repeats, num_tokens-2).argpartition(2, axis=1)[:,:2] + 1
+    #     pert_3 = np.random.rand(num_repeats, num_tokens-2).argpartition(3, axis=1)[:,:3] + 1
+
+    #     pert_1_array = np.copy(ids_array)
+    #     pert_2_array = np.copy(ids_array)
+    #     pert_3_array = np.copy(ids_array)
+
+    #     # https://stackoverflow.com/a/74024396/4834515
+    #     row_indexes = np.arange(num_repeats)[:, None]
+    #     pert_1_array[row_indexes, pert_1] = masked_id
+    #     pert_2_array[row_indexes, pert_2] = masked_id
+    #     pert_3_array[row_indexes, pert_3] = masked_id
+
+    #     perturbed_samples = np.concatenate([pert_1_array, pert_2_array, pert_3_array])
+    #     return perturbed_samples, perturbed_samples != ids_array
+
+    def evaluate(self, raw_text: str, explanation: list or np.ndarray, tokenizer: callable, max_seq_len=128, is_random_samples=False, recompute: bool = False):
         self._build_predict_fn()
 
         # tokenizer text to ids
-        encoded_inputs = tokenizer(raw_text, max_seq_len=128)
+        encoded_inputs = tokenizer(raw_text, max_seq_len=max_seq_len)
         # order is important. *_batched_and_to_tuple will be the input for the model.
         _batched_and_to_tuple = tuple([np.array([v]) for v in encoded_inputs.values()])
 
@@ -276,7 +334,7 @@ class InfidelityNLP(InterpreterEvaluator):
         # generate perturbation samples.
         if 'proba_diff' not in self.results or recompute:
             ## x and I related.
-            generated_samples, Is = self._generate_samples(encoded_inputs['input_ids'], tokenizer.pad_token_id)
+            generated_samples, Is = self._generate_samples(encoded_inputs['input_ids'], tokenizer.pad_token_id, is_random_samples)
             self.results['generated_samples'] = generated_samples
             self.results['Is'] = Is
             proba_pert = self.predict_fn(generated_samples)[:, label]

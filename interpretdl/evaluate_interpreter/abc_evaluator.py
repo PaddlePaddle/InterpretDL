@@ -14,27 +14,20 @@ class InterpreterEvaluator(ABC):
     All evaluators aim to evaluate the trustworthiness of the interpretation algorithms. Besides theoretical
     verification of the algorithm, here the evaluators validate the trustworthiness by looking through the obtained
     explanations from the interpretation algorithms. Different evaluators are provided.
-    
-    .. warning:: ``use_cuda`` would be deprecated soon. Use ``device`` directly.
     """
 
-    def __init__(self, paddle_model: callable or None, device: str = 'gpu:0', use_cuda: bool = None, **kwargs):
+    def __init__(self, model: callable or None, device: str = 'gpu:0', **kwargs):
         """
 
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions. This 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions. This 
                 is not always required if the model is not involved. 
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc. Again, this is not always required if the model is not involved.
         """
 
-        if use_cuda in [True, False]:
-            warnings.warn('``use_cuda`` would be deprecated soon. '
-                          'Use ``device`` directly.', stacklevel=2)
-            device = 'gpu' if use_cuda and device[:3] == 'gpu' else 'cpu'
-
         self.device = device
-        self.paddle_model = paddle_model
+        self.model = model
         self.predict_fn = None
 
     def _build_predict_fn(self, rebuild: bool = False):
@@ -52,7 +45,7 @@ class InterpreterEvaluator(ABC):
             paddle.set_device(self.device)
 
             # to get gradients, the ``train`` mode must be set.
-            self.paddle_model.eval()
+            self.model.eval()
 
             def predict_fn(inputs):
                 """predict_fn for input gradients based interpreters,
@@ -69,7 +62,7 @@ class InterpreterEvaluator(ABC):
                 with paddle.no_grad():
                     inputs = tuple(paddle.to_tensor(inp) for inp in inputs) if isinstance(inputs, tuple) \
                         else (paddle.to_tensor(inputs), )
-                    logits = self.paddle_model(*inputs)  # get logits, [bs, num_c]
+                    logits = self.model(*inputs)  # get logits, [bs, num_c]
                     probas = paddle.nn.functional.softmax(logits, axis=1)  # get probabilities.
                 return probas.numpy()
 

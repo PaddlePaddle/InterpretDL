@@ -30,7 +30,7 @@ class Perturbation(InterpreterEvaluator):
     """
 
     def __init__(self,
-                 paddle_model: callable,
+                 model: callable,
                  device: str = 'gpu:0',
                  compute_MoRF: bool = True,
                  compute_LeRF: bool = True,
@@ -38,9 +38,9 @@ class Perturbation(InterpreterEvaluator):
         """_summary_
 
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions. This 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions. This 
                 is not always required if the model is not involved. 
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc. Again, this is not always required if the model is not involved.
             compute_MoRF (bool, optional): Whether comptue MoRF score. Defaults to True.
             compute_LeRF (bool, optional): Whether comptue LeRF score. Defaults to True.
@@ -48,7 +48,7 @@ class Perturbation(InterpreterEvaluator):
         Raises:
             ValueError: 'At least one of ``compute_MoRF`` and ``compute_LeRF`` must be True.'
         """
-        super().__init__(paddle_model, device, None, **kwargs)
+        super().__init__(model, device, **kwargs)
 
         if (not compute_MoRF) and (not compute_LeRF):
             raise ValueError('At least one of ``compute_MoRF`` and ``compute_LeRF`` must be True.')
@@ -281,15 +281,15 @@ class PerturbationNLP(InterpreterEvaluator):
     """
 
     def __init__(self,
-                 paddle_model: callable,
+                 model: callable,
                  device: str = 'gpu:0',
                  **kwargs):
         """_summary_
 
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions. This 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions. This 
                 is not always required if the model is not involved. 
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc. Again, this is not always required if the model is not involved.
             compute_MoRF (bool, optional): Whether comptue MoRF score. Defaults to True.
             compute_LeRF (bool, optional): Whether comptue LeRF score. Defaults to True.
@@ -297,7 +297,7 @@ class PerturbationNLP(InterpreterEvaluator):
         Raises:
             ValueError: 'At least one of ``compute_MoRF`` and ``compute_LeRF`` must be True.'
         """
-        super().__init__(paddle_model, device, None, **kwargs)
+        super().__init__(model, device, None, **kwargs)
         self._build_predict_fn()
 
     def evaluate(self,

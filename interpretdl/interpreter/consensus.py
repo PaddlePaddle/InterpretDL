@@ -1,5 +1,9 @@
 import numpy as np
-from .abc_interpreter import Interpreter
+
+try:
+    from .abc_interpreter_m import Interpreter
+except:
+    from .abc_interpreter import Interpreter
 
 
 class ConsensusInterpreter(object):
@@ -16,13 +20,13 @@ class ConsensusInterpreter(object):
     `PPClas <https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/ppcls/arch/backbone/__init__.py>`_.
     """
 
-    def __init__(self, InterpreterClass, list_of_models: list, device: str = 'gpu:0', use_cuda=None, **kwargs):
+    def __init__(self, InterpreterClass, list_of_models: list, device: str = 'gpu:0', **kwargs):
         """
         
         Args:
             InterpreterClass ([type]): The given Interpreter defined in InterpretDL.
             list_of_models (list): a list of trained models.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
         assert issubclass(InterpreterClass, Interpreter)
@@ -30,7 +34,6 @@ class ConsensusInterpreter(object):
         self.InterpreterClass = InterpreterClass
         self.list_of_models = list_of_models
         self.device = device
-        self.use_cuda = use_cuda
         self.other_args = kwargs
 
     def interpret(self, inputs: str or list(str) or np.ndarray, **kwargs) -> np.ndarray:
@@ -86,7 +89,7 @@ class ConsensusInterpreter(object):
 
         exps = []
         for model in self.list_of_models:
-            interpreter = self.InterpreterClass(model, self.device, self.use_cuda, **self.other_args)
+            interpreter = self.InterpreterClass(model, self.device, **self.other_args)
             raw_explanation = interpreter.interpret(inputs, visual=False, save_path=None, **kwargs)
             exps.append(raw_explanation)
 

@@ -20,15 +20,15 @@ class NormLIMECVInterpreter(LIMECVInterpreter):
 
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None):
+    def __init__(self, model: callable, device: str = 'gpu:0'):
         """
 
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` etc.
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` etc.
         """
 
-        LIMECVInterpreter.__init__(self, paddle_model, use_cuda=use_cuda, device=device)
+        LIMECVInterpreter.__init__(self, model, device)
         self.lime_interpret = super().interpret
 
     def _get_lime_weights(self, data, num_samples, batch_size, save=False):
@@ -188,14 +188,14 @@ class NormLIMENLPInterpreter(LIMENLPInterpreter):
 
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None):
+    def __init__(self, model: callable, device: str = 'gpu:0'):
         """
 
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` etc.
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` etc.
         """
-        LIMENLPInterpreter.__init__(self, paddle_model, device, use_cuda)
+        LIMENLPInterpreter.__init__(self, model, device)
         self.lime_interpret = super().interpret
 
     def _get_lime_weights(self, data, preprocess_fn, num_samples, batch_size, unk_id, pad_id, lod_levels, save=False):

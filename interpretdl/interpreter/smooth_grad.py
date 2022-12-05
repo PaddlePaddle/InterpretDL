@@ -25,7 +25,7 @@ class SmoothGradInterpreter(InputGradientInterpreter):
     http://arxiv.org/abs/1706.03825.
     """
 
-    def __init__(self, model: callable, device: str = 'gpu:0', env: str = 'pp'):
+    def __init__(self, model: callable, device: str = 'gpu:0', **kwargs):
         """
 
         Args:
@@ -34,7 +34,7 @@ class SmoothGradInterpreter(InputGradientInterpreter):
                 etc.
         """
 
-        InputGradientInterpreter.__init__(self, model, device, env=env)
+        InputGradientInterpreter.__init__(self, model, device, **kwargs)
 
     def interpret(self,
                   inputs: str or list(str) or np.ndarray,
@@ -137,7 +137,7 @@ class SmoothGradNLPInterpreter(IntermediateGradientInterpreter):
     https://arxiv.org/abs/1703.01365.
     """
 
-    def __init__(self, model: callable, device: str = 'gpu:0') -> None:
+    def __init__(self, model: callable, device: str = 'gpu:0', **kwargs) -> None:
         """
         
         Args:
@@ -145,7 +145,7 @@ class SmoothGradNLPInterpreter(IntermediateGradientInterpreter):
             device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        IntermediateGradientInterpreter.__init__(self, model, device)
+        IntermediateGradientInterpreter.__init__(self, model, device, **kwargs)
 
     def interpret(self,
                   raw_text: str,

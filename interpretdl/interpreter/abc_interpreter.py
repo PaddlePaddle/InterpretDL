@@ -541,7 +541,7 @@ class IntermediateGradientInterpreter(Interpreter):
             device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        Interpreter.__init__(self, model, device, None)
+        Interpreter.__init__(self, model, device)
 
     def _build_predict_fn(self, rebuild=False, layer_name='word_embeddings', gradient_of='probability'):
 

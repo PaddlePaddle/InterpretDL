@@ -17,21 +17,20 @@ class LIMEPriorInterpreter(LIMECVInterpreter):
     """
 
     def __init__(self,
-                 paddle_model: callable,
+                 model: callable,
                  prior_method: str = "none",
-                 device: str = 'gpu:0',
-                 use_cuda=None) -> None:
+                 device: str = 'gpu:0') -> None:
         """
 
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
             prior_method: Prior method. Can be chosen from ``{"none", "ridge"}``. Defaults to ``"none"``, which is 
                 equivalent to LIME. If ``none``, :py:func:`interpret()` will use zeros as prior; Otherwise, the loaded
                 prior will be used.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        LIMECVInterpreter.__init__(self, paddle_model, device, use_cuda)
+        LIMECVInterpreter.__init__(self, model, device)
         self.prior_method = prior_method
         self.global_weights = None
 
