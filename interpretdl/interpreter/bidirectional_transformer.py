@@ -16,15 +16,15 @@ class BTCVInterpreter(TransformerInterpreter):
     The following implementation is specially designed for Vision Transformer.
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None) -> None:
+    def __init__(self, model: callable, device: str = 'gpu:0') -> None:
         """
 
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        TransformerInterpreter.__init__(self, paddle_model, device, use_cuda)
+        TransformerInterpreter.__init__(self, model, device)
 
     def interpret(self,
                   inputs: str or list(str) or np.ndarray,
@@ -130,7 +130,7 @@ class BTCVInterpreter(TransformerInterpreter):
         # gradient mean over heads.
         grad_head_mean = np.mean((total_gradients / steps).clip(min=0), axis=1)  # [b, s, s]
 
-        if hasattr(self.paddle_model, 'global_pool') and self.paddle_model.global_pool:
+        if hasattr(self.model, 'global_pool') and self.model.global_pool:
             # For MAE ViT.
             explanation = (R * grad_head_mean)[:, 1:, :].mean(axis=1)
         else:
@@ -157,15 +157,15 @@ class BTNLPInterpreter(TransformerInterpreter):
     The following implementation is specially designed for Ernie.
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None) -> None:
+    def __init__(self, model: callable, device: str = 'gpu:0') -> None:
         """
 
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        TransformerInterpreter.__init__(self, paddle_model, device, use_cuda)
+        TransformerInterpreter.__init__(self, model, device)
 
     def interpret(self,
                   raw_text: str,

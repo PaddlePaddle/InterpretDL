@@ -14,23 +14,23 @@ class LRPCVInterpreter(Interpreter):
     or text. LRP operates by propagating the prediction backwards in the neural network, by means of purposely designed
     local propagation rules.
 
-    Note that LRP requires ``paddle_model`` have :py:func:`relprop` and related implementations, see 
+    Note that LRP requires ``model`` have :py:func:`relprop` and related implementations, see 
     `tutorial/assets/lrp_model <https://github.com/PaddlePaddle/InterpretDL/tree/master/tutorials/assets/lrp_model>`_.
-    This is different from other interpreters, which do not have additional requirements for ``paddle_model``.
+    This is different from other interpreters, which do not have additional requirements for ``model``.
 
     More details regarding the LRP method can be found in the original paper:
     https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140.
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None) -> None:
+    def __init__(self, model: callable, device: str = 'gpu:0') -> None:
         """
         
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        Interpreter.__init__(self, paddle_model, device, use_cuda)
+        Interpreter.__init__(self, model, device)
         self.paddle_prepared = False
 
     def interpret(self, inputs, label=None, resize_to=224, crop_to=None, visual=True, save_path=None):
@@ -81,14 +81,14 @@ class LRPCVInterpreter(Interpreter):
         if predict_fn is None:
             import paddle
             paddle.set_device(self.device)
-            self.paddle_model.eval()
+            self.model.eval()
 
-            layer_list = [(n, v) for n, v in self.paddle_model.named_sublayers()]
+            layer_list = [(n, v) for n, v in self.model.named_sublayers()]
             num_classes = layer_list[-1][1].weight.shape[1]
 
             def predict_fn(data, label):
                 data = paddle.to_tensor(data, stop_gradient=False)
-                output = self.paddle_model(data)
+                output = self.model(data)
 
                 if label is None:
                     T = output.argmax().numpy()[0]
@@ -101,7 +101,7 @@ class LRPCVInterpreter(Interpreter):
                 T = (T[:, np.newaxis] == np.arange(num_classes)) * 1.0
                 T = paddle.to_tensor(T).astype('float32')
 
-                R = self.paddle_model.relprop(R=output * T, alpha=1).sum(axis=1, keepdim=True)
+                R = self.model.relprop(R=output * T, alpha=1).sum(axis=1, keepdim=True)
 
                 # Check relevance value preserved
                 # print("Check relevance value preserved: ")

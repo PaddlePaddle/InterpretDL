@@ -22,15 +22,15 @@ class GAInterpreter(InputGradientInterpreter):
 
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0') -> None:
+    def __init__(self, model: callable, device: str = 'gpu:0') -> None:
         """
 
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        Interpreter.__init__(self, paddle_model, device)
+        Interpreter.__init__(self, model, device)
 
     def interpret(self,
                   image_input: str or np.ndarray,
@@ -140,7 +140,7 @@ class GAInterpreter(InputGradientInterpreter):
 
         if self.predict_fn is None or rebuild:
             import paddle
-            self._paddle_env_setup()  # inherit from InputGradientInterpreter
+            self._env_setup()  # inherit from InputGradientInterpreter
 
             def predict_fn(image, text_tokenized):
                 image = paddle.to_tensor(image)
@@ -158,7 +158,7 @@ class GAInterpreter(InputGradientInterpreter):
                     txt_attns.append(output)
 
                 hooks = []  # for remove.
-                for n, v in self.paddle_model.named_sublayers():
+                for n, v in self.model.named_sublayers():
                     if re.match(vis_attn_layer_pattern, n):
                         h = v.register_forward_post_hook(img_hook)
                         hooks.append(h)
@@ -167,7 +167,7 @@ class GAInterpreter(InputGradientInterpreter):
                         h = v.register_forward_post_hook(txt_hook)
                         hooks.append(h)
 
-                logits_per_image, logits_per_text = self.paddle_model(image, text_tokenized)
+                logits_per_image, logits_per_text = self.model(image, text_tokenized)
 
                 for h in hooks:
                     h.remove()
@@ -180,7 +180,7 @@ class GAInterpreter(InputGradientInterpreter):
                 one_hot[paddle.arange(logits_per_image.shape[0]), index] = 1
                 one_hot = paddle.to_tensor(one_hot)
                 one_hot = paddle.sum(one_hot * logits_per_image)
-                self.paddle_model.clear_gradients()
+                self.model.clear_gradients()
                 one_hot.backward()
 
                 img_attns_grads = []
@@ -218,15 +218,15 @@ class GANLPInterpreter(TransformerInterpreter):
 
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None) -> None:
+    def __init__(self, model: callable, device: str = 'gpu:0') -> None:
         """
 
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        TransformerInterpreter.__init__(self, paddle_model, device, use_cuda)
+        TransformerInterpreter.__init__(self, model, device)
 
     def interpret(self,
                   raw_text: str,
@@ -315,15 +315,15 @@ class GACVInterpreter(TransformerInterpreter):
     The following implementation is specially designed for Vision Transformer.
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None) -> None:
+    def __init__(self, model: callable, device: str = 'gpu:0') -> None:
         """
 
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        TransformerInterpreter.__init__(self, paddle_model, device, use_cuda)
+        TransformerInterpreter.__init__(self, model, device)
 
     def interpret(self,
                   inputs: str or list(str) or np.ndarray,
@@ -381,7 +381,7 @@ class GACVInterpreter(TransformerInterpreter):
 
             R = R + np.matmul(attn, R)
 
-        if hasattr(self.paddle_model, 'global_pool') and self.paddle_model.global_pool:
+        if hasattr(self.model, 'global_pool') and self.model.global_pool:
             # For MAE ViT, but GA does not work well.
             R = R[:, 1:, :].mean(axis=1)
         else:

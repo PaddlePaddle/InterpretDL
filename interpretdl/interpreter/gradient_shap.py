@@ -19,15 +19,15 @@ class GradShapCVInterpreter(InputGradientInterpreter):
     http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions.
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None):
+    def __init__(self, model: callable, device: str = 'gpu:0'):
         """
         
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        InputGradientInterpreter.__init__(self, paddle_model, device, use_cuda)
+        InputGradientInterpreter.__init__(self, model, device)
 
     def interpret(self,
                   inputs: str or list(str) or np.ndarray,
@@ -140,15 +140,15 @@ class GradShapNLPInterpreter(Interpreter):
     http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions.
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda: bool = None) -> None:
+    def __init__(self, model: callable, device: str = 'gpu:0') -> None:
         """
         
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        Interpreter.__init__(self, paddle_model, device, use_cuda)
+        Interpreter.__init__(self, model, device)
 
     def interpret(self,
                   data: tuple or np.ndarray,
@@ -244,15 +244,15 @@ class GradShapNLPInterpreter(Interpreter):
                     return output
 
                 hooks = []
-                for name, v in self.paddle_model.named_sublayers():
+                for name, v in self.model.named_sublayers():
                     if embedding_name in name:
                         h = v.register_forward_post_hook(hook)
                         hooks.append(h)
 
                 if isinstance(data, tuple):
-                    logits = self.paddle_model(*data)  # get logits, [bs, num_c]
+                    logits = self.model(*data)  # get logits, [bs, num_c]
                 else:
-                    logits = self.paddle_model(data)  # get logits, [bs, num_c]
+                    logits = self.model(data)  # get logits, [bs, num_c]
 
                 for h in hooks:
                     h.remove()

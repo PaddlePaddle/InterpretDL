@@ -24,15 +24,15 @@ class GradCAMInterpreter(Interpreter):
     https://arxiv.org/abs/1610.02391.
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None):
+    def __init__(self, model: callable, device: str = 'gpu:0'):
         """
         
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        Interpreter.__init__(self, paddle_model, device, use_cuda)
+        Interpreter.__init__(self, model, device)
         self.paddle_prepared = False
 
         # init for usages during the interpretation.
@@ -76,9 +76,9 @@ class GradCAMInterpreter(Interpreter):
         bsz = len(data)  # batch size
         save_path = preprocess_save_path(save_path, bsz)
 
-        assert target_layer_name in [n for n, v in self.paddle_model.named_sublayers()], \
+        assert target_layer_name in [n for n, v in self.model.named_sublayers()], \
             f"target_layer_name {target_layer_name} does not exist in the given model, " \
-            f"please check all valid layer names by [n for n, v in paddle_model.named_sublayers()]"
+            f"please check all valid layer names by [n for n, v in model.named_sublayers()]"
 
         if self._target_layer_name != target_layer_name:
             self._target_layer_name = target_layer_name
@@ -119,12 +119,12 @@ class GradCAMInterpreter(Interpreter):
             paddle.set_device(self.device)
             # to get gradients, the ``train`` mode must be set.
             # we cannot set v.training = False for the same reason.
-            self.paddle_model.train()
+            self.model.train()
 
             def hook(layer, input, output):
                 self._feature_maps[layer._layer_name_for_hook] = output
 
-            for n, v in self.paddle_model.named_sublayers():
+            for n, v in self.model.named_sublayers():
                 if n == self._target_layer_name:
                     v._layer_name_for_hook = n
                     v.register_forward_post_hook(hook)
@@ -137,7 +137,7 @@ class GradCAMInterpreter(Interpreter):
             def predict_fn(data, label):
                 data = paddle.to_tensor(data)
                 data.stop_gradient = False
-                out = self.paddle_model(data)
+                out = self.model(data)
                 out = paddle.nn.functional.softmax(out, axis=1)
                 preds = paddle.argmax(out, axis=1)
                 if label is None:

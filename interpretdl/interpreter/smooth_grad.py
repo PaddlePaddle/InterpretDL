@@ -25,16 +25,16 @@ class SmoothGradInterpreter(InputGradientInterpreter):
     http://arxiv.org/abs/1706.03825.
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0', env: str = 'pp'):
+    def __init__(self, model: callable, device: str = 'gpu:0', env: str = 'pp'):
         """
 
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
 
-        InputGradientInterpreter.__init__(self, paddle_model, device, env=env)
+        InputGradientInterpreter.__init__(self, model, device, env=env)
 
     def interpret(self,
                   inputs: str or list(str) or np.ndarray,
@@ -137,15 +137,15 @@ class SmoothGradNLPInterpreter(IntermediateGradientInterpreter):
     https://arxiv.org/abs/1703.01365.
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda: bool = None) -> None:
+    def __init__(self, model: callable, device: str = 'gpu:0') -> None:
         """
         
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        IntermediateGradientInterpreter.__init__(self, paddle_model, device)
+        IntermediateGradientInterpreter.__init__(self, model, device)
 
     def interpret(self,
                   raw_text: str,

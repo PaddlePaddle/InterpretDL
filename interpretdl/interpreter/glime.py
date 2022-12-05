@@ -20,15 +20,15 @@ class GLIMECVInterpreter(LIMECVInterpreter):
     
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0') -> None:
+    def __init__(self, model: callable, device: str = 'gpu:0') -> None:
         """
 
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        LIMECVInterpreter.__init__(self, paddle_model, device)
+        LIMECVInterpreter.__init__(self, model, device)
         self.global_weights = None
 
     def set_global_weights(self, global_weights_info: str or dict):

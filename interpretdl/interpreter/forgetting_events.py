@@ -19,15 +19,15 @@ class ForgettingEventsInterpreter(Interpreter):
     https://arxiv.org/abs/1812.05159.
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None):
+    def __init__(self, model: callable, device: str = 'gpu:0'):
         """
         
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        Interpreter.__init__(self, paddle_model, device, use_cuda)
+        Interpreter.__init__(self, model, device)
 
     def interpret(self,
                   train_reader: callable,
@@ -73,7 +73,7 @@ class ForgettingEventsInterpreter(Interpreter):
                 y_train = [t[2] for t in data_train]
                 x_train = paddle.to_tensor(x_train)
                 y_train = paddle.to_tensor(np.array(y_train).reshape((-1, 1)))
-                logits = self.paddle_model(x_train)
+                logits = self.model(x_train)
                 predicted = paddle.argmax(logits, axis=1).numpy()
                 bsz = len(predicted)
 

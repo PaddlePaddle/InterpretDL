@@ -22,7 +22,7 @@ class TrainingDynamics():
     and [Dataset Mapping] will be available in this interpreter.
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None):
+    def __init__(self, paddle_model: callable, device: str = 'gpu:0'):
         """
         
         Args:
@@ -32,10 +32,6 @@ class TrainingDynamics():
         """
         self.device = device
         self.paddle_model = paddle_model
-
-        if use_cuda in [True, False]:
-            warnings.warn('``use_cuda`` would be deprecated soon. Use ``device`` directly.', stacklevel=2)
-            self.device = 'gpu:0' if use_cuda and device[:3] == 'gpu' else 'cpu'
 
         assert self.device[:3] in ['cpu', 'gpu']
 
@@ -200,7 +196,7 @@ class BHDFInterpreter(Interpreter):
     For reproduction experiments, refer to [this repo](https://github.com/Christophe-Jia/mislabel-detection).
     """
 
-    def __init__(self, detector: callable = None, device: str = 'gpu:0', use_cuda=None):
+    def __init__(self, detector: callable = None, device: str = 'gpu:0'):
         """
         Args:
             detector (callable, optional): A detector model for identifying the mislabeled samples. Defaults to None.
@@ -219,8 +215,8 @@ class BHDFInterpreter(Interpreter):
                 )
             paddle.Model(self.detector).load(default_detector_path)
 
-        Interpreter.__init__(self, self.detector, device, use_cuda)
-        self._paddle_env_setup()
+        Interpreter.__init__(self, self.detector, device)
+        self._env_setup()
         self.detector.eval()
 
     def interpret(self,

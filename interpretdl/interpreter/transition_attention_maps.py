@@ -21,15 +21,15 @@ class TAMInterpreter(Interpreter):
 
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None) -> None:
+    def __init__(self, model: callable, device: str = 'gpu:0') -> None:
         """
 
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        Interpreter.__init__(self, paddle_model, device, use_cuda)
+        Interpreter.__init__(self, model, device)
         self.paddle_prepared = False
 
     def interpret(self,
@@ -118,9 +118,9 @@ class TAMInterpreter(Interpreter):
             paddle.set_device(self.device)
             # to get gradients, the ``train`` mode must be set.
             # we cannot set v.training = False for the same reason.
-            self.paddle_model.train()
+            self.model.train()
 
-            for n, v in self.paddle_model.named_sublayers():
+            for n, v in self.model.named_sublayers():
                 if "batchnorm" in v.__class__.__name__.lower():
                     v._use_global_stats = True
                 if "dropout" in v.__class__.__name__.lower():
@@ -138,11 +138,11 @@ class TAMInterpreter(Interpreter):
                     attns.append(output)
 
                 hooks = []
-                for n, v in self.paddle_model.named_sublayers():
+                for n, v in self.model.named_sublayers():
                     if re.match('^blocks.*.attn.attn_drop$', n):
                         h = v.register_forward_post_hook(hook)
                         hooks.append(h)
-                out = self.paddle_model(data)
+                out = self.model(data)
                 for h in hooks:
                     h.remove()
 

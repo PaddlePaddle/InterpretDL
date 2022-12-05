@@ -34,7 +34,7 @@ class Interpreter(ABC):
     .. warning:: ``use_cuda`` would be deprecated soon. Use ``device`` directly.
     """
 
-    def __init__(self, model: callable, device: str, use_cuda: bool = None, **kwargs):
+    def __init__(self, model: callable, device: str, **kwargs):
         """
         
         Args:
@@ -46,9 +46,9 @@ class Interpreter(ABC):
         self.model = model
         self.predict_fn = None
 
-        if use_cuda in [True, False]:
+        if 'use_cuda' in kwargs and kwargs['use_cuda'] in [True, False]:
             warnings.warn('``use_cuda`` would be deprecated soon. Use ``device`` directly.', stacklevel=2)
-            self.device = 'gpu:0' if use_cuda and device[:3] == 'gpu' else 'cpu'
+            self.device = 'gpu:0' if kwargs['use_cuda'] and device[:3] == 'gpu' else 'cpu'
 
         assert self.device[:3] in ['cpu', 'gpu']
 
@@ -90,7 +90,7 @@ class InputGradientInterpreter(Interpreter):
     This Interpreter implements :py:func:`_build_predict_fn` that returns input gradient given an input. 
     """
 
-    def __init__(self, model: callable, device: str, use_cuda: bool = None, **kwargs):
+    def __init__(self, model: callable, device: str, **kwargs):
         """
         
         Args:
@@ -98,7 +98,7 @@ class InputGradientInterpreter(Interpreter):
             device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        Interpreter.__init__(self, model, device, use_cuda, **kwargs)
+        Interpreter.__init__(self, model, device, **kwargs)
         assert hasattr(model, 'forward'), \
             "model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
@@ -195,7 +195,7 @@ class InputOutputInterpreter(Interpreter):
 
     """
 
-    def __init__(self, model: callable, device: str, use_cuda: bool = None, **kwargs):
+    def __init__(self, model: callable, device: str, **kwargs):
         """
         
         Args:
@@ -203,7 +203,7 @@ class InputOutputInterpreter(Interpreter):
             device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        Interpreter.__init__(self, model, device, use_cuda, **kwargs)
+        Interpreter.__init__(self, model, device, **kwargs)
         assert hasattr(model, 'forward'), \
             "model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
@@ -271,7 +271,7 @@ class IntermediateLayerInterpreter(Interpreter):
     input. 
     """
 
-    def __init__(self, model: callable, device: str, use_cuda: bool = None, **kwargs):
+    def __init__(self, model: callable, device: str, **kwargs):
         """
 
         Args:
@@ -280,7 +280,7 @@ class IntermediateLayerInterpreter(Interpreter):
                 etc.
         """
 
-        Interpreter.__init__(self, model, device, use_cuda, **kwargs)
+        Interpreter.__init__(self, model, device, **kwargs)
         assert hasattr(model, 'forward'), \
             "model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
@@ -361,7 +361,7 @@ class TransformerInterpreter(Interpreter):
     This Interpreter implements :py:func:`_build_predict_fn` that returns servral variables and gradients in each layer. 
     """
 
-    def __init__(self, model: callable, device: str, use_cuda: bool = None, **kwargs):
+    def __init__(self, model: callable, device: str, **kwargs):
         """
         
         Args:
@@ -369,7 +369,7 @@ class TransformerInterpreter(Interpreter):
             device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        Interpreter.__init__(self, model, device, use_cuda, **kwargs)
+        Interpreter.__init__(self, model, device, **kwargs)
         assert hasattr(model, 'forward'), \
             "model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
