@@ -34,16 +34,16 @@ class Interpreter(ABC):
     .. warning:: ``use_cuda`` would be deprecated soon. Use ``device`` directly.
     """
 
-    def __init__(self, paddle_model: callable, device: str, use_cuda: bool = None, **kwargs):
+    def __init__(self, model: callable, device: str, use_cuda: bool = None, **kwargs):
         """
         
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
         self.device = device
-        self.paddle_model = paddle_model
+        self.model = model
         self.predict_fn = None
 
         if use_cuda in [True, False]:
@@ -51,17 +51,6 @@ class Interpreter(ABC):
             self.device = 'gpu:0' if use_cuda and device[:3] == 'gpu' else 'cpu'
 
         assert self.device[:3] in ['cpu', 'gpu']
-
-    def _paddle_prepare(self, predict_fn: callable or None = None):
-        """
-        Prepare Paddle program inside of the interpreter. This will be called by :py:meth:`interpret`. Would be renamed
-        to :py:meth:`_build_predict_fn`.
-
-        Args:
-            predict_fn: A defined callable function that defines inputs and outputs. Defaults to ``None``, and each 
-                interpreter should implement it.
-        """
-        raise NotImplementedError
 
     def interpret(self, **kwargs):
         """Main function of the interpreter."""
@@ -71,7 +60,7 @@ class Interpreter(ABC):
         """ Build :py:attr:`predict_fn` for interpreters. This will be called by :py:meth:`interpret`. """
         raise NotImplementedError
 
-    def _paddle_env_setup(self):
+    def _env_setup(self):
         """Prepare the environment setup. This is not always necessary because the setup can be done within the 
         function of :py:func:`_build_predict_fn`.
         """
@@ -88,7 +77,7 @@ class Interpreter(ABC):
         paddle.set_device(self.device)
 
         # does not need gradients at all.
-        self.paddle_model.eval()
+        self.model.eval()
 
 
 class InputGradientInterpreter(Interpreter):
@@ -101,17 +90,17 @@ class InputGradientInterpreter(Interpreter):
     This Interpreter implements :py:func:`_build_predict_fn` that returns input gradient given an input. 
     """
 
-    def __init__(self, paddle_model: callable, device: str, use_cuda: bool = None, **kwargs):
+    def __init__(self, model: callable, device: str, use_cuda: bool = None, **kwargs):
         """
         
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        Interpreter.__init__(self, paddle_model, device, use_cuda, **kwargs)
-        assert hasattr(paddle_model, 'forward'), \
-            "paddle_model has to be " \
+        Interpreter.__init__(self, model, device, use_cuda, **kwargs)
+        assert hasattr(model, 'forward'), \
+            "model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
 
     def _build_predict_fn(self, rebuild: bool = False, gradient_of: str = 'probability'):
@@ -132,7 +121,7 @@ class InputGradientInterpreter(Interpreter):
         if self.predict_fn is None or rebuild:
             assert gradient_of in ['loss', 'logit', 'probability']
 
-            self._paddle_env_setup()
+            self._env_setup()
 
             def predict_fn(inputs, labels=None):
                 """predict_fn for input gradients based interpreters,
@@ -163,7 +152,7 @@ class InputGradientInterpreter(Interpreter):
                     tensor_inputs = (tensor_inputs, )
 
                 # get logits and probas, [bs, num_c]
-                logits = self.paddle_model(*tensor_inputs)
+                logits = self.model(*tensor_inputs)
                 num_samples, num_classes = logits.shape[0], logits.shape[1]
                 probas = paddle.nn.functional.softmax(logits, axis=-1)
 
@@ -206,17 +195,17 @@ class InputOutputInterpreter(Interpreter):
 
     """
 
-    def __init__(self, paddle_model: callable, device: str, use_cuda: bool = None, **kwargs):
+    def __init__(self, model: callable, device: str, use_cuda: bool = None, **kwargs):
         """
         
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        Interpreter.__init__(self, paddle_model, device, use_cuda, **kwargs)
-        assert hasattr(paddle_model, 'forward'), \
-            "paddle_model has to be " \
+        Interpreter.__init__(self, model, device, use_cuda, **kwargs)
+        assert hasattr(model, 'forward'), \
+            "model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
 
     def _build_predict_fn(self, rebuild: bool = False, output: str = 'probability'):
@@ -236,7 +225,7 @@ class InputOutputInterpreter(Interpreter):
         if self.predict_fn is None or rebuild:
             assert output in ['logit', 'probability']
 
-            self._paddle_env_setup()
+            self._env_setup()
 
             def predict_fn(inputs, label):
                 """predict_fn for input gradients based interpreters,
@@ -255,7 +244,7 @@ class InputOutputInterpreter(Interpreter):
                 with paddle.no_grad():
                     inputs = tuple(paddle.to_tensor(inp) for inp in inputs) if isinstance(inputs, tuple) \
                         else (paddle.to_tensor(inputs), )
-                    logits = self.paddle_model(*inputs)  # get logits, [bs, num_c]
+                    logits = self.model(*inputs)  # get logits, [bs, num_c]
                     probas = paddle.nn.functional.softmax(logits, axis=-1)  # get probabilities.
                     pred = paddle.argmax(probas, axis=-1)  # get predictions.
 
@@ -282,18 +271,18 @@ class IntermediateLayerInterpreter(Interpreter):
     input. 
     """
 
-    def __init__(self, paddle_model: callable, device: str, use_cuda: bool = None, **kwargs):
+    def __init__(self, model: callable, device: str, use_cuda: bool = None, **kwargs):
         """
 
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
 
-        Interpreter.__init__(self, paddle_model, device, use_cuda, **kwargs)
-        assert hasattr(paddle_model, 'forward'), \
-            "paddle_model has to be " \
+        Interpreter.__init__(self, model, device, use_cuda, **kwargs)
+        assert hasattr(model, 'forward'), \
+            "model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
 
     def _build_predict_fn(self, rebuild: bool = False, target_layer: str = None, target_layer_pattern: str = None):
@@ -318,7 +307,7 @@ class IntermediateLayerInterpreter(Interpreter):
             assert not (target_layer is None and target_layer_pattern is None), 'one of them must be given.'
             assert target_layer is None or target_layer_pattern is None, 'they cannot be given at the same time.'
 
-            self._paddle_env_setup()
+            self._env_setup()
 
             def predict_fn(data):
                 import paddle
@@ -338,18 +327,18 @@ class IntermediateLayerInterpreter(Interpreter):
                     target_feature_maps.append(output.numpy())
 
                 hooks = []
-                for name, v in self.paddle_model.named_sublayers():
+                for name, v in self.model.named_sublayers():
                     if match_func(name):
                         h = v.register_forward_post_hook(hook)
                         hooks.append(h)
 
                 assert len(hooks) > 0, f"No target layers are found in the given model, \
                                 the list of layer names are \n \
-                                {[n for n, v in self.paddle_model.named_sublayers()]}"
+                                {[n for n, v in self.model.named_sublayers()]}"
 
                 with paddle.no_grad():
                     data = paddle.to_tensor(data)
-                    logits = self.paddle_model(data)
+                    logits = self.model(data)
 
                     # hooks has to be removed.
                     for h in hooks:
@@ -372,17 +361,17 @@ class TransformerInterpreter(Interpreter):
     This Interpreter implements :py:func:`_build_predict_fn` that returns servral variables and gradients in each layer. 
     """
 
-    def __init__(self, paddle_model: callable, device: str, use_cuda: bool = None, **kwargs):
+    def __init__(self, model: callable, device: str, use_cuda: bool = None, **kwargs):
         """
         
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        Interpreter.__init__(self, paddle_model, device, use_cuda, **kwargs)
-        assert hasattr(paddle_model, 'forward'), \
-            "paddle_model has to be " \
+        Interpreter.__init__(self, model, device, use_cuda, **kwargs)
+        assert hasattr(model, 'forward'), \
+            "model has to be " \
             "an instance of paddle.nn.Layer or a compatible one."
 
     def _build_predict_fn(
@@ -412,7 +401,7 @@ class TransformerInterpreter(Interpreter):
                 "Check it again."
 
         if self.predict_fn is None or rebuild:
-            self._paddle_env_setup()
+            self._env_setup()
 
             def predict_fn(inputs, label=None, scale: float or None=None):
                 """predict_fn for input gradients based interpreters,
@@ -466,7 +455,7 @@ class TransformerInterpreter(Interpreter):
                 # apply hooks in the forward pass
                 block_projs = []
                 hooks = []
-                for n, v in self.paddle_model.named_sublayers():
+                for n, v in self.model.named_sublayers():
                     if attn_map_name is not None and re.match(attn_map_name, n):
                         h = v.register_forward_post_hook(block_attn_hook)
                         hooks.append(h)
@@ -481,7 +470,7 @@ class TransformerInterpreter(Interpreter):
                         h = v.register_forward_post_hook(block_value_hook)
                         hooks.append(h)
                 
-                logits = self.paddle_model(*inputs)
+                logits = self.model(*inputs)
                 
                 for h in hooks:
                     h.remove()
@@ -544,15 +533,15 @@ class IntermediateGradientInterpreter(Interpreter):
     input. 
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0') -> None:
+    def __init__(self, model: callable, device: str = 'gpu:0') -> None:
         """
         
         Args:
-            paddle_model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
-            device (str): The device used for running ``paddle_model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
+            model (callable): A model with :py:func:`forward` and possibly :py:func:`backward` functions.
+            device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        Interpreter.__init__(self, paddle_model, device, None)
+        Interpreter.__init__(self, model, device, None)
 
     def _build_predict_fn(self, rebuild=False, layer_name='word_embeddings', gradient_of='probability'):
 
@@ -563,7 +552,7 @@ class IntermediateGradientInterpreter(Interpreter):
 
         if self.predict_fn is None or rebuild:
             assert gradient_of in ['loss', 'logit', 'probability']
-            self._paddle_env_setup()
+            self._env_setup()
 
             def predict_fn(inputs, label=None, scale=None, noise_amount=None):
                 import paddle
@@ -581,12 +570,12 @@ class IntermediateGradientInterpreter(Interpreter):
                     return output
 
                 hooks = []
-                for name, v in self.paddle_model.named_sublayers():
+                for name, v in self.model.named_sublayers():
                     if layer_name in name:
                         h = v.register_forward_post_hook(hook)
                         hooks.append(h)
 
-                logits = self.paddle_model(*inputs)   # get logits, [bs, num_c]
+                logits = self.model(*inputs)   # get logits, [bs, num_c]
 
                 for h in hooks:
                     h.remove()

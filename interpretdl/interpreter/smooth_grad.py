@@ -2,7 +2,11 @@ import numpy as np
 from tqdm import tqdm
 from collections.abc import Iterable
 
-from .abc_interpreter import InputGradientInterpreter, IntermediateGradientInterpreter
+try:
+    from .abc_interpreter_m import InputGradientInterpreter, IntermediateGradientInterpreter
+except:
+    from .abc_interpreter import InputGradientInterpreter, IntermediateGradientInterpreter
+
 from ..data_processor.readers import images_transform_pipeline, preprocess_save_path
 from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
 
@@ -21,7 +25,7 @@ class SmoothGradInterpreter(InputGradientInterpreter):
     http://arxiv.org/abs/1706.03825.
     """
 
-    def __init__(self, paddle_model: callable, device: str = 'gpu:0', use_cuda=None):
+    def __init__(self, paddle_model: callable, device: str = 'gpu:0', env: str = 'pp'):
         """
 
         Args:
@@ -30,7 +34,7 @@ class SmoothGradInterpreter(InputGradientInterpreter):
                 etc.
         """
 
-        InputGradientInterpreter.__init__(self, paddle_model, device, use_cuda)
+        InputGradientInterpreter.__init__(self, paddle_model, device, env=env)
 
     def interpret(self,
                   inputs: str or list(str) or np.ndarray,
