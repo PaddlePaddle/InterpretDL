@@ -2,7 +2,11 @@ import re
 import numpy as np
 from collections.abc import Iterable
 
-from .abc_interpreter import Interpreter, TransformerInterpreter
+try:
+    from .abc_interpreter_m import TransformerInterpreter
+except:
+    from .abc_interpreter import TransformerInterpreter
+
 from ..data_processor.readers import images_transform_pipeline, preprocess_save_path
 from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
 
@@ -16,7 +20,7 @@ class BTCVInterpreter(TransformerInterpreter):
     The following implementation is specially designed for Vision Transformer.
     """
 
-    def __init__(self, model: callable, device: str = 'gpu:0') -> None:
+    def __init__(self, model: callable, device: str = 'gpu:0', **kwargs) -> None:
         """
 
         Args:
@@ -24,7 +28,7 @@ class BTCVInterpreter(TransformerInterpreter):
             device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        TransformerInterpreter.__init__(self, model, device)
+        TransformerInterpreter.__init__(self, model, device, **kwargs)
 
     def interpret(self,
                   inputs: str or list(str) or np.ndarray,
@@ -123,20 +127,26 @@ class BTCVInterpreter(TransformerInterpreter):
         for alpha in np.linspace(0, 1, steps):
             # forward propagation
             data_scaled = data * alpha
-            _, gradients, _, _, _, _, _ = self.predict_fn(data_scaled, label=label)
+            _, gradients, _, _, _, _, _ = self.predict_fn(data_scaled, label)
 
             total_gradients += gradients[-1]
 
         # gradient mean over heads.
         grad_head_mean = np.mean((total_gradients / steps).clip(min=0), axis=1)  # [b, s, s]
 
-        if hasattr(self.model, 'global_pool') and self.model.global_pool:
-            # For MAE ViT.
-            explanation = (R * grad_head_mean)[:, 1:, :].mean(axis=1)
-        else:
+        if (not hasattr(self.model, 'global_pool')) or (self.model.global_pool == 'token'):
             explanation = R[:, 0, :] * grad_head_mean[:, 0, :]
+        else:
+            # For those that use globa_pooling, e.g., MAE ViT.
+            explanation = (R * grad_head_mean)[:, 1:, :].mean(axis=1)
 
         explanation = explanation[:, 1:].reshape((-1, 14, 14))
+
+        # intermediate results, for possible further usages.
+        self.predicted_label = preds
+        self.predicted_proba = proba
+        self.ap = R
+        self.rf = grad_head_mean
 
         # visualization and save image.
         vis_explanation = explanation_to_vis(imgs, explanation[0], style='overlay_heatmap')
@@ -146,7 +156,7 @@ class BTCVInterpreter(TransformerInterpreter):
             save_image(save_path, vis_explanation)
 
         return explanation
-            
+
 
 class BTNLPInterpreter(TransformerInterpreter):
     """
@@ -157,7 +167,7 @@ class BTNLPInterpreter(TransformerInterpreter):
     The following implementation is specially designed for Ernie.
     """
 
-    def __init__(self, model: callable, device: str = 'gpu:0') -> None:
+    def __init__(self, model: callable, device: str = 'gpu:0', **kwargs) -> None:
         """
 
         Args:
@@ -165,7 +175,7 @@ class BTNLPInterpreter(TransformerInterpreter):
             device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        TransformerInterpreter.__init__(self, model, device)
+        TransformerInterpreter.__init__(self, model, device, **kwargs)
 
     def interpret(self,
                   raw_text: str,
@@ -226,9 +236,12 @@ class BTNLPInterpreter(TransformerInterpreter):
         else:
             model_input = tuple(model_input, )
 
-        self._build_predict_fn(embedding_name=embedding_name, attn_map_name=attn_map_name, 
-                               attn_v_name=attn_v_name, attn_proj_name=attn_proj_name, 
-                               gradient_of=gradient_of)
+        self._build_predict_fn(
+            embedding_name=embedding_name, 
+            attn_map_name=attn_map_name, 
+            attn_v_name=attn_v_name, 
+            attn_proj_name=attn_proj_name, 
+            gradient_of=gradient_of)
         
         attns, grads, inputs, values, projs, proba, preds = self.predict_fn(model_input)
         assert start_layer < len(attns), "start_layer should be in the range of [0, num_block-1]"
@@ -272,7 +285,7 @@ class BTNLPInterpreter(TransformerInterpreter):
         total_gradients = np.zeros((b, h, s, s))
         for alpha in np.linspace(0, 1, steps):
             # forward propagation
-            _, gradients, _, _, _, _, _ = self.predict_fn(model_input, label=label, scale=alpha)
+            _, gradients, _, _, _, _, _ = self.predict_fn(model_input, label, scale=alpha)
             total_gradients += gradients[-1]
 
         grad_head_mean = np.mean((total_gradients / steps).clip(min=0), axis=1)  # [b, s, s]

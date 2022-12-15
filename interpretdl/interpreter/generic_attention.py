@@ -2,7 +2,11 @@ import re
 import numpy as np
 from collections.abc import Iterable
 
-from .abc_interpreter import Interpreter, InputGradientInterpreter, TransformerInterpreter
+try:
+    from .abc_interpreter_m import Interpreter, InputGradientInterpreter, TransformerInterpreter
+except:
+    from .abc_interpreter import Interpreter, InputGradientInterpreter, TransformerInterpreter
+
 from ..data_processor.readers import images_transform_pipeline
 from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation, save_image
 
@@ -218,7 +222,7 @@ class GANLPInterpreter(TransformerInterpreter):
 
     """
 
-    def __init__(self, model: callable, device: str = 'gpu:0') -> None:
+    def __init__(self, model: callable, device: str = 'gpu:0', **kwargs) -> None:
         """
 
         Args:
@@ -226,7 +230,7 @@ class GANLPInterpreter(TransformerInterpreter):
             device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        TransformerInterpreter.__init__(self, model, device)
+        TransformerInterpreter.__init__(self, model, device, **kwargs)
 
     def interpret(self,
                   raw_text: str,
@@ -315,7 +319,7 @@ class GACVInterpreter(TransformerInterpreter):
     The following implementation is specially designed for Vision Transformer.
     """
 
-    def __init__(self, model: callable, device: str = 'gpu:0') -> None:
+    def __init__(self, model: callable, device: str = 'gpu:0', **kwargs) -> None:
         """
 
         Args:
@@ -323,7 +327,7 @@ class GACVInterpreter(TransformerInterpreter):
             device (str): The device used for running ``model``, options: ``"cpu"``, ``"gpu:0"``, ``"gpu:1"`` 
                 etc.
         """
-        TransformerInterpreter.__init__(self, model, device)
+        TransformerInterpreter.__init__(self, model, device, **kwargs)
 
     def interpret(self,
                   inputs: str or list(str) or np.ndarray,
@@ -381,11 +385,11 @@ class GACVInterpreter(TransformerInterpreter):
 
             R = R + np.matmul(attn, R)
 
-        if hasattr(self.model, 'global_pool') and self.model.global_pool:
-            # For MAE ViT, but GA does not work well.
-            R = R[:, 1:, :].mean(axis=1)
-        else:
+        if (not hasattr(self.model, 'global_pool')) or (self.model.global_pool == 'token'):
             R = R[:, 0, :]
+        else:
+            # For those that use globa_pooling, e.g., MAE ViT.
+            R = R[:, 1:, :].mean(axis=1)
         explanation = R[:, 1:].reshape((-1, 14, 14))
 
         # visualization and save image.

@@ -381,8 +381,7 @@ class TransformerInterpreter(Interpreter):
             attn_map_name: str or None = None, 
             attn_v_name: str or None = None, 
             attn_proj_name: str or None = None, 
-            gradient_of: str or None = None,
-            nlp: bool = False):
+            gradient_of: str or None = None):
         
         """Build ``predict_fn`` for transformer based algorithms.
         The model is supposed to be a classification model.
