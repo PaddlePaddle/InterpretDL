@@ -31,7 +31,7 @@ For researchers working on designing new interpretation algorithms, InterpretDL 
 
 > Xuhong Li, Haoyi Xiong, Xingjian Li, Xiao Zhang, Ji Liu, Haiyan Jiang, Zeyu Chen, Dejing Dou. “G-LIME: Statistical Learning for Local Interpretations of Deep Neural Networks using Global Priors.” Artificial Intelligence, 2023. [pdf link](https://github.com/PaddlePaddle/InterpretDL/files/10110787/glime-aij-paper.pdf). 
 
-> Qingrui Jia, Xuhong Li, Lei Yu, Penghao Zhao, Jiang Bian, Shupeng Li, Haoyi Xiong, Dejing Dou. “Learning from Training Dynamics: Identifying Mislabeled Data Beyond Manually Designed Features”. AAAI 2023. [pdf link to be announced]().
+> Qingrui Jia, Xuhong Li, Lei Yu, Penghao Zhao, Jiang Bian, Shupeng Li, Haoyi Xiong, Dejing Dou. “Learning from Training Dynamics: Identifying Mislabeled Data Beyond Manually Designed Features”. AAAI 2023. [pdf link](https://arxiv.org/abs/2212.09321).
 
 # Demo
 
