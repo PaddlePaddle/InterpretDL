@@ -91,7 +91,7 @@ class LRPCVInterpreter(Interpreter):
                 output = self.model(data)
 
                 if label is None:
-                    T = output.argmax().numpy()[0]
+                    T = int(output.argmax())
                 else:
                     assert isinstance(label, int), "label should be an integer"
                     assert 0 <= label < num_classes, f"input label is not correct, label should be at [0, {num_classes})"
