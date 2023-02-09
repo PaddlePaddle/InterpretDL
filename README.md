@@ -26,12 +26,13 @@ For researchers working on designing new interpretation algorithms, InterpretDL 
 
 # :fire: :fire: :fire: News :fire: :fire: :fire:
 
-- (2022.11) Two papers got accepted by AAAI'23 and Artificial Intelligence respectively. See implementations at [G-LIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/glime.py) and [TrainingDynamics](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/training_dynamics.py).
+- (2023.2) One paper on explaining Transformers got accepted by TMLR. See implementations at [BT](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/bidirectional_transformer.py).
 
+- (2022.11) Two papers got accepted by AAAI'23 and Artificial Intelligence respectively. See implementations at [G-LIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/glime.py) and [TrainingDynamics](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/training_dynamics.py).
 
 > Xuhong Li, Haoyi Xiong, Xingjian Li, Xiao Zhang, Ji Liu, Haiyan Jiang, Zeyu Chen, Dejing Dou. “G-LIME: Statistical Learning for Local Interpretations of Deep Neural Networks using Global Priors.” Artificial Intelligence, 2023. [pdf link](https://github.com/PaddlePaddle/InterpretDL/files/10110787/glime-aij-paper.pdf). 
 
-> Qingrui Jia, Xuhong Li, Lei Yu, Penghao Zhao, Jiang Bian, Shupeng Li, Haoyi Xiong, Dejing Dou. “Learning from Training Dynamics: Identifying Mislabeled Data Beyond Manually Designed Features”. AAAI 2023. [pdf link to be announced]().
+> Qingrui Jia, Xuhong Li, Lei Yu, Penghao Zhao, Jiang Bian, Shupeng Li, Haoyi Xiong, Dejing Dou. “Learning from Training Dynamics: Identifying Mislabeled Data Beyond Manually Designed Features”. AAAI 2023. [link](https://arxiv.org/abs/2212.09321).
 
 # Demo
 
