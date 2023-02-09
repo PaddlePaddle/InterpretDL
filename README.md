@@ -28,6 +28,8 @@ For researchers working on designing new interpretation algorithms, InterpretDL 
 
 - (2023.2) One paper on explaining Transformers got accepted by TMLR. See implementations at [BT](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/bidirectional_transformer.py).
 
+> Jiamin Chen, Xuhong Li, Lei Yu, Dejing Dou, Haoyi Xiong. “Beyond Intuition: Rethinking Token Attributions inside Transformers.” TMLR. [paper link](https://openreview.net/forum?id=rm0zIzlhcX).
+
 - (2022.11) Two papers got accepted by AAAI'23 and Artificial Intelligence respectively. See implementations at [G-LIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/glime.py) and [TrainingDynamics](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/training_dynamics.py).
 
 > Xuhong Li, Haoyi Xiong, Xingjian Li, Xiao Zhang, Ji Liu, Haiyan Jiang, Zeyu Chen, Dejing Dou. “G-LIME: Statistical Learning for Local Interpretations of Deep Neural Networks using Global Priors.” Artificial Intelligence, 2023. [pdf link](https://github.com/PaddlePaddle/InterpretDL/files/10110787/glime-aij-paper.pdf). 
