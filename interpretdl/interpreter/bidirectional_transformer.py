@@ -14,9 +14,12 @@ from ..data_processor.visualizer import explanation_to_vis, show_vis_explanation
 class BTCVInterpreter(TransformerInterpreter):
     """
     Bidirectional Transformer Interpreter.
-
     This is a specific interpreter for Transformers models, with two sub-processes: attentional perception, reasoning feedback.
-    
+
+    More details regarding this method can be found in the original paper:
+    https://openreview.net/forum?id=rm0zIzlhcX.
+    For reproduction experiments, refer to [this repo](https://github.com/jiaminchen-1031/transformerinterp).
+
     The following implementation is specially designed for Vision Transformer.
     """
 
@@ -161,9 +164,12 @@ class BTCVInterpreter(TransformerInterpreter):
 class BTNLPInterpreter(TransformerInterpreter):
     """
     Bidirectional Transformer Interpreter.
-
     This is a specific interpreter for Transformers models, with two sub-processes: attentional perception, reasoning feedback.
     
+    More details regarding this method can be found in the original paper:
+    https://openreview.net/forum?id=rm0zIzlhcX.
+    For reproduction experiments, refer to [this repo](https://github.com/jiaminchen-1031/transformerinterp).
+
     The following implementation is specially designed for Ernie.
     """
 
