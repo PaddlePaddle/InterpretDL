@@ -190,8 +190,7 @@ class BHDFInterpreter(Interpreter):
     BHDFInterpreter takes the training dynamics as raw input and lets an LSTM model to predict whether the sample is
     mislabeled or clean. We have provided a pre-trained LSTM, which can be directly used for identifying the mislabels.
     
-    # TODO: to add the arxiv link.
-    More details regarding this method can be found in the original paper: [link_to_be_annonced]().
+    More details regarding this method can be found in the original paper: [link](https://arxiv.org/abs/2212.09321).
 
     For reproduction experiments, refer to [this repo](https://github.com/Christophe-Jia/mislabel-detection).
     """
