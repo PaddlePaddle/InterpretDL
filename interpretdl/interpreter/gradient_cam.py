@@ -144,13 +144,15 @@ class GradCAMInterpreter(Interpreter):
                     label = preds.numpy()
                 label_onehot = paddle.nn.functional.one_hot(paddle.to_tensor(label), num_classes=out.shape[1])
                 target = paddle.sum(out * label_onehot, axis=1)
-
-                target.backward()
-                gradients = self._feature_maps[self._target_layer_name].grad
+                paddle_version=tuple(map(int, paddle.__version__.split(".")))
+                if paddle_version>=(2,4,0):
+                    target.backward(retain_graph=True) #since paddle 2.4
+                    gradients = paddle.grad(
+                        outputs=[target], inputs=[self._feature_maps[self._target_layer_name]])[0]
+                else:
+                    target.backward()
+                    gradients = self._feature_maps[self._target_layer_name].grad
                 target.clear_gradient()
-
-                # gradients = paddle.grad(
-                #     outputs=[target], inputs=[self._feature_maps])[0]
                 if isinstance(gradients, paddle.Tensor):
                     gradients = gradients.numpy()
 
