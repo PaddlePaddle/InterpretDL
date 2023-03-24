@@ -378,6 +378,7 @@ class TransformerInterpreter(Interpreter):
             self, 
             rebuild: bool = False, 
             embedding_name: str or None = None, 
+            input_name: str or None=None,
             attn_map_name: str or None = None, 
             attn_v_name: str or None = None, 
             attn_proj_name: str or None = None, 
@@ -389,6 +390,7 @@ class TransformerInterpreter(Interpreter):
         Args:
             rebuild (bool, optional): forces to rebuild. Defaults to ``False``.
             embedding_name (str, optional): the layer name for embedding, if in need.
+            input_name (str, optional): the layer name for block input, if in need.
             attn_map_name (str, optional): the layer name for attention weights, if in need.
             attn_v_name (str, optional): the layer name for attention value.
             attn_proj_name (str, optional): the layer name for attention projection, if in need.
@@ -464,9 +466,10 @@ class TransformerInterpreter(Interpreter):
                     elif attn_proj_name is not None and re.match(attn_proj_name, n):
                         block_projs.append(v.weight)
                     elif attn_v_name is not None and re.match(attn_v_name, n):
-                        h = v.register_forward_pre_hook(block_input_hook)
-                        hooks.append(h)
                         h = v.register_forward_post_hook(block_value_hook)
+                        hooks.append(h)
+                    elif input_name is not None and re.match(input_name, n):
+                        h = v.register_forward_pre_hook(block_input_hook)
                         hooks.append(h)
                 
                 logits = self.model(*inputs)
