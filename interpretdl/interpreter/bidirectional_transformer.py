@@ -149,7 +149,7 @@ class BTCVInterpreter(TransformerInterpreter):
             # For avg pooling such as Swin
             explanation =(R * grad_head_mean).mean(axis=1).reshape((-1, int(s**0.5), int(s**0.5)))
         else:
-            explanation = (R * grad_head_mean)[:, 0:, :].mean(axis=1)[:, 1:].reshape((-1, int(s**0.5), int(s**0.5)))
+            explanation = (R * grad_head_mean)[:, 0, 1:].reshape((-1, int(s**0.5), int(s**0.5)))
 
         # intermediate results, for possible further usages.
         self.predicted_label = preds

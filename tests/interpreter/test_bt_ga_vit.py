@@ -54,7 +54,7 @@ class TestBT(unittest.TestCase):
         algo = it.BTCVInterpreter(paddle_model, device='cpu')
         exp = algo.interpret(img_path, ap_mode='token', steps=2, visual=False)
         result = np.array([exp.mean(), exp.std(), exp.min(), exp.max()])
-        desired = np.array([87.71998196,  50.87808793,  10.59904119, 314.91102318])
+        desired = np.array([2.33336808e-04, 1.31544930e-04, 2.85234940e-05, 7.31504641e-04])
 
         assert_arrays_almost_equal(self, result, desired) 
     
