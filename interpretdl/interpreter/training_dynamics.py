@@ -96,39 +96,26 @@ class TrainingDynamics():
                 with paddle.no_grad():
                     softmax = paddle.nn.Softmax()
                     training_dynamics_per_epoch = softmax(logits).detach().cpu().numpy()
-
-                    if len(indices) == train_loader.batch_size:
-                        for j,index in enumerate(indices):
-                            index = index.item()
-                            training_dynamics_previous = training_dynamics.get(index,[])
-                            training_dynamics_previous.append(training_dynamics_per_epoch[j])
-                            training_dynamics[index] = training_dynamics_previous
-                    else:
-                        for j,index in enumerate(indices):
-                            index = index.item()
-                            training_dynamics_previous = training_dynamics.get(index,[])
-                            training_dynamics_previous.append(np.full([training_dynamics_per_epoch.shape[1],], np.nan))
-                            training_dynamics[index] = training_dynamics_previous                       
+    
+                    for j in range(len(indices)):
+                        index = indices[j].item()
+                        training_dynamics_previous = training_dynamics.get(index, [])
+                        training_dynamics_previous.append(training_dynamics_per_epoch[j])
+                        training_dynamics[index] = training_dynamics_previous
                 
         return training_dynamics
             
     def transform(self,logits,assigned_targets):
-        """Transform training dynamics with linear interpolation.
+        """Transform training dynamics.
 
         Args:
             logits (dict): A dictionary recording training dynamics.
             assigned_targets (list): The assigned targets of dataset,.
 
         """
+        
         logits = [(k, logits[k]) for k in sorted(logits.keys())]
         logits = np.asarray([logits[i][1] for i in range(len(logits))])
-
-        # Linear interpolation of logits given
-        for logit in logits:
-            bad_indexes = np.isnan(logit)
-            good_indexes = np.logical_not(bad_indexes)
-            interpolated = np.interp(bad_indexes.nonzero()[0], good_indexes.nonzero()[0], logit[good_indexes])
-            logit[bad_indexes] = interpolated
         logits = logits.astype(np.float16)
 
         targets_list = np.argsort(-logits.mean(axis=1), axis=1)
@@ -246,15 +233,14 @@ class BHDFInterpreter(Interpreter):
             training_dynamics = paddle.to_tensor(np.load(training_dynamics_path)['td'][:,:,0]).astype(paddle.float32)
         else:
             raise Exception('Invalid form or path')
-
-        dataset = paddle.io.TensorDataset([training_dynamics,paddle.zeros((len(training_dynamics),))])
+        print(training_dynamics,training_dynamics.shape)
+        dataset = paddle.io.TensorDataset([training_dynamics,])
         loader = paddle.io.DataLoader(dataset, batch_size=128, shuffle=False)        
 
         predictions=[]
         with paddle.no_grad():
             for batch_id, data in enumerate(loader()):
-                x_data = data[0]
-                predicts = self.detector(x_data).cpu().detach().numpy()
+                predicts = self.detector(data).cpu().detach().numpy()
                 predictions.extend(predicts[:,1])
         
         order = np.argsort(predictions)
