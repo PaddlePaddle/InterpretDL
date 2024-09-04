@@ -26,15 +26,17 @@ For researchers working on designing new interpretation algorithms, InterpretDL 
 
 # :fire: :fire: :fire: News :fire: :fire: :fire:
 
+- (2024.6) A paper investigating [feature attributions of LLMs via Optimal Transport](https://openreview.net/forum?id=qKL25sGjxL) got accepted by ICML'24. See implementations at [GiLOT](https://github.com/holyseven/GiLOT).
+
+> Xuhong Li, Jiamin Chen, Yekun Chai, Haoyi Xiong. GILOT: Interpreting Generative Language Models via Optimal Transport. ICML 2024. [paper link](https://openreview.net/pdf?id=qKL25sGjxL).
+
+- (2023.10) M4 XAI Benchmark got accepted by Neurips'23 Datasets and Benchmarks. See implementations at [M4_XAI_Benchmark](https://github.com/holyseven/M4_XAI_Benchmark).
+
+> Xuhong Li, Mengnan Du, Jiamin Chen, Yekun Chai, Himabindu Lakkaraju, Haoyi Xiong. “M4: A Unified XAI Benchmark for Faithfulness Evaluation of Feature Attribution Methods across Metrics, Modalities and Models.” Neurips 2023, Dataset and Benchmark Track. [paper link](https://openreview.net/forum?id=6zcfrSz98y).
+
 - (2023.2) One paper on explaining Transformers got accepted by TMLR. See implementations at [BT](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/bidirectional_transformer.py).
 
 > Jiamin Chen, Xuhong Li, Lei Yu, Dejing Dou, Haoyi Xiong. “Beyond Intuition: Rethinking Token Attributions inside Transformers.” TMLR. [paper link](https://openreview.net/forum?id=rm0zIzlhcX).
-
-- (2022.11) Two papers got accepted by AAAI'23 and Artificial Intelligence respectively. See implementations at [G-LIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/glime.py) and [TrainingDynamics](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/training_dynamics.py).
-
-> Xuhong Li, Haoyi Xiong, Xingjian Li, Xiao Zhang, Ji Liu, Haiyan Jiang, Zeyu Chen, Dejing Dou. “G-LIME: Statistical Learning for Local Interpretations of Deep Neural Networks using Global Priors.” Artificial Intelligence, 2023. [pdf link](https://github.com/PaddlePaddle/InterpretDL/files/10110787/glime-aij-paper.pdf). 
-
-> Qingrui Jia, Xuhong Li, Lei Yu, Penghao Zhao, Jiang Bian, Shupeng Li, Haoyi Xiong, Dejing Dou. “Learning from Training Dynamics: Identifying Mislabeled Data Beyond Manually Designed Features”. AAAI 2023. [pdf link](https://arxiv.org/abs/2212.09321).
 
 # Demo
 
@@ -229,9 +231,7 @@ Two dimensions (representations of explanation results and types of the target m
 * `Perturbation`: [Evaluating the visualization of what a deep neural network has learned.](https://arxiv.org/abs/1509.06321)
 * `Deletion&Insertion`: [RISE: Randomized Input Sampling for Explanation of Black-box Models.](https://arxiv.org/abs/1806.07421)
 * `PointGame`: [Top-down Neural Attention by Excitation Backprop.](https://arxiv.org/abs/1608.00507)
-* `Generic Attention`: [Generic Attention-model Explainability for Interpreting Bi-Modal and Encoder-Decoder Transformers
-  
-  ](https://arxiv.org/abs/2103.15679)
+* `Generic Attention`: [Generic Attention-model Explainability for Interpreting Bi-Modal and Encoder-Decoder Transformers](https://arxiv.org/abs/2103.15679)
 
 # Copyright and License
 
@@ -239,6 +239,11 @@ InterpretDL is provided under the [Apache-2.0 license](https://github.com/Paddle
 
 # Recent News
 
+- (2022.11) Two papers got accepted by AAAI'23 and Artificial Intelligence respectively. See implementations at [G-LIME](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/glime.py) and [TrainingDynamics](https://github.com/PaddlePaddle/InterpretDL/blob/master/interpretdl/interpreter/training_dynamics.py).
+
+> Xuhong Li, Haoyi Xiong, Xingjian Li, Xiao Zhang, Ji Liu, Haiyan Jiang, Zeyu Chen, Dejing Dou. “G-LIME: Statistical Learning for Local Interpretations of Deep Neural Networks using Global Priors.” Artificial Intelligence, 2023. [pdf link](https://github.com/PaddlePaddle/InterpretDL/files/10110787/glime-aij-paper.pdf). 
+
+> Qingrui Jia, Xuhong Li, Lei Yu, Penghao Zhao, Jiang Bian, Shupeng Li, Haoyi Xiong, Dejing Dou. “Learning from Training Dynamics: Identifying Mislabeled Data Beyond Manually Designed Features”. AAAI 2023. [pdf link](https://arxiv.org/abs/2212.09321).
 
 - (2022.08) The paper with this repository is accepted by Journal of Machine Learning Research (JMLR). If this repo is helpful for your work, please consider citing this paper:
 
